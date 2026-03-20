@@ -84,7 +84,7 @@
             />
             <!--end::Brand Image-->
             <!--begin::Brand Text-->
-            <span class="brand-text fw-light">AdminLTE 4</span>
+            <span class="brand-text fw-light">{{ auth()->check() ? auth()->user()->nombre_completo : config('adminlte.app_name') }}</span>
             <!--end::Brand Text-->
           </a>
           <!--end::Brand Link-->
@@ -979,3 +979,4 @@
   </body>
   <!--end::Body-->
 </html>
+

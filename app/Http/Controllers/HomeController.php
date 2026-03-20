@@ -25,11 +25,14 @@ class HomeController extends Controller
     {
         $statusConfig = config('adminlte.ticket_states', []);
         $ticketsBase = $this->ticketsQueryForCurrentUser();
+        $ticketsWithDeleted = $this->ticketsQueryForCurrentUser(includeDeleted: true);
 
         $statusCounts = (clone $ticketsBase)
             ->selectRaw('estado, COUNT(*) as total')
             ->groupBy('estado')
             ->pluck('total', 'estado');
+
+        $closedCount = (clone $ticketsWithDeleted)->onlyTrashed()->count();
 
         $chartLabels = [];
         $chartValues = [];
@@ -37,7 +40,9 @@ class HomeController extends Controller
 
         foreach (array_keys($statusConfig) as $state) {
             $chartLabels[] = $statusConfig[$state]['label'];
-            $chartValues[] = (int) ($statusCounts[$state] ?? 0);
+            $chartValues[] = $state === 'cerrado'
+                ? $closedCount
+                : (int) ($statusCounts[$state] ?? 0);
             $chartColors[] = $statusConfig[$state]['color'];
         }
 
@@ -50,7 +55,7 @@ class HomeController extends Controller
             'pendientes' => (int) ($statusCounts['pendiente'] ?? 0),
             'en_proceso' => (int) ($statusCounts['en_proceso'] ?? 0),
             'finalizado' => (int) ($statusCounts['finalizado'] ?? 0),
-            'cerrado' => (int) ($statusCounts['cerrado'] ?? 0),
+            'cerrado' => $closedCount,
         ];
 
         return view('home', [
@@ -386,6 +391,8 @@ class HomeController extends Controller
             abort(403);
         }
 
+        $this->markTicketInProgressWhenEmployeeEnters($ticket);
+
         $ticket->load(['cliente', 'empleado', 'departamento']);
         $messages = $ticket->mensajes()
             ->with('user')
@@ -410,7 +417,6 @@ class HomeController extends Controller
             'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
-            'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
             'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
 
@@ -442,6 +448,9 @@ class HomeController extends Controller
         if (empty($validated['codigo'])) {
             $validated['codigo'] = $this->nextTicketCode();
         }
+
+        $validated['estado'] = 'pendiente';
+        $validated['fecha_cierre'] = null;
 
         $ticket = Ticket::create($validated);
 
@@ -484,6 +493,10 @@ class HomeController extends Controller
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
+        }
+
+        if ($ticket->estado === 'finalizado') {
+            return back()->with('error', 'Este ticket ya fue finalizado y no admite mas comentarios.');
         }
 
         $validated = $request->validate([
@@ -546,14 +559,44 @@ class HomeController extends Controller
             }
         }
 
+        $ticket->estado = 'cerrado';
+        $ticket->fecha_cierre = now();
+        $ticket->save();
         $ticket->delete();
 
         return back()->with('success', 'Ticket eliminado correctamente.');
     }
 
-    private function ticketsQueryForCurrentUser()
+    public function finalizeTicket(Ticket $ticket): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!$this->canFinalizeTicket($ticket)) {
+            abort(403);
+        }
+
+        $ticket->estado = 'finalizado';
+        $ticket->fecha_cierre = now();
+        $ticket->save();
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => 'Ticket finalizado por ' . auth()->user()->name . '.',
+            'tipo' => 'atencion',
+        ]);
+
+        return back()->with('success', 'Ticket finalizado correctamente.');
+    }
+
+    private function ticketsQueryForCurrentUser(bool $includeDeleted = false)
     {
         $query = Ticket::query();
+
+        if ($includeDeleted) {
+            $query->withTrashed();
+        }
 
         if (auth()->check() && auth()->user()->hasRole('Usuario')) {
             $query->whereHas('cliente', function ($q): void {
@@ -634,6 +677,59 @@ class HomeController extends Controller
             return (int) $ticket->empleado_id === (int) $employee->id;
         }
 
+        if (auth()->user()->hasRole('Usuario')) {
+            return $ticket->cliente && $ticket->cliente->email === auth()->user()->email;
+        }
+
         return false;
+    }
+
+    private function canFinalizeTicket(Ticket $ticket): bool
+    {
+        if (!auth()->user()->hasRole('Empleado')) {
+            return false;
+        }
+
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        if (!$employee) {
+            return false;
+        }
+
+        return (int) $ticket->empleado_id === (int) $employee->id
+            && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
+    }
+
+    private function markTicketInProgressWhenEmployeeEnters(Ticket $ticket): void
+    {
+        if (!auth()->user()->hasRole('Empleado') || $ticket->estado !== 'pendiente') {
+            return;
+        }
+
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        if (!$employee) {
+            return;
+        }
+
+        $shouldUpdate = is_null($ticket->empleado_id) || (int) $ticket->empleado_id === (int) $employee->id;
+
+        if (!$shouldUpdate) {
+            return;
+        }
+
+        $ticket->empleado_id = $employee->id;
+        $ticket->estado = 'en_proceso';
+        $ticket->save();
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
+            'tipo' => 'atencion',
+        ]);
     }
 }

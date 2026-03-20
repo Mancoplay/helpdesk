@@ -58,6 +58,20 @@
                         </form>
                     </div>
                 @endif
+
+                @if(
+                    auth()->user()->hasRole('Empleado')
+                    && in_array($ticket->estado, ['pendiente', 'en_proceso'], true)
+                    && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0)
+                )
+                    <div class="card-footer">
+                        <form method="POST" action="{{ route('tickets.finalize', $ticket) }}">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="btn btn-success">Finalizar ticket</button>
+                        </form>
+                    </div>
+                @endif
             @endcan
         </div>
     </div>
@@ -104,24 +118,29 @@
                     @endforelse
                 </div>
 
-                <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-2">
-                        <label class="form-label">Nuevo comentario</label>
-                        <textarea name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                @if($ticket->estado === 'finalizado')
+                    <div class="alert alert-secondary mb-0">
+                        Ticket finalizado. El chat esta bloqueado y ya no se permiten comentarios.
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label">Adjuntar imagen (opcional)</label>
-                        <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
-                        <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
-                    </div>
-                </form>
+                @else
+                    <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-2">
+                            <label class="form-label">Nuevo comentario</label>
+                            <textarea name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Adjuntar imagen (opcional)</label>
+                            <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
+                            <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+                        </div>
+                    </form>
+                @endif
             </div>
         </div>
     </div>
 </div>
 @endsection
-

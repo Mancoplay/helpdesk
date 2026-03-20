@@ -42,6 +42,7 @@ Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
 
 Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
     Route::patch('/tickets/{ticket}/atender', [HomeController::class, 'attendTicket'])->name('tickets.attend');
+    Route::patch('/tickets/{ticket}/finalizar', [HomeController::class, 'finalizeTicket'])->name('tickets.finalize');
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {

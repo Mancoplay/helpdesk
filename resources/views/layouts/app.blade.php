@@ -97,7 +97,7 @@
             <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
                 <div class="sidebar-brand">
                     <a href="{{ route('dashboard') }}" class="brand-link">
-                        <span class="brand-text fw-light">{{ config('adminlte.app_name') }}</span>
+                        <span class="brand-text fw-light">{{ auth()->user()->nombre_completo }}</span>
                     </a>
                 </div>
 
