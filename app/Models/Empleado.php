@@ -15,9 +15,11 @@ class Empleado extends Model
         'user_id',
         'departamento_id',
         'nombres',
+        'segundo_nombre',
         'apellidos',
         'email',
         'telefono',
+        'direccion',
         'cargo',
         'activo',
     ];
@@ -43,6 +45,6 @@ class Empleado extends Model
 
     public function getNombreCompletoAttribute(): string
     {
-        return trim($this->nombres . ' ' . $this->apellidos);
+        return trim(collect([$this->nombres, $this->segundo_nombre, $this->apellidos])->filter()->implode(' '));
     }
 }

@@ -47,7 +47,7 @@
                     <th>Departamento</th>
                     <th>Contacto</th>
                     <th>Correo</th>
-                    <th style="width:130px;">Accion</th>
+                    <th style="width:170px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -58,7 +58,8 @@
                         <td>{{ $empleado->telefono ?? '-' }}</td>
                         <td>{{ $empleado->email }}</td>
                         <td>
-                            <form method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
+                            <a href="{{ route('empleados.edit', $empleado) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                            <form class="d-inline" method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
@@ -73,3 +74,5 @@
     </div>
 </div>
 @endsection
+
+

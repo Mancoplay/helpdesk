@@ -39,7 +39,7 @@
                     <th>Email</th>
                     <th>Telefono</th>
                     <th>Empresa</th>
-                    <th style="width:130px;">Accion</th>
+                    <th style="width:170px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -50,7 +50,8 @@
                         <td>{{ $cliente->telefono ?? '-' }}</td>
                         <td>{{ $cliente->empresa ?? '-' }}</td>
                         <td>
-                            <form method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
+                            <a href="{{ route('clientes.edit', $cliente) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                            <form class="d-inline" method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
@@ -65,3 +66,5 @@
     </div>
 </div>
 @endsection
+
+

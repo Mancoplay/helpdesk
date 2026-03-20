@@ -81,6 +81,34 @@ class HomeController extends Controller
         return back()->with('success', 'Usuario agregado correctamente.');
     }
 
+    public function editUsuario(User $user)
+    {
+        return view('usuarios.edit', [
+            'usuario' => $user,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function updateUsuario(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
+    }
+
     public function destroyUsuario(User $user): RedirectResponse
     {
         if ((int) auth()->id() === (int) $user->id) {
@@ -104,15 +132,42 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'nombres' => ['required', 'string', 'max:100'],
+            'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:clientes,email'],
             'telefono' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string'],
             'empresa' => ['nullable', 'string', 'max:120'],
         ]);
 
         Cliente::create($validated + ['activo' => true]);
 
         return back()->with('success', 'Cliente agregado correctamente.');
+    }
+
+    public function editCliente(Cliente $cliente)
+    {
+        return view('clientes.edit', [
+            'cliente' => $cliente,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function updateCliente(Request $request, Cliente $cliente): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nombres' => ['required', 'string', 'max:100'],
+            'segundo_nombre' => ['nullable', 'string', 'max:100'],
+            'apellidos' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('clientes', 'email')->ignore($cliente->id)],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string'],
+            'empresa' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $cliente->update($validated);
+
+        return redirect()->route('clientes.index')->with('success', 'Cliente actualizado correctamente.');
     }
 
     public function destroyCliente(Cliente $cliente): RedirectResponse
@@ -139,9 +194,11 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'nombres' => ['required', 'string', 'max:100'],
+            'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:empleados,email'],
             'telefono' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
             'departamento_id' => ['required', 'exists:departamentos,id'],
         ]);
@@ -149,6 +206,33 @@ class HomeController extends Controller
         Empleado::create($validated + ['activo' => true]);
 
         return back()->with('success', 'Empleado agregado correctamente.');
+    }
+
+    public function editEmpleado(Empleado $empleado)
+    {
+        return view('empleados.edit', [
+            'empleado' => $empleado,
+            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function updateEmpleado(Request $request, Empleado $empleado): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nombres' => ['required', 'string', 'max:100'],
+            'segundo_nombre' => ['nullable', 'string', 'max:100'],
+            'apellidos' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('empleados', 'email')->ignore($empleado->id)],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string'],
+            'cargo' => ['nullable', 'string', 'max:100'],
+            'departamento_id' => ['required', 'exists:departamentos,id'],
+        ]);
+
+        $empleado->update($validated);
+
+        return redirect()->route('empleados.index')->with('success', 'Empleado actualizado correctamente.');
     }
 
     public function destroyEmpleado(Empleado $empleado): RedirectResponse
@@ -185,6 +269,31 @@ class HomeController extends Controller
         ]);
 
         return back()->with('success', 'Departamento agregado correctamente.');
+    }
+
+    public function editDepartamento(Departamento $departamento)
+    {
+        return view('departamentos.edit', [
+            'departamento' => $departamento,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function updateDepartamento(Request $request, Departamento $departamento): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nombre' => ['required', 'string', 'max:120', Rule::unique('departamentos', 'nombre')->ignore($departamento->id)],
+            'descripcion' => ['nullable', 'string', 'max:255'],
+            'activo' => ['nullable', 'boolean'],
+        ]);
+
+        $departamento->update([
+            'nombre' => $validated['nombre'],
+            'descripcion' => $validated['descripcion'] ?? null,
+            'activo' => (bool) ($validated['activo'] ?? false),
+        ]);
+
+        return redirect()->route('departamentos.index')->with('success', 'Departamento actualizado correctamente.');
     }
 
     public function destroyDepartamento(Departamento $departamento): RedirectResponse
@@ -229,6 +338,35 @@ class HomeController extends Controller
         Ticket::create($validated);
 
         return back()->with('success', 'Ticket agregado correctamente.');
+    }
+
+    public function editTicket(Ticket $ticket)
+    {
+        return view('tickets.edit', [
+            'ticket' => $ticket,
+            'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
+            'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
+            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate([
+            'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
+            'cliente_id' => ['required', 'exists:clientes,id'],
+            'empleado_id' => ['nullable', 'exists:empleados,id'],
+            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'asunto' => ['required', 'string', 'max:180'],
+            'descripcion' => ['required', 'string'],
+            'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
+            'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
+        ]);
+
+        $ticket->update($validated);
+
+        return redirect()->route('tickets.index')->with('success', 'Ticket actualizado correctamente.');
     }
 
     public function destroyTicket(Ticket $ticket): RedirectResponse

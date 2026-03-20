@@ -35,7 +35,7 @@
                     <th>Nombre</th>
                     <th>Descripcion</th>
                     <th>Activo</th>
-                    <th style="width:130px;">Accion</th>
+                    <th style="width:170px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +49,8 @@
                             </span>
                         </td>
                         <td>
-                            <form method="POST" action="{{ route('departamentos.destroy', $departamento) }}" onsubmit="return confirm('Deseas eliminar este departamento?');">
+                            <a href="{{ route('departamentos.edit', $departamento) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                            <form class="d-inline" method="POST" action="{{ route('departamentos.destroy', $departamento) }}" onsubmit="return confirm('Deseas eliminar este departamento?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
@@ -64,3 +65,5 @@
     </div>
 </div>
 @endsection
+
+

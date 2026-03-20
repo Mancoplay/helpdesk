@@ -12,9 +12,11 @@ class Cliente extends Model
 
     protected $fillable = [
         'nombres',
+        'segundo_nombre',
         'apellidos',
         'email',
         'telefono',
+        'direccion',
         'empresa',
         'activo',
     ];
@@ -30,6 +32,6 @@ class Cliente extends Model
 
     public function getNombreCompletoAttribute(): string
     {
-        return trim($this->nombres . ' ' . $this->apellidos);
+        return trim(collect([$this->nombres, $this->segundo_nombre, $this->apellidos])->filter()->implode(' '));
     }
 }

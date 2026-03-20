@@ -36,7 +36,7 @@
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Creado</th>
-                    <th style="width:130px;">Accion</th>
+                    <th style="width:170px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +49,8 @@
                             @if(auth()->id() === $usuario->id)
                                 <span class="badge text-bg-secondary">Actual</span>
                             @else
-                                <form method="POST" action="{{ route('usuarios.destroy', $usuario) }}" onsubmit="return confirm('Deseas eliminar este usuario?');">
+                                <a href="{{ route('usuarios.edit', $usuario) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                                <form class="d-inline" method="POST" action="{{ route('usuarios.destroy', $usuario) }}" onsubmit="return confirm('Deseas eliminar este usuario?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>

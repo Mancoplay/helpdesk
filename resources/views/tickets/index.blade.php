@@ -76,7 +76,7 @@
                     <th>Asunto</th>
                     <th>Cliente</th>
                     <th>Estado</th>
-                    <th style="width:130px;">Accion</th>
+                    <th style="width:170px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -93,7 +93,8 @@
                             <span class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
                         </td>
                         <td>
-                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Deseas eliminar este ticket?');">
+                            <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                            <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Deseas eliminar este ticket?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
@@ -108,3 +109,5 @@
     </div>
 </div>
 @endsection
+
+
