@@ -103,144 +103,14 @@
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-lg-6 mx-auto">
+<div class="row g-3">
+    <div class="col-lg-8 mx-auto">
         <div class="card card-graph">
             <div class="card-header">
                 <h3 class="card-title mb-0">Grafico de Tickets</h3>
             </div>
             <div class="card-body">
                 <canvas id="ticketsChart" height="220"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title mb-0">Tabla de Clientes</h3></div>
-            <div class="card-body table-responsive p-0">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Email</th>
-                            <th>Telefono</th>
-                            <th>Empresa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($clientes as $cliente)
-                            <tr>
-                                <td>{{ $cliente->nombre_completo }}</td>
-                                <td>{{ $cliente->email }}</td>
-                                <td>{{ $cliente->telefono ?? '-' }}</td>
-                                <td>{{ $cliente->empresa ?? '-' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title mb-0">Tabla de Empleados</h3></div>
-            <div class="card-body table-responsive p-0">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Email</th>
-                            <th>Cargo</th>
-                            <th>Departamento</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($empleados as $empleado)
-                            <tr>
-                                <td>{{ $empleado->nombre_completo }}</td>
-                                <td>{{ $empleado->email }}</td>
-                                <td>{{ $empleado->cargo ?? '-' }}</td>
-                                <td>{{ $empleado->departamento->nombre ?? '-' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title mb-0">Tabla de Departamentos</h3></div>
-            <div class="card-body table-responsive p-0">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Descripcion</th>
-                            <th>Activo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($departamentos as $departamento)
-                            <tr>
-                                <td>{{ $departamento->nombre }}</td>
-                                <td>{{ $departamento->descripcion ?? '-' }}</td>
-                                <td>
-                                    <span class="badge text-bg-{{ $departamento->activo ? 'success' : 'secondary' }}">
-                                        {{ $departamento->activo ? 'Si' : 'No' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="3" class="text-center text-muted">Sin datos</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title mb-0">Tabla de Tickets</h3></div>
-            <div class="card-body table-responsive p-0">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Codigo</th>
-                            <th>Asunto</th>
-                            <th>Cliente</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($tickets as $ticket)
-                            <tr>
-                                <td>{{ $ticket->codigo }}</td>
-                                <td>{{ $ticket->asunto }}</td>
-                                <td>{{ $ticket->cliente->nombre_completo ?? '-' }}</td>
-                                <td>
-                                    @php
-                                        $stateMap = config('adminlte.ticket_states');
-                                        $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
-                                    @endphp
-                                    <span class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>

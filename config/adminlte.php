@@ -14,22 +14,22 @@ return [
         ],
         [
             'label' => 'Clientes',
-            'route' => 'dashboard',
+            'route' => 'clientes.index',
             'icon' => 'fas fa-users',
         ],
         [
             'label' => 'Empleados',
-            'route' => 'dashboard',
+            'route' => 'empleados.index',
             'icon' => 'fas fa-user-tie',
         ],
         [
             'label' => 'Departamentos',
-            'route' => 'dashboard',
+            'route' => 'departamentos.index',
             'icon' => 'fas fa-building',
         ],
         [
             'label' => 'Tickets',
-            'route' => 'dashboard',
+            'route' => 'tickets.index',
             'icon' => 'fas fa-ticket-alt',
             'badge_type' => 'warning',
             'badge_key' => 'pendientes',

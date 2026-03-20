@@ -46,6 +46,23 @@
             background: #00264d;
             color: #fff;
         }
+        .app-sidebar .sidebar-menu .nav-link {
+            border-radius: 8px;
+            margin: 0.2rem 0.5rem;
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 1.05rem;
+        }
+        .app-sidebar .sidebar-menu .nav-link:hover,
+        .app-sidebar .sidebar-menu .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.18);
+            color: #fff;
+        }
+        .app-sidebar .sidebar-menu .nav-link .nav-badge {
+            border-radius: 10px;
+            font-weight: 700;
+            min-width: 26px;
+        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">

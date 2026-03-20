@@ -17,18 +17,13 @@ class HomeController extends Controller
     public function index()
     {
         $statusConfig = config('adminlte.ticket_states', []);
-        $statusKeys = array_keys($statusConfig);
-
-        $statusCounts = Ticket::query()
-            ->selectRaw('estado, COUNT(*) as total')
-            ->groupBy('estado')
-            ->pluck('total', 'estado');
+        $statusCounts = $this->ticketStatusCounts();
 
         $chartLabels = [];
         $chartValues = [];
         $chartColors = [];
 
-        foreach ($statusKeys as $state) {
+        foreach (array_keys($statusConfig) as $state) {
             $chartLabels[] = $statusConfig[$state]['label'];
             $chartValues[] = (int) ($statusCounts[$state] ?? 0);
             $chartColors[] = $statusConfig[$state]['color'];
@@ -50,11 +45,56 @@ class HomeController extends Controller
             'chartLabels' => $chartLabels,
             'chartValues' => $chartValues,
             'chartColors' => $chartColors,
-            'clientes' => Cliente::latest()->limit(5)->get(),
-            'empleados' => Empleado::with('departamento')->latest()->limit(5)->get(),
-            'departamentos' => Departamento::latest()->limit(5)->get(),
-            'tickets' => Ticket::with(['cliente', 'empleado', 'departamento'])->latest()->limit(8)->get(),
-            'menuBadges' => ['pendientes' => (int) ($statusCounts['pendiente'] ?? 0)],
+            'menuBadges' => $this->menuBadges($statusCounts),
         ]);
+    }
+
+    public function clientes()
+    {
+        return view('clientes.index', [
+            'clientes' => Cliente::latest()->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function empleados()
+    {
+        return view('empleados.index', [
+            'empleados' => Empleado::with('departamento')->latest()->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function departamentos()
+    {
+        return view('departamentos.index', [
+            'departamentos' => Departamento::latest()->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function tickets()
+    {
+        return view('tickets.index', [
+            'tickets' => Ticket::with(['cliente', 'empleado', 'departamento'])->latest()->get(),
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    private function ticketStatusCounts()
+    {
+        return Ticket::query()
+            ->selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+    }
+
+    private function menuBadges($statusCounts = null): array
+    {
+        $counts = $statusCounts ?? $this->ticketStatusCounts();
+
+        return [
+            'pendientes' => (int) ($counts['pendiente'] ?? 0),
+        ];
     }
 }
