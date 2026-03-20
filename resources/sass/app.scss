@@ -1,0 +1,30 @@
+// Fonts
+@import '@fontsource/source-sans-3/index.css';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Font Awesome
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
+// AdminLTE
+@import 'admin-lte/dist/css/adminlte.css';
+
+// Custom styles
+:root {
+    --primary: #007bff;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --info: #17a2b8;
+    --warning: #ffc107;
+    --danger: #dc3545;
+}
+
+.login-page, .register-page {
+    background-color: #e9ecef;
+}
+
+.login-box, .register-box {
+    width: 360px;
+    margin: 7% auto;
+}
