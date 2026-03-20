@@ -55,20 +55,6 @@
             font-weight: 700;
             min-width: 26px;
         }
-        @media (min-width: 992px) {
-            .app-main,
-            .app-header,
-            .app-footer {
-                margin-left: var(--lte-sidebar-width) !important;
-            }
-        }
-        @media (max-width: 991.98px) {
-            .app-main,
-            .app-header,
-            .app-footer {
-                margin-left: 0 !important;
-            }
-        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
