@@ -11,26 +11,31 @@ return [
             'label' => 'Dashboard',
             'route' => 'dashboard',
             'icon' => 'fas fa-gauge-high',
+            'roles' => ['Administrador', 'Empleado', 'Usuario'],
         ],
         [
             'label' => 'Usuarios',
             'route' => 'usuarios.index',
             'icon' => 'fas fa-user-shield',
+            'roles' => ['Administrador'],
         ],
         [
             'label' => 'Clientes',
             'route' => 'clientes.index',
             'icon' => 'fas fa-users',
+            'roles' => ['Administrador'],
         ],
         [
             'label' => 'Empleados',
             'route' => 'empleados.index',
             'icon' => 'fas fa-user-tie',
+            'roles' => ['Administrador'],
         ],
         [
             'label' => 'Departamentos',
             'route' => 'departamentos.index',
             'icon' => 'fas fa-building',
+            'roles' => ['Administrador'],
         ],
         [
             'label' => 'Tickets',
@@ -38,6 +43,7 @@ return [
             'icon' => 'fas fa-ticket-alt',
             'badge_type' => 'warning',
             'badge_key' => 'pendientes',
+            'roles' => ['Administrador', 'Empleado', 'Usuario'],
         ],
     ],
 

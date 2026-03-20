@@ -11,19 +11,9 @@
 @section('content')
 <div class="card mb-3">
     <div class="card-body">
-        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#nuevoUsuario">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUsuarioModal">
             <i class="fas fa-plus me-1"></i> Agregar nuevo usuario
         </button>
-
-        <div class="collapse mt-3" id="nuevoUsuario">
-            <form method="POST" action="{{ route('usuarios.store') }}" class="row g-2">
-                @csrf
-                <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nombre" required></div>
-                <div class="col-md-4"><input type="email" name="email" class="form-control" placeholder="Correo" required></div>
-                <div class="col-md-3"><input type="password" name="password" class="form-control" placeholder="Contrasena" required></div>
-                <div class="col-md-1 text-end"><button type="submit" class="btn btn-success">Guardar</button></div>
-            </form>
-        </div>
     </div>
 </div>
 
@@ -36,7 +26,7 @@
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Creado</th>
-                    <th style="width:170px;">Accion</th>
+                    <th style="width:220px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +39,7 @@
                             @if(auth()->id() === $usuario->id)
                                 <span class="badge text-bg-secondary">Actual</span>
                             @else
-                                <a href="{{ route('usuarios.edit', $usuario) }}" class="btn btn-warning btn-sm me-1">Editar</a>
+                                <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ $usuario->id }}">Editar</button>
                                 <form class="d-inline" method="POST" action="{{ route('usuarios.destroy', $usuario) }}" onsubmit="return confirm('Deseas eliminar este usuario?');">
                                     @csrf
                                     @method('DELETE')
@@ -58,11 +48,88 @@
                             @endif
                         </td>
                     </tr>
+
+                    <div class="modal fade" id="editUsuarioModal{{ $usuario->id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ route('usuarios.update', $usuario) }}">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Editar usuario</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Nombre</label>
+                                                <input type="text" name="name" class="form-control" value="{{ $usuario->name }}" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Correo</label>
+                                                <input type="email" name="email" class="form-control" value="{{ $usuario->email }}" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Contrasena (opcional)</label>
+                                                <input type="password" name="password" class="form-control" autocomplete="new-password">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Confirmar contrasena</label>
+                                                <input type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 @empty
                     <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="modal fade" id="createUsuarioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('usuarios.store') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contrasena</label>
+                            <input type="password" name="password" class="form-control" required autocomplete="new-password">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirmar contrasena</label>
+                            <input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

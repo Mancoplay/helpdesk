@@ -23,7 +23,12 @@ class HomeController extends Controller
     public function index()
     {
         $statusConfig = config('adminlte.ticket_states', []);
-        $statusCounts = $this->ticketStatusCounts();
+        $ticketsBase = $this->ticketsQueryForCurrentUser();
+
+        $statusCounts = (clone $ticketsBase)
+            ->selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
 
         $chartLabels = [];
         $chartValues = [];
@@ -40,7 +45,7 @@ class HomeController extends Controller
             'total_clientes' => Cliente::count(),
             'total_empleados' => Empleado::count(),
             'total_departamentos' => Departamento::count(),
-            'total_tickets' => Ticket::count(),
+            'total_tickets' => (clone $ticketsBase)->count(),
             'pendientes' => (int) ($statusCounts['pendiente'] ?? 0),
             'en_proceso' => (int) ($statusCounts['en_proceso'] ?? 0),
             'finalizado' => (int) ($statusCounts['finalizado'] ?? 0),
@@ -52,7 +57,7 @@ class HomeController extends Controller
             'chartLabels' => $chartLabels,
             'chartValues' => $chartValues,
             'chartColors' => $chartColors,
-            'menuBadges' => $this->menuBadges($statusCounts),
+            'menuBadges' => $this->menuBadges(),
         ]);
     }
 
@@ -69,24 +74,18 @@ class HomeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
 
-        return back()->with('success', 'Usuario agregado correctamente.');
-    }
+        $user->syncRoles(['Usuario']);
 
-    public function editUsuario(User $user)
-    {
-        return view('usuarios.edit', [
-            'usuario' => $user,
-            'menuBadges' => $this->menuBadges(),
-        ]);
+        return back()->with('success', 'Usuario agregado correctamente.');
     }
 
     public function updateUsuario(Request $request, User $user): RedirectResponse
@@ -106,13 +105,13 @@ class HomeController extends Controller
 
         $user->save();
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
+        return back()->with('success', 'Usuario actualizado correctamente.');
     }
 
     public function destroyUsuario(User $user): RedirectResponse
     {
         if ((int) auth()->id() === (int) $user->id) {
-            return back()->with('success', 'No puedes eliminar tu propio usuario.');
+            return back()->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
         $user->delete();
@@ -134,40 +133,58 @@ class HomeController extends Controller
             'nombres' => ['required', 'string', 'max:100'],
             'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', 'unique:clientes,email'],
+            'email' => ['required', 'email', 'max:255', 'unique:clientes,email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'empresa' => ['nullable', 'string', 'max:120'],
         ]);
+
+        $usuario = User::create([
+            'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+        $usuario->syncRoles(['Usuario']);
 
         Cliente::create($validated + ['activo' => true]);
 
         return back()->with('success', 'Cliente agregado correctamente.');
     }
 
-    public function editCliente(Cliente $cliente)
-    {
-        return view('clientes.edit', [
-            'cliente' => $cliente,
-            'menuBadges' => $this->menuBadges(),
-        ]);
-    }
-
     public function updateCliente(Request $request, Cliente $cliente): RedirectResponse
     {
+        $linkedUser = User::where('email', $cliente->email)->first();
+
         $validated = $request->validate([
             'nombres' => ['required', 'string', 'max:100'],
             'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('clientes', 'email')->ignore($cliente->id)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('clientes', 'email')->ignore($cliente->id), Rule::unique('users', 'email')->ignore($linkedUser?->id)],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'empresa' => ['nullable', 'string', 'max:120'],
         ]);
 
+        if ($linkedUser) {
+            $linkedUser->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+            $linkedUser->email = $validated['email'];
+            $linkedUser->password = Hash::make($validated['password']);
+            $linkedUser->save();
+            $linkedUser->syncRoles(['Usuario']);
+        } else {
+            $newUser = User::create([
+                'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
+            $newUser->syncRoles(['Usuario']);
+        }
+
         $cliente->update($validated);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente actualizado correctamente.');
+        return back()->with('success', 'Cliente actualizado correctamente.');
     }
 
     public function destroyCliente(Cliente $cliente): RedirectResponse
@@ -196,25 +213,35 @@ class HomeController extends Controller
             'nombres' => ['required', 'string', 'max:100'],
             'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', 'unique:empleados,email'],
+            'email' => ['required', 'email', 'max:255', 'unique:empleados,email', 'unique:users,email'],
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
             'departamento_id' => ['required', 'exists:departamentos,id'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        Empleado::create($validated + ['activo' => true]);
+        $user = User::create([
+            'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+        $user->syncRoles(['Empleado']);
+
+        Empleado::create([
+            'user_id' => $user->id,
+            'departamento_id' => $validated['departamento_id'],
+            'nombres' => $validated['nombres'],
+            'segundo_nombre' => $validated['segundo_nombre'] ?? null,
+            'apellidos' => $validated['apellidos'],
+            'email' => $validated['email'],
+            'telefono' => $validated['telefono'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'cargo' => $validated['cargo'] ?? null,
+            'activo' => true,
+        ]);
 
         return back()->with('success', 'Empleado agregado correctamente.');
-    }
-
-    public function editEmpleado(Empleado $empleado)
-    {
-        return view('empleados.edit', [
-            'empleado' => $empleado,
-            'departamentos' => Departamento::orderBy('nombre')->get(),
-            'menuBadges' => $this->menuBadges(),
-        ]);
     }
 
     public function updateEmpleado(Request $request, Empleado $empleado): RedirectResponse
@@ -228,17 +255,45 @@ class HomeController extends Controller
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
             'departamento_id' => ['required', 'exists:departamentos,id'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $empleado->update($validated);
+        $empleado->update([
+            'departamento_id' => $validated['departamento_id'],
+            'nombres' => $validated['nombres'],
+            'segundo_nombre' => $validated['segundo_nombre'] ?? null,
+            'apellidos' => $validated['apellidos'],
+            'email' => $validated['email'],
+            'telefono' => $validated['telefono'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'cargo' => $validated['cargo'] ?? null,
+        ]);
 
-        return redirect()->route('empleados.index')->with('success', 'Empleado actualizado correctamente.');
+        if ($empleado->user_id) {
+            $user = User::find($empleado->user_id);
+            if ($user) {
+                $user->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+                $user->email = $validated['email'];
+                if (!empty($validated['password'])) {
+                    $user->password = Hash::make($validated['password']);
+                }
+                $user->save();
+                $user->syncRoles(['Empleado']);
+            }
+        }
+
+        return back()->with('success', 'Empleado actualizado correctamente.');
     }
 
     public function destroyEmpleado(Empleado $empleado): RedirectResponse
     {
         try {
+            $userId = $empleado->user_id;
             $empleado->delete();
+
+            if ($userId) {
+                User::whereKey($userId)->delete();
+            }
         } catch (QueryException $exception) {
             return back()->with('error', 'No se puede eliminar el empleado porque tiene registros relacionados.');
         }
@@ -271,14 +326,6 @@ class HomeController extends Controller
         return back()->with('success', 'Departamento agregado correctamente.');
     }
 
-    public function editDepartamento(Departamento $departamento)
-    {
-        return view('departamentos.edit', [
-            'departamento' => $departamento,
-            'menuBadges' => $this->menuBadges(),
-        ]);
-    }
-
     public function updateDepartamento(Request $request, Departamento $departamento): RedirectResponse
     {
         $validated = $request->validate([
@@ -293,7 +340,7 @@ class HomeController extends Controller
             'activo' => (bool) ($validated['activo'] ?? false),
         ]);
 
-        return redirect()->route('departamentos.index')->with('success', 'Departamento actualizado correctamente.');
+        return back()->with('success', 'Departamento actualizado correctamente.');
     }
 
     public function destroyDepartamento(Departamento $departamento): RedirectResponse
@@ -309,8 +356,13 @@ class HomeController extends Controller
 
     public function tickets()
     {
+        $tickets = $this->ticketsQueryForCurrentUser()
+            ->with(['cliente', 'empleado', 'departamento'])
+            ->latest()
+            ->get();
+
         return view('tickets.index', [
-            'tickets' => Ticket::with(['cliente', 'empleado', 'departamento'])->latest()->get(),
+            'tickets' => $tickets,
             'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
             'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
@@ -322,7 +374,7 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
-            'cliente_id' => ['required', 'exists:clientes,id'],
+            'cliente_id' => ['nullable', 'exists:clientes,id'],
             'empleado_id' => ['nullable', 'exists:empleados,id'],
             'departamento_id' => ['required', 'exists:departamentos,id'],
             'asunto' => ['required', 'string', 'max:180'],
@@ -330,6 +382,19 @@ class HomeController extends Controller
             'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
             'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
+
+        if (auth()->user()->hasRole('Usuario')) {
+            $cliente = Cliente::where('email', auth()->user()->email)->first();
+            if (!$cliente) {
+                $cliente = Cliente::create([
+                    'nombres' => auth()->user()->name,
+                    'apellidos' => '',
+                    'email' => auth()->user()->email,
+                    'activo' => true,
+                ]);
+            }
+            $validated['cliente_id'] = $cliente->id;
+        }
 
         if (empty($validated['codigo'])) {
             $validated['codigo'] = $this->nextTicketCode();
@@ -340,15 +405,20 @@ class HomeController extends Controller
         return back()->with('success', 'Ticket agregado correctamente.');
     }
 
-    public function editTicket(Ticket $ticket)
+    public function attendTicket(Ticket $ticket): RedirectResponse
     {
-        return view('tickets.edit', [
-            'ticket' => $ticket,
-            'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
-            'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
-            'departamentos' => Departamento::orderBy('nombre')->get(),
-            'menuBadges' => $this->menuBadges(),
-        ]);
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        if ($employee) {
+            $ticket->empleado_id = $employee->id;
+        }
+
+        $ticket->estado = 'en_proceso';
+        $ticket->save();
+
+        return back()->with('success', 'Ticket atendido correctamente.');
     }
 
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
@@ -366,7 +436,7 @@ class HomeController extends Controller
 
         $ticket->update($validated);
 
-        return redirect()->route('tickets.index')->with('success', 'Ticket actualizado correctamente.');
+        return back()->with('success', 'Ticket actualizado correctamente.');
     }
 
     public function destroyTicket(Ticket $ticket): RedirectResponse
@@ -374,6 +444,36 @@ class HomeController extends Controller
         $ticket->delete();
 
         return back()->with('success', 'Ticket eliminado correctamente.');
+    }
+
+    private function ticketsQueryForCurrentUser()
+    {
+        $query = Ticket::query();
+
+        if (auth()->check() && auth()->user()->hasRole('Usuario')) {
+            $query->whereHas('cliente', function ($q): void {
+                $q->where('email', auth()->user()->email);
+            });
+        }
+
+        if (auth()->check() && auth()->user()->hasRole('Empleado')) {
+            $employee = Empleado::where('user_id', auth()->id())
+                ->orWhere('email', auth()->user()->email)
+                ->first();
+
+            if ($employee) {
+                $query->where(function ($q) use ($employee): void {
+                    $q->where('empleado_id', $employee->id)
+                      ->orWhere(function ($q2): void {
+                          $q2->whereNull('empleado_id')->where('estado', 'pendiente');
+                      });
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        return $query;
     }
 
     private function ticketStatusCounts()

@@ -9,61 +9,37 @@
 @endsection
 
 @section('content')
-<div class="card mb-3">
-    <div class="card-body">
-        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#nuevoDepartamento">
-            <i class="fas fa-plus me-1"></i> Agregar nuevo departamento
-        </button>
-
-        <div class="collapse mt-3" id="nuevoDepartamento">
-            <form method="POST" action="{{ route('departamentos.store') }}" class="row g-2">
-                @csrf
-                <div class="col-md-4"><input type="text" name="nombre" class="form-control" placeholder="Nombre" required></div>
-                <div class="col-md-6"><input type="text" name="descripcion" class="form-control" placeholder="Descripcion"></div>
-                <div class="col-md-2 text-end"><button type="submit" class="btn btn-success">Guardar</button></div>
-            </form>
-        </div>
-    </div>
-</div>
+<div class="card mb-3"><div class="card-body"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDepartamentoModal"><i class="fas fa-plus me-1"></i> Agregar nuevo departamento</button></div></div>
 
 <div class="card">
     <div class="card-header"><h3 class="card-title mb-0">Tabla de Departamentos</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Descripcion</th>
-                    <th>Activo</th>
-                    <th style="width:170px;">Accion</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Nombre</th><th>Descripcion</th><th>Activo</th><th style="width:220px;">Accion</th></tr></thead>
             <tbody>
-                @forelse($departamentos as $departamento)
-                    <tr>
-                        <td>{{ $departamento->nombre }}</td>
-                        <td>{{ $departamento->descripcion ?? '-' }}</td>
-                        <td>
-                            <span class="badge text-bg-{{ $departamento->activo ? 'success' : 'secondary' }}">
-                                {{ $departamento->activo ? 'Si' : 'No' }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{{ route('departamentos.edit', $departamento) }}" class="btn btn-warning btn-sm me-1">Editar</a>
-                            <form class="d-inline" method="POST" action="{{ route('departamentos.destroy', $departamento) }}" onsubmit="return confirm('Deseas eliminar este departamento?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
-                @endforelse
+            @forelse($departamentos as $departamento)
+                <tr>
+                    <td>{{ $departamento->nombre }}</td>
+                    <td>{{ $departamento->descripcion ?? '-' }}</td>
+                    <td><span class="badge text-bg-{{ $departamento->activo ? 'success' : 'secondary' }}">{{ $departamento->activo ? 'Si' : 'No' }}</span></td>
+                    <td>
+                        <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editDepartamentoModal{{ $departamento->id }}">Editar</button>
+                        <form class="d-inline" method="POST" action="{{ route('departamentos.destroy', $departamento) }}" onsubmit="return confirm('Deseas eliminar este departamento?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <div class="modal fade" id="editDepartamentoModal{{ $departamento->id }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.update', $departamento) }}">@csrf @method('PUT')<div class="modal-header"><h5 class="modal-title">Editar departamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" value="{{ $departamento->nombre }}" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control" value="{{ $departamento->descripcion }}"></div><div class="col-md-6"><label class="form-label">Activo</label><select name="activo" class="form-select"><option value="1" @selected($departamento->activo)>Si</option><option value="0" @selected(!$departamento->activo)>No</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
+            @empty
+                <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
+            @endforelse
             </tbody>
         </table>
     </div>
 </div>
+
+<div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo departamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
 @endsection
-
-

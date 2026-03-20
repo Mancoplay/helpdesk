@@ -106,6 +106,11 @@
                         <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
                             @foreach($menuItems as $item)
                                 @php
+                                    $allowedRoles = $item['roles'] ?? [];
+                                    if (!empty($allowedRoles) && !auth()->user()->hasAnyRole($allowedRoles)) {
+                                        continue;
+                                    }
+
                                     $routeName = $item['route'] ?? 'dashboard';
                                     $active = request()->routeIs($routeName) ? 'active' : '';
                                     $badgeCount = null;

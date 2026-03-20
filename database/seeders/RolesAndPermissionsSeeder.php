@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -13,38 +13,37 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Crear permisos básicos
         $permissions = [
             'ver dashboard',
-            'ver usuarios',
-            'crear usuarios',
-            'editar usuarios',
-            'eliminar usuarios',
-            'ver roles',
-            'asignar roles',
+            'ver tickets',
+            'crear tickets',
+            'atender tickets',
+            'gestionar usuarios',
+            'gestionar clientes',
+            'gestionar empleados',
+            'gestionar departamentos',
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Crear roles
-        $admin = Role::create(['name' => 'Administrador']);
-        $empleado = Role::create(['name' => 'Empleado']);
-        $usuario = Role::create(['name' => 'Usuario']); // Clientes
+        $admin = Role::firstOrCreate(['name' => 'Administrador']);
+        $empleado = Role::firstOrCreate(['name' => 'Empleado']);
+        $usuario = Role::firstOrCreate(['name' => 'Usuario']);
 
-        // Asignar permisos a Admin (todos)
-        $admin->givePermissionTo(Permission::all());
+        $admin->syncPermissions(Permission::all());
 
-        // Asignar permisos a Empleado
-        $empleado->givePermissionTo([
+        $usuario->syncPermissions([
             'ver dashboard',
-            'ver usuarios',
+            'ver tickets',
+            'crear tickets',
         ]);
 
-        // Asignar permisos a Usuario (solo ver dashboard)
-        $usuario->givePermissionTo([
+        $empleado->syncPermissions([
             'ver dashboard',
+            'ver tickets',
+            'atender tickets',
         ]);
     }
 }
