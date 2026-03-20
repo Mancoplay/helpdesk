@@ -11,6 +11,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
@@ -361,12 +362,43 @@ class HomeController extends Controller
             ->latest()
             ->get();
 
+        $currentEmployee = null;
+        if (auth()->user()->hasRole('Empleado')) {
+            $currentEmployee = Empleado::where('user_id', auth()->id())
+                ->orWhere('email', auth()->user()->email)
+                ->first();
+        }
+
         return view('tickets.index', [
             'tickets' => $tickets,
             'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
             'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
+            'currentEmployeeId' => $currentEmployee?->id,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function showTicket(Ticket $ticket)
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        $ticket->load(['cliente', 'empleado', 'departamento']);
+        $messages = $ticket->mensajes()
+            ->with('user')
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->sortBy('created_at')
+            ->values();
+
+        return view('tickets.show', [
+            'ticket' => $ticket,
+            'messages' => $messages,
+            'departamentos' => Departamento::orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -411,13 +443,23 @@ class HomeController extends Controller
             $validated['codigo'] = $this->nextTicketCode();
         }
 
-        Ticket::create($validated);
+        $ticket = Ticket::create($validated);
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => $validated['descripcion'],
+            'tipo' => 'creacion',
+        ]);
 
         return back()->with('success', 'Ticket agregado correctamente.');
     }
 
     public function attendTicket(Ticket $ticket): RedirectResponse
     {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
         $employee = Empleado::where('user_id', auth()->id())
             ->orWhere('email', auth()->user()->email)
             ->first();
@@ -429,7 +471,49 @@ class HomeController extends Controller
         $ticket->estado = 'en_proceso';
         $ticket->save();
 
-        return back()->with('success', 'Ticket atendido correctamente.');
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
+            'tipo' => 'atencion',
+        ]);
+
+        return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
+    }
+
+    public function storeTicketMessage(Request $request, Ticket $ticket): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'mensaje' => ['nullable', 'string', 'max:3000'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        if (empty($validated['mensaje']) && !$request->hasFile('imagen')) {
+            return back()->with('error', 'Debes escribir un mensaje o subir una imagen.');
+        }
+
+        $payload = [
+            'user_id' => auth()->id(),
+            'mensaje' => $validated['mensaje'] ?? '',
+            'tipo' => 'comentario',
+        ];
+
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+            $path = $file->store('ticket-mensajes', 'public');
+
+            $payload['imagen_path'] = $path;
+            $payload['imagen_nombre'] = $file->getClientOriginalName();
+            $payload['imagen_mime'] = $file->getClientMimeType();
+            $payload['imagen_size'] = $file->getSize();
+        }
+
+        $ticket->mensajes()->create($payload);
+
+        return back()->with('success', 'Mensaje enviado correctamente.');
     }
 
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
@@ -452,6 +536,16 @@ class HomeController extends Controller
 
     public function destroyTicket(Ticket $ticket): RedirectResponse
     {
+        if (!$this->canDeleteTicket($ticket)) {
+            abort(403);
+        }
+
+        foreach ($ticket->mensajes as $mensaje) {
+            if ($mensaje->imagen_path) {
+                Storage::disk('public')->delete($mensaje->imagen_path);
+            }
+        }
+
         $ticket->delete();
 
         return back()->with('success', 'Ticket eliminado correctamente.');
@@ -509,5 +603,37 @@ class HomeController extends Controller
         $lastId = (int) Ticket::max('id');
 
         return 'TCK-' . str_pad((string) ($lastId + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    private function canAccessTicket(Ticket $ticket): bool
+    {
+        if (auth()->user()->hasRole('Administrador')) {
+            return true;
+        }
+
+        return $this->ticketsQueryForCurrentUser()
+            ->whereKey($ticket->id)
+            ->exists();
+    }
+
+    private function canDeleteTicket(Ticket $ticket): bool
+    {
+        if (auth()->user()->hasRole('Administrador')) {
+            return true;
+        }
+
+        if (auth()->user()->hasRole('Empleado')) {
+            $employee = Empleado::where('user_id', auth()->id())
+                ->orWhere('email', auth()->user()->email)
+                ->first();
+
+            if (!$employee) {
+                return false;
+            }
+
+            return (int) $ticket->empleado_id === (int) $employee->id;
+        }
+
+        return false;
     }
 }

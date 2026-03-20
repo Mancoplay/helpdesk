@@ -32,6 +32,8 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 
 Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::get('/tickets', [HomeController::class, 'tickets'])->name('tickets.index');
+    Route::get('/tickets/{ticket}', [HomeController::class, 'showTicket'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])->name('tickets.messages.store');
 });
 
 Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
@@ -44,6 +46,9 @@ Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::put('/tickets/{ticket}', [HomeController::class, 'updateTicket'])->name('tickets.update');
+});
+
+Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
 });
 

@@ -10,7 +10,7 @@ new #[Title('Dashboard - Help Desk')] class extends Component {
     {
         return view('livewire.dashboard');
     }
-};
+
 
 ?>
 
