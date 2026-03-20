@@ -11,16 +11,8 @@
     @livewireStyles
 
     <style>
-        .topbar-system {
-            background: #e53935;
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-        .topbar-system .system-title {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        :root {
+            --lte-sidebar-width: 280px;
         }
         .dashboard-stat .icon {
             width: 45px;
@@ -63,6 +55,20 @@
             font-weight: 700;
             min-width: 26px;
         }
+        @media (min-width: 992px) {
+            .app-main,
+            .app-header,
+            .app-footer {
+                margin-left: var(--lte-sidebar-width) !important;
+            }
+        }
+        @media (max-width: 991.98px) {
+            .app-main,
+            .app-header,
+            .app-footer {
+                margin-left: 0 !important;
+            }
+        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
@@ -71,23 +77,19 @@
         $menuBadges = $menuBadges ?? [];
     @endphp
 
-    <div class="app-wrapper">
-        <nav class="app-header navbar navbar-expand bg-dark navbar-dark py-1">
-            <div class="container-fluid">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
-                            <i class="fas fa-bars"></i>
-                        </a>
-                    </li>
-                    <li class="nav-item d-none d-md-inline-flex align-items-center text-white-50 fw-semibold">
-                        <i class="fas fa-circle text-primary me-2"></i>
-                        {{ config('adminlte.logo_text') }}
-                    </li>
-                </ul>
+    @auth
+        <div class="app-wrapper">
+            <nav class="app-header navbar navbar-expand bg-dark navbar-dark py-1">
+                <div class="container-fluid">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                                <i class="fas fa-bars"></i>
+                            </a>
+                        </li>
+                    </ul>
 
-                <ul class="navbar-nav ms-auto">
-                    @auth
+                    <ul class="navbar-nav ms-auto">
                         <li class="nav-item dropdown">
                             <a class="nav-link" data-bs-toggle="dropdown" href="#" role="button">
                                 <i class="fas fa-user"></i>
@@ -102,24 +104,10 @@
                                 </form>
                             </div>
                         </li>
-                    @else
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('login') }}">
-                                <i class="fas fa-sign-in-alt"></i>
-                                <span class="ms-2">Iniciar sesion</span>
-                            </a>
-                        </li>
-                    @endauth
-                </ul>
-            </div>
-        </nav>
+                    </ul>
+                </div>
+            </nav>
 
-        <div class="topbar-system py-2 px-3 d-flex align-items-center">
-            <i class="fas fa-server me-2"></i>
-            <span class="system-title">{{ config('adminlte.topbar_title') }}</span>
-        </div>
-
-        @auth
             <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
                 <div class="sidebar-brand">
                     <a href="{{ route('dashboard') }}" class="brand-link">
@@ -156,38 +144,62 @@
                     </nav>
                 </div>
             </aside>
-        @endauth
 
-        <main class="app-main">
-            <div class="app-content-header">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-sm-6">
-                            <h3 class="mb-0">@yield('header', 'Dashboard')</h3>
-                        </div>
-                        <div class="col-sm-6">
-                            <ol class="breadcrumb float-sm-end">
-                                @yield('breadcrumb')
-                            </ol>
+            <main class="app-main">
+                <div class="app-content-header">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <h3 class="mb-0">@yield('header', 'Dashboard')</h3>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-end">
+                                    @yield('breadcrumb')
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="app-content">
-                <div class="container-fluid">
-                    @yield('content')
-                    {{ $slot ?? '' }}
+                <div class="app-content">
+                    <div class="container-fluid">
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                {{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+                        @if(session('error'))
+                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+                        @if($errors->any())
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <strong>Revisa los campos del formulario.</strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+
+                        @yield('content')
+                        {{ $slot ?? '' }}
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
 
-        <footer class="app-footer">
-            <div class="float-end d-none d-sm-inline">Version 1.0</div>
-            <strong>Copyright {{ date('Y') }} {{ config('adminlte.app_name') }}</strong>
-            {{ config('adminlte.footer_text') }}.
-        </footer>
-    </div>
+            <footer class="app-footer">
+                <div class="float-end d-none d-sm-inline">Version 1.0</div>
+                <strong>Copyright {{ date('Y') }} {{ config('adminlte.app_name') }}</strong>
+                {{ config('adminlte.footer_text') }}.
+            </footer>
+        </div>
+    @else
+        <div class="login-page bg-body-secondary" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+            @yield('content')
+            {{ $slot ?? '' }}
+        </div>
+    @endauth
 
     @livewireScripts
     @stack('scripts')

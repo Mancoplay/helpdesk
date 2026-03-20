@@ -13,6 +13,11 @@ return [
             'icon' => 'fas fa-gauge-high',
         ],
         [
+            'label' => 'Usuarios',
+            'route' => 'usuarios.index',
+            'icon' => 'fas fa-user-shield',
+        ],
+        [
             'label' => 'Clientes',
             'route' => 'clientes.index',
             'icon' => 'fas fa-users',
