@@ -366,6 +366,7 @@ class HomeController extends Controller
             'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
             'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
+            'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -374,26 +375,36 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
-            'cliente_id' => ['nullable', 'exists:clientes,id'],
-            'empleado_id' => ['nullable', 'exists:empleados,id'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
             'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
             'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
 
-        if (auth()->user()->hasRole('Usuario')) {
-            $cliente = Cliente::where('email', auth()->user()->email)->first();
-            if (!$cliente) {
-                $cliente = Cliente::create([
-                    'nombres' => auth()->user()->name,
-                    'apellidos' => '',
-                    'email' => auth()->user()->email,
-                    'activo' => true,
-                ]);
+        $currentUser = auth()->user();
+        $cliente = Cliente::where('email', $currentUser->email)->first();
+
+        if (!$cliente) {
+            $cliente = Cliente::create([
+                'nombres' => $currentUser->name,
+                'apellidos' => '',
+                'email' => $currentUser->email,
+                'activo' => true,
+            ]);
+        }
+
+        $validated['cliente_id'] = $cliente->id;
+        $validated['empleado_id'] = null;
+
+        if ($currentUser->hasRole('Empleado')) {
+            $empleado = Empleado::where('user_id', $currentUser->id)
+                ->orWhere('email', $currentUser->email)
+                ->first();
+
+            if ($empleado) {
+                $validated['empleado_id'] = $empleado->id;
             }
-            $validated['cliente_id'] = $cliente->id;
         }
 
         if (empty($validated['codigo'])) {

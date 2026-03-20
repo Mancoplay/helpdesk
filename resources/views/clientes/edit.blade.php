@@ -48,7 +48,7 @@
 
                     <label class="form-label mt-2">Confirmar Contrasena</label>
                     <input type="password" class="form-control" placeholder="Opcional" disabled>
-                    <small class="text-muted">La contrasena se gestiona desde Usuarios.</small>
+                    <small class="text-muted">La contrasena se gestiona desde el formulario de cliente.</small>
                 </div>
             </div>
 

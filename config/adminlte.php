@@ -14,12 +14,6 @@ return [
             'roles' => ['Administrador', 'Empleado', 'Usuario'],
         ],
         [
-            'label' => 'Usuarios',
-            'route' => 'usuarios.index',
-            'icon' => 'fas fa-user-shield',
-            'roles' => ['Administrador'],
-        ],
-        [
             'label' => 'Clientes',
             'route' => 'clientes.index',
             'icon' => 'fas fa-users',

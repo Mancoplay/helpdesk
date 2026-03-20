@@ -46,7 +46,7 @@
     <div class="col-lg-3 col-md-6">
         <div class="card dashboard-stat h-100">
             <div class="card-body d-flex align-items-center">
-                <div class="icon bg-navy"><i class="fas fa-ticket-alt"></i></div>
+                <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
                 <div>
                     <div class="label">Total Tickets</div>
                     <p class="value">{{ $stats['total_tickets'] }}</p>
