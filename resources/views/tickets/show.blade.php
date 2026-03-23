@@ -11,7 +11,7 @@
 
 @section('content')
 <div class="row g-3">
-    <div class="col-lg-8">
+    <div class="col-lg-5">
         <div class="card border-success">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0">Ticket</h3>
@@ -76,7 +76,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-lg-7">
         <div class="card border-primary">
             <div class="card-header">
                 <h3 class="card-title mb-0">Comunicacion</h3>

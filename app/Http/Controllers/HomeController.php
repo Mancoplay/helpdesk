@@ -8,6 +8,7 @@ use App\Models\Empleado;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -441,6 +442,7 @@ class HomeController extends Controller
             'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
+            'nextTicketCode' => $this->nextTicketCode(),
             'currentEmployeeId' => $currentEmployee?->id,
             'menuBadges' => $this->menuBadges(),
         ]);
@@ -472,7 +474,7 @@ class HomeController extends Controller
     public function storeTicket(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
+            'codigo' => ['nullable', 'string', 'max:25'],
             'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
@@ -504,14 +506,27 @@ class HomeController extends Controller
             }
         }
 
-        if (empty($validated['codigo'])) {
-            $validated['codigo'] = $this->nextTicketCode();
-        }
-
         $validated['estado'] = 'pendiente';
         $validated['fecha_cierre'] = null;
+        $validated['codigo'] = $this->nextAvailableTicketCode($validated['codigo'] ?? null);
 
-        $ticket = Ticket::create($validated);
+        $ticket = null;
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            try {
+                $ticket = Ticket::create($validated);
+                break;
+            } catch (QueryException $exception) {
+                if (!$this->isDuplicateTicketCodeException($exception)) {
+                    throw $exception;
+                }
+
+                $validated['codigo'] = $this->nextAvailableTicketCode($validated['codigo']);
+            }
+        }
+
+        if (!$ticket) {
+            return back()->with('error', 'No se pudo generar un codigo de ticket unico. Intenta nuevamente.');
+        }
 
         $ticket->mensajes()->create([
             'user_id' => auth()->id(),
@@ -520,6 +535,13 @@ class HomeController extends Controller
         ]);
 
         return back()->with('success', 'Ticket agregado correctamente.');
+    }
+
+    public function nextTicketCodeJson(): JsonResponse
+    {
+        return response()->json([
+            'codigo' => $this->nextTicketCode(),
+        ]);
     }
 
     public function attendTicket(Ticket $ticket): RedirectResponse
@@ -716,9 +738,54 @@ class HomeController extends Controller
 
     private function nextTicketCode(): string
     {
-        $lastId = (int) Ticket::max('id');
+        $maxNumber = (int) Ticket::withTrashed()
+            ->where('codigo', 'like', 'TCK-%')
+            ->selectRaw('MAX(CAST(SUBSTRING(codigo, 5) AS UNSIGNED)) as max_code')
+            ->value('max_code');
 
-        return 'TCK-' . str_pad((string) ($lastId + 1), 4, '0', STR_PAD_LEFT);
+        $nextNumber = max(1, $maxNumber + 1);
+
+        return 'TCK-' . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function nextAvailableTicketCode(?string $requestedCode): string
+    {
+        $candidate = trim((string) $requestedCode);
+        if ($candidate === '') {
+            $candidate = $this->nextTicketCode();
+        }
+
+        while (Ticket::withTrashed()->where('codigo', $candidate)->exists()) {
+            $candidate = $this->incrementTicketCode($candidate);
+        }
+
+        return $candidate;
+    }
+
+    private function incrementTicketCode(string $currentCode): string
+    {
+        if (!preg_match('/^TCK-(\d+)$/', $currentCode, $matches)) {
+            return $this->nextTicketCode();
+        }
+
+        $nextNumber = (int) $matches[1] + 1;
+
+        return 'TCK-' . str_pad((string) $nextNumber, max(strlen($matches[1]), 4), '0', STR_PAD_LEFT);
+    }
+
+    private function isDuplicateTicketCodeException(QueryException $exception): bool
+    {
+        $errorInfo = $exception->errorInfo;
+        $sqlState = (string) ($errorInfo[0] ?? '');
+        $driverCode = (int) ($errorInfo[1] ?? 0);
+        $message = strtolower((string) ($errorInfo[2] ?? $exception->getMessage()));
+
+        return ($sqlState === '23000' && $driverCode === 1062)
+            || str_contains($message, 'duplicate')
+            || str_contains($message, 'duplic')
+            || str_contains($message, 'unique')
+            || str_contains($message, 'tickets_codigo_unique')
+            || str_contains($message, 'tickets.codigo');
     }
 
     private function canAccessTicket(Ticket $ticket): bool

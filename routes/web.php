@@ -9,6 +9,7 @@ Route::get('/', function () {
 })->name('home');
 
 Auth::routes(['verify' => true]);
+Route::pattern('ticket', '[0-9]+');
 
 Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
 
 Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
     Route::post('/tickets', [HomeController::class, 'storeTicket'])->name('tickets.store');
+    Route::get('/tickets/next-code', [HomeController::class, 'nextTicketCodeJson'])->name('tickets.next-code');
 });
 
 Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
