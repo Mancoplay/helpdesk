@@ -83,6 +83,9 @@
             </div>
             <div class="card-body">
                 <div class="border rounded p-2 mb-3" style="max-height: 360px; overflow-y: auto;">
+                    @php
+                        $chatTimezone = config('app.timezone', 'America/La_Paz');
+                    @endphp
                     @forelse($messages as $mensaje)
                         @php
                             $tipoBadge = match($mensaje->tipo) {
@@ -97,7 +100,9 @@
                                     <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
                                     <span class="badge text-bg-{{ $tipoBadge }}">{{ $mensaje->tipo }}</span>
                                 </div>
-                                <small class="text-muted">{{ $mensaje->created_at?->format('d/m/Y H:i') }}</small>
+                                <small class="text-muted">
+                                    {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }} (UTC-04)
+                                </small>
                             </div>
                             @if(!empty($mensaje->mensaje))
                                 <p class="mb-1">{{ $mensaje->mensaje }}</p>
