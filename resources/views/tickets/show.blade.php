@@ -51,7 +51,7 @@
             @can('atender tickets')
                 @if($ticket->estado === 'pendiente')
                     <div class="card-footer">
-                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('¿Estás seguro de que quieres atender este ticket? El estado cambiará a \"En proceso\" y se asignará a ti.');">
+                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a "En proceso" y se asignara a ti.');">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-info">Atender ticket</button>
@@ -118,7 +118,15 @@
                     @endforelse
                 </div>
 
-                @if($ticket->estado === 'finalizado')
+                @php
+                    $mustAttendFirst = auth()->user()->hasRole('Empleado') && $ticket->estado === 'pendiente';
+                @endphp
+
+                @if($mustAttendFirst)
+                    <div class="alert alert-warning mb-0">
+                        Este ticket aun no esta siendo atendido. Presiona <strong>Atender ticket</strong> para habilitar el chat y la carga de imagenes.
+                    </div>
+                @elseif($ticket->estado === 'finalizado')
                     <div class="alert alert-secondary mb-0">
                         Ticket finalizado. El chat esta bloqueado y ya no se permiten comentarios.
                     </div>

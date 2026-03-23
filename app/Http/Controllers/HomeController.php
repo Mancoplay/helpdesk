@@ -554,6 +554,10 @@ class HomeController extends Controller
             abort(403);
         }
 
+        if (auth()->user()->hasRole('Empleado') && $ticket->estado === 'pendiente') {
+            return back()->with('error', 'Debes atender el ticket antes de enviar mensajes o imagenes.');
+        }
+
         if ($ticket->estado === 'finalizado') {
             return back()->with('error', 'Este ticket ya fue finalizado y no admite mas comentarios.');
         }
