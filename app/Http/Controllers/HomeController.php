@@ -452,8 +452,6 @@ class HomeController extends Controller
             abort(403);
         }
 
-        $this->markTicketInProgressWhenEmployeeEnters($ticket);
-
         $ticket->load(['cliente', 'empleado', 'departamento']);
         $messages = $ticket->mensajes()
             ->with('user')
@@ -773,34 +771,4 @@ class HomeController extends Controller
             && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
     }
 
-    private function markTicketInProgressWhenEmployeeEnters(Ticket $ticket): void
-    {
-        if (!auth()->user()->hasRole('Empleado') || $ticket->estado !== 'pendiente') {
-            return;
-        }
-
-        $employee = Empleado::where('user_id', auth()->id())
-            ->orWhere('email', auth()->user()->email)
-            ->first();
-
-        if (!$employee) {
-            return;
-        }
-
-        $shouldUpdate = is_null($ticket->empleado_id) || (int) $ticket->empleado_id === (int) $employee->id;
-
-        if (!$shouldUpdate) {
-            return;
-        }
-
-        $ticket->empleado_id = $employee->id;
-        $ticket->estado = 'en_proceso';
-        $ticket->save();
-
-        $ticket->mensajes()->create([
-            'user_id' => auth()->id(),
-            'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
-            'tipo' => 'atencion',
-        ]);
-    }
 }
