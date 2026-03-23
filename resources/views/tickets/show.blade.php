@@ -11,7 +11,7 @@
 
 @section('content')
 <div class="row g-3">
-    <div class="col-lg-8">
+    <div class="col-lg-6">
         <div class="card border-success">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0">Ticket</h3>
@@ -76,13 +76,13 @@
         </div>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-lg-6">
         <div class="card border-primary">
             <div class="card-header">
                 <h3 class="card-title mb-0">Comunicacion</h3>
             </div>
             <div class="card-body">
-                <div class="border rounded p-2 mb-3" style="max-height: 360px; overflow-y: auto;">
+                <div class="border rounded p-2 mb-3" style="max-height: 500px; overflow-y: auto;">
                     @forelse($messages as $mensaje)
                         @php
                             $tipoBadge = match($mensaje->tipo) {
@@ -97,7 +97,7 @@
                                     <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
                                     <span class="badge text-bg-{{ $tipoBadge }}">{{ $mensaje->tipo }}</span>
                                 </div>
-                                <small class="text-muted">{{ $mensaje->created_at?->format('d/m/Y H:i') }}</small>
+                                <small class="text-muted">{{ $mensaje->created_at?->setTimezone(config('app.timezone'))->format('d/m/Y H:i') }}</small>
                             </div>
                             @if(!empty($mensaje->mensaje))
                                 <p class="mb-1">{{ $mensaje->mensaje }}</p>
@@ -131,9 +131,26 @@
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Adjuntar imagen (opcional)</label>
-                            <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
+                            <input type="file" name="imagen" class="form-control chat-file-input" accept=".jpg,.jpeg,.png,.webp,image/*">
                             <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
                         </div>
+                        <style scoped>
+                            .chat-file-input {
+                                color: #6c757d;
+                                border-color: #ced4da;
+                                background-color: #f8f9fa;
+                            }
+                            .chat-file-input::-webkit-file-upload-button {
+                                background-color: #e9f2ff;
+                                border: 1px solid #b6d4fe;
+                                color: #0d6efd;
+                                padding: .3rem .75rem;
+                                border-radius: .25rem;
+                            }
+                            .chat-file-input::-moz-focus-inner {
+                                border: 0;
+                            }
+                        </style>
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
                         </div>

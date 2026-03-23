@@ -73,7 +73,81 @@
                 </tr>
 
                 @if(auth()->user()->hasRole('Administrador'))
-                <div class="modal fade" id="editTicketModal{{ $ticket->id }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('tickets.update', $ticket) }}">@csrf @method('PUT')<div class="modal-header"><h5 class="modal-title">Editar ticket</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-3"><label class="form-label">Codigo</label><input type="text" name="codigo" class="form-control" value="{{ $ticket->codigo }}" required></div><div class="col-md-3"><label class="form-label">Cliente</label><select name="cliente_id" class="form-select" required>@foreach($clientes as $cliente)<option value="{{ $cliente->id }}" @selected($ticket->cliente_id == $cliente->id)>{{ $cliente->nombre_completo }}</option>@endforeach</select></div><div class="col-md-3"><label class="form-label">Empleado</label><select name="empleado_id" class="form-select"><option value="">Sin asignar</option>@foreach($empleados as $empleado)<option value="{{ $empleado->id }}" @selected($ticket->empleado_id == $empleado->id)>{{ $empleado->nombre_completo }}</option>@endforeach</select></div><div class="col-md-3"><label class="form-label">Departamento</label><select name="departamento_id" class="form-select" required>@foreach($departamentos as $departamento)<option value="{{ $departamento->id }}" @selected($ticket->departamento_id == $departamento->id)>{{ $departamento->nombre }}</option>@endforeach</select></div><div class="col-md-4"><label class="form-label">Asunto</label><input type="text" name="asunto" class="form-control" value="{{ $ticket->asunto }}" required></div><div class="col-md-4"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control" value="{{ $ticket->descripcion }}" required></div><div class="col-md-2"><label class="form-label">Estado</label><select name="estado" class="form-select" required><option value="pendiente" @selected($ticket->estado=='pendiente')>Pendiente</option><option value="en_proceso" @selected($ticket->estado=='en_proceso')>En proceso</option><option value="finalizado" @selected($ticket->estado=='finalizado')>Finalizado</option><option value="cerrado" @selected($ticket->estado=='cerrado')>Cerrado</option></select></div><div class="col-md-2"><label class="form-label">Prioridad</label><select name="prioridad" class="form-select" required><option value="baja" @selected($ticket->prioridad=='baja')>Baja</option><option value="media" @selected($ticket->prioridad=='media')>Media</option><option value="alta" @selected($ticket->prioridad=='alta')>Alta</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
+                <div class="modal fade" id="editTicketModal{{ $ticket->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ route('tickets.update', $ticket) }}">
+                                @csrf @method('PUT')
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Editar ticket</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Codigo</label>
+                                            <input type="text" name="codigo" class="form-control" value="{{ $ticket->codigo }}" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Cliente</label>
+                                            <select name="cliente_id" class="form-select" required>
+                                                @foreach($clientes as $cliente)
+                                                    <option value="{{ $cliente->id }}" @selected($ticket->cliente_id == $cliente->id)>{{ $cliente->nombre_completo }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Empleado</label>
+                                            <select name="empleado_id" class="form-select">
+                                                <option value="">Sin asignar</option>
+                                                @foreach($empleados as $empleado)
+                                                    <option value="{{ $empleado->id }}" @selected($ticket->empleado_id == $empleado->id)>{{ $empleado->nombre_completo }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Departamento</label>
+                                            <select name="departamento_id" class="form-select" required>
+                                                @foreach($departamentos as $departamento)
+                                                    <option value="{{ $departamento->id }}" @selected($ticket->departamento_id == $departamento->id)>{{ $departamento->nombre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Asunto</label>
+                                            <input type="text" name="asunto" class="form-control" value="{{ $ticket->asunto }}" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Descripcion</label>
+                                            <textarea name="descripcion" class="form-control" rows="3" required>{{ $ticket->descripcion }}</textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Estado</label>
+                                            <select name="estado" class="form-select" required>
+                                                <option value="pendiente" @selected($ticket->estado=='pendiente')>Pendiente</option>
+                                                <option value="en_proceso" @selected($ticket->estado=='en_proceso')>En proceso</option>
+                                                <option value="finalizado" @selected($ticket->estado=='finalizado')>Finalizado</option>
+                                                <option value="cerrado" @selected($ticket->estado=='cerrado')>Cerrado</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Prioridad</label>
+                                            <select name="prioridad" class="form-select" required>
+                                                <option value="baja" @selected($ticket->prioridad=='baja')>Baja</option>
+                                                <option value="media" @selected($ticket->prioridad=='media')>Media</option>
+                                                <option value="alta" @selected($ticket->prioridad=='alta')>Alta</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary">Guardar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 @endif
             @empty
                 <tr><td colspan="6" class="text-center text-muted">Sin datos</td></tr>
@@ -84,6 +158,55 @@
 </div>
 
 @if(auth()->user()->can('crear tickets'))
-<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('tickets.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo ticket</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-3"><label class="form-label">Codigo</label><input type="text" name="codigo" class="form-control" placeholder="Opcional"></div><div class="col-md-3"><label class="form-label">Departamento</label><select name="departamento_id" class="form-select" required><option value="">Departamento</option>@foreach($departamentosActivos as $departamento)<option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>@endforeach</select></div><div class="col-md-4"><label class="form-label">Asunto</label><input type="text" name="asunto" class="form-control" required></div><div class="col-md-4"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control" required></div><div class="col-md-2"><label class="form-label">Prioridad</label><select name="prioridad" class="form-select" required><option value="baja">Baja</option><option value="media" selected>Media</option><option value="alta">Alta</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" @disabled($departamentosActivos->isEmpty())>Guardar</button></div></form></div></div></div>
+<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('tickets.store') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Codigo</label>
+                            <input type="text" name="codigo" class="form-control" placeholder="Opcional">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Departamento</label>
+                            <select name="departamento_id" class="form-select" required>
+                                <option value="">Departamento</option>
+                                @foreach($departamentosActivos as $departamento)
+                                    <option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Asunto</label>
+                            <input type="text" name="asunto" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Descripcion</label>
+                            <textarea name="descripcion" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Prioridad</label>
+                            <select name="prioridad" class="form-select" required>
+                                <option value="baja">Baja</option>
+                                <option value="media" selected>Media</option>
+                                <option value="alta">Alta</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" @disabled($departamentosActivos->isEmpty())>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endif
 @endsection
