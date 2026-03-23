@@ -16,11 +16,11 @@
         <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="row g-3">
             @csrf
             @method('PUT')
-            <div class="col-12">
+            <div class="col-md-3">
                 <label class="form-label">Codigo</label>
                 <input type="text" name="codigo" class="form-control" value="{{ old('codigo', $ticket->codigo) }}" required>
             </div>
-            <div class="col-12">
+            <div class="col-md-3">
                 <label class="form-label">Cliente</label>
                 <select name="cliente_id" class="form-select" required>
                     @foreach($clientes as $cliente)
@@ -28,7 +28,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-12">
+            <div class="col-md-3">
                 <label class="form-label">Empleado</label>
                 <select name="empleado_id" class="form-select">
                     <option value="">Sin asignar</option>
@@ -37,7 +37,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-12">
+            <div class="col-md-3">
                 <label class="form-label">Departamento</label>
                 <select name="departamento_id" class="form-select" required>
                     @foreach($departamentos as $departamento)
@@ -45,15 +45,15 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-12">
+            <div class="col-md-4">
                 <label class="form-label">Asunto</label>
                 <input type="text" name="asunto" class="form-control" value="{{ old('asunto', $ticket->asunto) }}" required>
             </div>
-            <div class="col-12">
+            <div class="col-md-4">
                 <label class="form-label">Descripcion</label>
-                <textarea name="descripcion" class="form-control" rows="3" required>{{ old('descripcion', $ticket->descripcion) }}</textarea>
+                <input type="text" name="descripcion" class="form-control" value="{{ old('descripcion', $ticket->descripcion) }}" required>
             </div>
-            <div class="col-12">
+            <div class="col-md-2">
                 <label class="form-label">Estado</label>
                 <select name="estado" class="form-select" required>
                     <option value="pendiente" @selected(old('estado', $ticket->estado) == 'pendiente')>Pendiente</option>
@@ -62,7 +62,7 @@
                     <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
                 </select>
             </div>
-            <div class="col-12">
+            <div class="col-md-2">
                 <label class="form-label">Prioridad</label>
                 <select name="prioridad" class="form-select" required>
                     <option value="baja" @selected(old('prioridad', $ticket->prioridad) == 'baja')>Baja</option>

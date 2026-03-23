@@ -207,7 +207,7 @@ class HomeController extends Controller
     public function empleados()
     {
         return view('empleados.index', [
-            'empleados' => Empleado::with('departamento')->latest()->get(),
+            'empleados' => Empleado::with(['departamento', 'departamentos'])->latest()->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
@@ -215,6 +215,22 @@ class HomeController extends Controller
 
     public function storeEmpleado(Request $request): RedirectResponse
     {
+        $departamentoInput = $request->input('departamento_ids', []);
+        if (!is_array($departamentoInput)) {
+            $departamentoInput = [$departamentoInput];
+        }
+        if ($request->filled('departamento_id')) {
+            $departamentoInput[] = $request->input('departamento_id');
+        }
+        $request->merge([
+            'departamento_ids' => collect($departamentoInput)
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
+        ]);
+
         $validated = $request->validate([
             'nombres' => ['required', 'string', 'max:100'],
             'segundo_nombre' => ['nullable', 'string', 'max:100'],
@@ -223,9 +239,18 @@ class HomeController extends Controller
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'departamento_ids' => ['required', 'array', 'min:1'],
+            'departamento_ids.*' => ['exists:departamentos,id'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+
+        $departamentoIds = collect($validated['departamento_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $departamentoPrincipal = $departamentoIds[0] ?? null;
 
         $user = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
@@ -234,9 +259,9 @@ class HomeController extends Controller
         ]);
         $user->syncRoles(['Empleado']);
 
-        Empleado::create([
+        $empleado = Empleado::create([
             'user_id' => $user->id,
-            'departamento_id' => $validated['departamento_id'],
+            'departamento_id' => $departamentoPrincipal,
             'nombres' => $validated['nombres'],
             'segundo_nombre' => $validated['segundo_nombre'] ?? null,
             'apellidos' => $validated['apellidos'],
@@ -247,25 +272,58 @@ class HomeController extends Controller
             'activo' => true,
         ]);
 
+        $empleado->departamentos()->sync($departamentoIds);
+
         return back()->with('success', 'Empleado agregado correctamente.');
     }
 
     public function updateEmpleado(Request $request, Empleado $empleado): RedirectResponse
     {
+        $departamentoInput = $request->input('departamento_ids', []);
+        if (!is_array($departamentoInput)) {
+            $departamentoInput = [$departamentoInput];
+        }
+        if ($request->filled('departamento_id')) {
+            $departamentoInput[] = $request->input('departamento_id');
+        }
+        $request->merge([
+            'departamento_ids' => collect($departamentoInput)
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
+        ]);
+
         $validated = $request->validate([
             'nombres' => ['required', 'string', 'max:100'],
             'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('empleados', 'email')->ignore($empleado->id)],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('empleados', 'email')->ignore($empleado->id),
+                Rule::unique('users', 'email')->ignore($empleado->user_id),
+            ],
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'departamento_ids' => ['required', 'array', 'min:1'],
+            'departamento_ids.*' => ['exists:departamentos,id'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $departamentoIds = collect($validated['departamento_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $departamentoPrincipal = $departamentoIds[0] ?? null;
+
         $empleado->update([
-            'departamento_id' => $validated['departamento_id'],
+            'departamento_id' => $departamentoPrincipal,
             'nombres' => $validated['nombres'],
             'segundo_nombre' => $validated['segundo_nombre'] ?? null,
             'apellidos' => $validated['apellidos'],
@@ -274,6 +332,8 @@ class HomeController extends Controller
             'direccion' => $validated['direccion'] ?? null,
             'cargo' => $validated['cargo'] ?? null,
         ]);
+
+        $empleado->departamentos()->sync($departamentoIds);
 
         if ($empleado->user_id) {
             $user = User::find($empleado->user_id);
@@ -371,6 +431,7 @@ class HomeController extends Controller
         if (auth()->user()->hasRole('Empleado')) {
             $currentEmployee = Empleado::where('user_id', auth()->id())
                 ->orWhere('email', auth()->user()->email)
+                ->with('departamentos')
                 ->first();
         }
 
@@ -607,15 +668,23 @@ class HomeController extends Controller
         if (auth()->check() && auth()->user()->hasRole('Empleado')) {
             $employee = Empleado::where('user_id', auth()->id())
                 ->orWhere('email', auth()->user()->email)
+                ->with('departamentos:id')
                 ->first();
 
             if ($employee) {
-                $query->where(function ($q) use ($employee): void {
+                $departmentIds = $employee->departamentos->pluck('id')
+                    ->push((int) $employee->departamento_id)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $query->where(function ($q) use ($employee, $departmentIds): void {
                     $q->where('empleado_id', $employee->id)
-                      ->orWhere(function ($q2) use ($employee): void {
+                      ->orWhere(function ($q2) use ($departmentIds): void {
                           $q2->whereNull('empleado_id')
                              ->where('estado', 'pendiente')
-                             ->where('departamento_id', $employee->departamento_id);
+                             ->whereIn('departamento_id', $departmentIds);
                       });
                 });
             } else {

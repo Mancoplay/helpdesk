@@ -2,18 +2,24 @@
 
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
-});
+})->name('home');
 
-Auth::routes();
+Auth::routes(['verify' => true]);
 
 Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
+    Route::get('/usuarios', [HomeController::class, 'usuarios'])->name('usuarios.index');
+    Route::post('/usuarios', [HomeController::class, 'storeUsuario'])->name('usuarios.store');
+    Route::put('/usuarios/{user}', [HomeController::class, 'updateUsuario'])->name('usuarios.update');
+    Route::delete('/usuarios/{user}', [HomeController::class, 'destroyUsuario'])->name('usuarios.destroy');
+
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');
     Route::put('/clientes/{cliente}', [HomeController::class, 'updateCliente'])->name('clientes.update');
@@ -51,6 +57,14 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 
 Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::redirect('/settings', '/settings/profile');
+
+    Volt::route('/settings/profile', 'settings.profile')->name('settings.profile');
+    Volt::route('/settings/password', 'settings.password')->name('settings.password');
+    Volt::route('/settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
 
 Route::view('/dashboard-livewire', 'dashboard')->name('dashboard.livewire')->middleware('auth');

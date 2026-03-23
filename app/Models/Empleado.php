@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empleado extends Model
@@ -36,6 +37,12 @@ class Empleado extends Model
     public function departamento(): BelongsTo
     {
         return $this->belongsTo(Departamento::class);
+    }
+
+    public function departamentos(): BelongsToMany
+    {
+        return $this->belongsToMany(Departamento::class, 'departamento_empleado')
+            ->withTimestamps();
     }
 
     public function tickets(): HasMany

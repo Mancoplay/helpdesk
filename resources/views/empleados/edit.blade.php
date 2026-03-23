@@ -37,13 +37,44 @@
 
                 <div class="col-md-6">
                     <h6 class="fw-bold">Credenciales del Sistema</h6>
-                    <label class="form-label">Departamento</label>
-                    <select name="departamento_id" class="form-select" required>
-                        <option value="">Selecciona aqui</option>
-                        @foreach($departamentos as $departamento)
-                            <option value="{{ $departamento->id }}" @selected(old('departamento_id', $empleado->departamento_id) == $departamento->id)>{{ $departamento->nombre }}</option>
-                        @endforeach
-                    </select>
+                    <label class="form-label">Departamentos</label>
+                    <div class="dropdown department-picker">
+                        <button
+                            class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                        >
+                            Departamento
+                        </button>
+                        <div class="dropdown-menu p-3 w-100" style="max-height: 220px; overflow-y: auto;">
+                            @foreach($departamentos as $departamento)
+                                <div class="form-check mb-2">
+                                    <input
+                                        class="form-check-input department-checkbox"
+                                        type="checkbox"
+                                        name="departamento_ids[]"
+                                        value="{{ $departamento->id }}"
+                                        id="edit-page-dep-{{ $departamento->id }}"
+                                        @checked(
+                                            collect(old('departamento_ids', $empleado->departamentos->pluck('id')->all() ?: [$empleado->departamento_id]))
+                                                ->contains($departamento->id)
+                                        )
+                                    >
+                                    <label class="form-check-label" for="edit-page-dep-{{ $departamento->id }}">
+                                        {{ $departamento->nombre }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                        
+                    </div>
+                    <small class="text-muted">Puedes seleccionar mas de un departamento.</small>
+
+                    <div class="mt-2">
+                        <label class="form-label">Departamentos seleccionados</label>
+                        <div class="departments-selected-list" style="min-height: 70px; border: 1px solid #dcdcdc; padding: .5rem; border-radius: .375rem;"></div>
+                    </div>
 
                     <label class="form-label mt-2">Cargo</label>
                     <input type="text" name="cargo" class="form-control" value="{{ old('cargo', $empleado->cargo) }}">
@@ -71,4 +102,60 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    function renderDepartmentPicklist(wrapper) {
+        const selectedContainer = wrapper.closest('.col-md-6').querySelector('.departments-selected-list');
+        const button = wrapper.querySelector('[data-bs-toggle="dropdown"]');
+        const checkedBoxes = Array.from(wrapper.querySelectorAll('.department-checkbox:checked'));        if (!selectedContainer || !button) {
+            return;
+        }
+
+        const selected = checkedBoxes.map((input) => {
+            const label = wrapper.querySelector(`label[for="${input.id}"]`);
+            return {
+                id: input.value,
+                name: label ? label.textContent.trim() : input.value,
+            };
+        });
+
+        selectedContainer.innerHTML = '';
+        button.textContent = selected.length > 0 ? `Departamento (${selected.length})` : 'Departamento';
+
+        if (selected.length === 0) {
+            const empty = document.createElement('span');
+            empty.className = 'text-muted';
+            empty.textContent = 'Ningun departamento seleccionado.';
+            selectedContainer.appendChild(empty);
+            return;
+        }
+
+        selected.forEach((dep) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge text-bg-primary me-1 mb-1';
+            badge.textContent = dep.name;
+            selectedContainer.appendChild(badge);
+        });
+    }
+
+    function setupDepartmentPicker(wrapper) {
+        const checkboxes = wrapper.querySelectorAll('.department-checkbox');
+        const update = () => renderDepartmentPicklist(wrapper);
+
+        checkboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', update);
+        });
+
+        update();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.department-picker').forEach(setupDepartmentPicker);
+    });
+</script>
+@endpush
+
 @endsection
+
+
