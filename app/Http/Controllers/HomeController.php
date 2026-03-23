@@ -611,7 +611,7 @@ class HomeController extends Controller
 
         $ticket->mensajes()->create($payload);
 
-        return back()->with('success', 'Mensaje enviado correctamente.');
+        return back();
     }
 
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse

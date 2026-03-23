@@ -9,52 +9,58 @@
 @endsection
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->hasRole('Administrador');
+@endphp
+
+@if($isAdmin)
 <div class="row g-3 mb-3">
-    <div class="col-lg-3 col-md-6">
-        <div class="card dashboard-stat h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon bg-secondary"><i class="fas fa-users"></i></div>
-                <div>
-                    <div class="label">Total Clientes</div>
-                    <p class="value">{{ $stats['total_clientes'] }}</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card dashboard-stat h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon bg-secondary"><i class="fas fa-users"></i></div>
+                    <div>
+                        <div class="label">Total Clientes</div>
+                        <p class="value">{{ $stats['total_clientes'] }}</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="card dashboard-stat h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon bg-info"><i class="fas fa-user-tie"></i></div>
-                <div>
-                    <div class="label">Total Empleados</div>
-                    <p class="value">{{ $stats['total_empleados'] }}</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card dashboard-stat h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon bg-info"><i class="fas fa-user-tie"></i></div>
+                    <div>
+                        <div class="label">Total Empleados</div>
+                        <p class="value">{{ $stats['total_empleados'] }}</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="card dashboard-stat h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon bg-primary"><i class="fas fa-building"></i></div>
-                <div>
-                    <div class="label">Total Departamentos</div>
-                    <p class="value">{{ $stats['total_departamentos'] }}</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card dashboard-stat h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon bg-primary"><i class="fas fa-building"></i></div>
+                    <div>
+                        <div class="label">Total Departamentos</div>
+                        <p class="value">{{ $stats['total_departamentos'] }}</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="card dashboard-stat h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
-                <div>
-                    <div class="label">Total Tickets</div>
-                    <p class="value">{{ $stats['total_tickets'] }}</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card dashboard-stat h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
+                    <div>
+                        <div class="label">Total Tickets</div>
+                        <p class="value">{{ $stats['total_tickets'] }}</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 </div>
+@endif
 
 <div class="row g-3 mb-3">
     <div class="col-lg-3 col-md-6">
@@ -102,6 +108,22 @@
         </div>
     </div>
 </div>
+
+@if(!$isAdmin)
+<div class="row g-3 mb-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
+                <div>
+                    <div class="label">Total Tickets</div>
+                    <p class="value">{{ $stats['total_tickets'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 <div class="row g-3">
     <div class="col-lg-8 mx-auto">
