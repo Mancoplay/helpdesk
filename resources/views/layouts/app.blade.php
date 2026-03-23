@@ -55,6 +55,17 @@
             font-weight: 700;
             min-width: 26px;
         }
+        .compact-pagination .pagination {
+            margin-bottom: 0;
+        }
+        .compact-pagination .page-link {
+            padding: 0.2rem 0.45rem;
+            font-size: 0.8rem;
+            line-height: 1.1;
+        }
+        .compact-pagination .page-item.active .page-link {
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
@@ -193,6 +204,32 @@
     @endauth
 
     @livewireScripts
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('form.js-table-filters').forEach(function (form) {
+                const searchInput = form.querySelector('input[name="q"]');
+                const perPageSelect = form.querySelector('select[name="per_page"]');
+                let searchTimer = null;
+
+                const submitFilters = function () {
+                    form.submit();
+                };
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', function () {
+                        clearTimeout(searchTimer);
+                        searchTimer = setTimeout(submitFilters, 350);
+                    });
+
+                    searchInput.addEventListener('search', submitFilters);
+                }
+
+                if (perPageSelect) {
+                    perPageSelect.addEventListener('change', submitFilters);
+                }
+            });
+        });
+    </script>
     @stack('scripts')
 </body>
 </html>

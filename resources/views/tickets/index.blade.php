@@ -19,6 +19,27 @@
 </div>
 @endif
 
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" action="{{ route('tickets.index') }}" class="row g-2 align-items-end js-table-filters">
+            <div class="col-md-8">
+                <label class="form-label mb-1">Buscar</label>
+                <input type="text" name="q" class="form-control" value="{{ $searchQuery ?? '' }}" placeholder="Ejemplo: red, TCK-0001, pendiente...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1">Registros</label>
+                <select name="per_page" class="form-select">
+                    @foreach([10, 15, 20] as $size)
+                        <option value="{{ $size }}" @selected(($perPage ?? 10) == $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ route('tickets.index') }}" class="btn btn-outline-secondary w-100">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
 <div class="card">
     <div class="card-header"><h3 class="card-title mb-0">Tabla de Tickets</h3></div>
     <div class="card-body table-responsive p-0">
@@ -85,6 +106,9 @@
             @endforelse
             </tbody>
         </table>
+    </div>
+    <div class="card-footer compact-pagination">
+        {{ $tickets->links() }}
     </div>
 </div>
 

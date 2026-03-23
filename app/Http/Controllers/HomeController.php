@@ -7,6 +7,7 @@ use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -68,10 +69,23 @@ class HomeController extends Controller
         ]);
     }
 
-    public function usuarios()
+    public function usuarios(Request $request)
     {
+        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
+
         return view('usuarios.index', [
-            'usuarios' => User::latest()->get(),
+            'usuarios' => User::query()
+                ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
+                    $query->where(function (Builder $subQuery) use ($searchQuery): void {
+                        $subQuery->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%");
+                    });
+                })
+                ->latest()
+                ->paginate($perPage)
+                ->withQueryString(),
+            'searchQuery' => $searchQuery,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -126,10 +140,28 @@ class HomeController extends Controller
         return back()->with('success', 'Usuario eliminado correctamente.');
     }
 
-    public function clientes()
+    public function clientes(Request $request)
     {
+        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
+
         return view('clientes.index', [
-            'clientes' => Cliente::latest()->get(),
+            'clientes' => Cliente::query()
+                ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
+                    $query->where(function (Builder $subQuery) use ($searchQuery): void {
+                        $subQuery->where('nombres', 'like', "%{$searchQuery}%")
+                            ->orWhere('segundo_nombre', 'like', "%{$searchQuery}%")
+                            ->orWhere('apellidos', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('telefono', 'like', "%{$searchQuery}%")
+                            ->orWhere('empresa', 'like', "%{$searchQuery}%")
+                            ->orWhere('direccion', 'like', "%{$searchQuery}%");
+                    });
+                })
+                ->latest()
+                ->paginate($perPage)
+                ->withQueryString(),
+            'searchQuery' => $searchQuery,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -205,11 +237,35 @@ class HomeController extends Controller
         return back()->with('success', 'Cliente eliminado correctamente.');
     }
 
-    public function empleados()
+    public function empleados(Request $request)
     {
+        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
+
         return view('empleados.index', [
-            'empleados' => Empleado::with(['departamento', 'departamentos'])->latest()->get(),
+            'empleados' => Empleado::query()
+                ->with(['departamento', 'departamentos'])
+                ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
+                    $query->where(function (Builder $subQuery) use ($searchQuery): void {
+                        $subQuery->where('nombres', 'like', "%{$searchQuery}%")
+                            ->orWhere('segundo_nombre', 'like', "%{$searchQuery}%")
+                            ->orWhere('apellidos', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('telefono', 'like', "%{$searchQuery}%")
+                            ->orWhere('cargo', 'like', "%{$searchQuery}%")
+                            ->orWhereHas('departamento', function (Builder $departmentQuery) use ($searchQuery): void {
+                                $departmentQuery->where('nombre', 'like', "%{$searchQuery}%");
+                            })
+                            ->orWhereHas('departamentos', function (Builder $departmentsQuery) use ($searchQuery): void {
+                                $departmentsQuery->where('nombre', 'like', "%{$searchQuery}%");
+                            });
+                    });
+                })
+                ->latest()
+                ->paginate($perPage)
+                ->withQueryString(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
+            'searchQuery' => $searchQuery,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -368,10 +424,23 @@ class HomeController extends Controller
         return back()->with('success', 'Empleado eliminado correctamente.');
     }
 
-    public function departamentos()
+    public function departamentos(Request $request)
     {
+        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
+
         return view('departamentos.index', [
-            'departamentos' => Departamento::latest()->get(),
+            'departamentos' => Departamento::query()
+                ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
+                    $query->where(function (Builder $subQuery) use ($searchQuery): void {
+                        $subQuery->where('nombre', 'like', "%{$searchQuery}%")
+                            ->orWhere('descripcion', 'like', "%{$searchQuery}%");
+                    });
+                })
+                ->latest()
+                ->paginate($perPage)
+                ->withQueryString(),
+            'searchQuery' => $searchQuery,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -421,12 +490,37 @@ class HomeController extends Controller
         return back()->with('success', 'Departamento eliminado correctamente.');
     }
 
-    public function tickets()
+    public function tickets(Request $request)
     {
+        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
+
         $tickets = $this->ticketsQueryForCurrentUser()
             ->with(['cliente', 'empleado', 'departamento'])
+            ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
+                $query->where(function (Builder $subQuery) use ($searchQuery): void {
+                    $subQuery->where('codigo', 'like', "%{$searchQuery}%")
+                        ->orWhere('asunto', 'like', "%{$searchQuery}%")
+                        ->orWhere('descripcion', 'like', "%{$searchQuery}%")
+                        ->orWhere('estado', 'like', "%{$searchQuery}%")
+                        ->orWhere('prioridad', 'like', "%{$searchQuery}%")
+                        ->orWhereHas('cliente', function (Builder $clientQuery) use ($searchQuery): void {
+                            $clientQuery->where('nombres', 'like', "%{$searchQuery}%")
+                                ->orWhere('apellidos', 'like', "%{$searchQuery}%")
+                                ->orWhere('email', 'like', "%{$searchQuery}%");
+                        })
+                        ->orWhereHas('empleado', function (Builder $employeeQuery) use ($searchQuery): void {
+                            $employeeQuery->where('nombres', 'like', "%{$searchQuery}%")
+                                ->orWhere('apellidos', 'like', "%{$searchQuery}%")
+                                ->orWhere('email', 'like', "%{$searchQuery}%");
+                        })
+                        ->orWhereHas('departamento', function (Builder $departmentQuery) use ($searchQuery): void {
+                            $departmentQuery->where('nombre', 'like', "%{$searchQuery}%");
+                        });
+                });
+            })
             ->latest()
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         $currentEmployee = null;
         if (auth()->user()->hasRole('Empleado')) {
@@ -444,6 +538,8 @@ class HomeController extends Controller
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'nextTicketCode' => $this->nextTicketCode(),
             'currentEmployeeId' => $currentEmployee?->id,
+            'searchQuery' => $searchQuery,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -734,6 +830,20 @@ class HomeController extends Controller
         return [
             'pendientes' => (int) ($counts['pendiente'] ?? 0),
         ];
+    }
+
+    private function resolveTableFilters(Request $request): array
+    {
+        $allowedPerPage = [10, 15, 20];
+        $perPage = (int) $request->query('per_page', 10);
+
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
+
+        $searchQuery = trim((string) $request->query('q', ''));
+
+        return [$searchQuery, $perPage];
     }
 
     private function nextTicketCode(): string
