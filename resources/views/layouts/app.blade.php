@@ -66,6 +66,10 @@
         .compact-pagination .page-item.active .page-link {
             font-weight: 600;
         }
+        .compact-pagination .page-link svg {
+            width: 12px;
+            height: 12px;
+        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
@@ -209,24 +213,96 @@
             document.querySelectorAll('form.js-table-filters').forEach(function (form) {
                 const searchInput = form.querySelector('input[name="q"]');
                 const perPageSelect = form.querySelector('select[name="per_page"]');
+                let resultsCard = document.querySelector('.js-table-results');
                 let searchTimer = null;
+                let activeController = null;
 
-                const submitFilters = function () {
-                    form.submit();
+                const loadFilteredTable = function (targetUrl = null) {
+                    if (!resultsCard) {
+                        form.submit();
+                        return;
+                    }
+
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+
+                    if (targetUrl) {
+                        const parsedTargetUrl = new URL(targetUrl, window.location.origin);
+                        const page = parsedTargetUrl.searchParams.get('page');
+                        if (page) {
+                            params.set('page', page);
+                        }
+                    }
+
+                    const requestUrl = `${form.action}?${params.toString()}`;
+
+                    if (activeController) {
+                        activeController.abort();
+                    }
+
+                    activeController = new AbortController();
+
+                    fetch(requestUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        signal: activeController.signal,
+                    })
+                        .then(function (response) {
+                            return response.text();
+                        })
+                        .then(function (html) {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newResultsCard = doc.querySelector('.js-table-results');
+
+                            if (!newResultsCard || !resultsCard) {
+                                window.location.href = requestUrl;
+                                return;
+                            }
+
+                            resultsCard.replaceWith(newResultsCard);
+                            resultsCard = newResultsCard;
+                            history.replaceState({}, '', requestUrl);
+                        })
+                        .catch(function (error) {
+                            if (error.name === 'AbortError') {
+                                return;
+                            }
+
+                            window.location.href = requestUrl;
+                        });
                 };
 
                 if (searchInput) {
                     searchInput.addEventListener('input', function () {
                         clearTimeout(searchTimer);
-                        searchTimer = setTimeout(submitFilters, 350);
+                        searchTimer = setTimeout(function () {
+                            loadFilteredTable();
+                        }, 500);
                     });
 
-                    searchInput.addEventListener('search', submitFilters);
+                    searchInput.addEventListener('search', function () {
+                        loadFilteredTable();
+                    });
                 }
 
                 if (perPageSelect) {
-                    perPageSelect.addEventListener('change', submitFilters);
+                    perPageSelect.addEventListener('change', function () {
+                        loadFilteredTable();
+                    });
                 }
+
+                document.addEventListener('click', function (event) {
+                    const paginationLink = event.target.closest('.js-table-results .pagination a[href]');
+
+                    if (!paginationLink) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    loadFilteredTable(paginationLink.href);
+                });
             });
         });
     </script>
