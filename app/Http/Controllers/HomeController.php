@@ -612,8 +612,10 @@ class HomeController extends Controller
             if ($employee) {
                 $query->where(function ($q) use ($employee): void {
                     $q->where('empleado_id', $employee->id)
-                      ->orWhere(function ($q2): void {
-                          $q2->whereNull('empleado_id')->where('estado', 'pendiente');
+                      ->orWhere(function ($q2) use ($employee): void {
+                          $q2->whereNull('empleado_id')
+                             ->where('estado', 'pendiente')
+                             ->where('departamento_id', $employee->departamento_id);
                       });
                 });
             } else {
