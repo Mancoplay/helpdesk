@@ -51,7 +51,7 @@
 <div class="row g-3 mb-3">
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets del cliente</div><p class="value">{{ $summary['total_tickets'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Empleados que atendieron</div><p class="value">{{ $summary['empleados_distintos'] }}</p></div></div></div>
-    <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets cerrados</div><p class="value">{{ $summary['tickets_cerrados'] }}</p></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickeds finalizados</div><p class="value">{{ $summary['tickets_cerrados'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets eliminados</div><p class="value">{{ $summary['tickets_eliminados'] }}</p></div></div></div>
 </div>
 

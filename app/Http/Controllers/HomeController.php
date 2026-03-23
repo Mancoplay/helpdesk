@@ -460,6 +460,8 @@ class HomeController extends Controller
 
     public function reviewEmpleado(Request $request, Empleado $empleado)
     {
+        $empleado->loadMissing(['departamento', 'departamentos']);
+
         [$period, $fromDate, $toDate, $fromInput, $toInput] = $this->resolveHistoryDateRange($request);
 
         $ticketsBase = Ticket::withTrashed()
