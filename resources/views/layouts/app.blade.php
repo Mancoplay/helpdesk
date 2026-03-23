@@ -181,7 +181,7 @@
 
             <footer class="app-footer">
                 <div class="float-end d-none d-sm-inline">Version 1.0</div>
-                <strong>Copyright {{ date('Y') }} {{ config('adminlte.app_name') }}</strong>
+                <strong>Version {{ date('Y') }} {{ config('adminlte.app_name') }}</strong>
                 {{ config('adminlte.footer_text') }}.
             </footer>
         </div>
