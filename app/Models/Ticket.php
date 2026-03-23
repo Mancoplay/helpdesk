@@ -47,4 +47,9 @@ class Ticket extends Model
     {
         return $this->hasMany(TicketMensaje::class);
     }
+
+    public function remoteSessions(): HasMany
+    {
+        return $this->hasMany(TicketRemoteSession::class);
+    }
 }

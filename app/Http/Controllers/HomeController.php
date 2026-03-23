@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
+use App\Models\TicketRemoteSession;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -631,6 +633,10 @@ class HomeController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'messages' => $messages,
+            'remoteEnabled' => $this->isRemoteSessionsReady(),
+            'remoteSession' => $this->isRemoteSessionsReady()
+                ? $ticket->remoteSessions()->latest()->first()
+                : null,
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
@@ -777,6 +783,166 @@ class HomeController extends Controller
         $ticket->mensajes()->create($payload);
 
         return back();
+    }
+
+    public function requestRemoteSession(Ticket $ticket): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!$this->isRemoteSessionsReady()) {
+            return back()->with('error', 'La funcionalidad remota aun no esta disponible. Ejecuta las migraciones pendientes.');
+        }
+
+        if ($ticket->estado !== 'en_proceso') {
+            return back()->with('error', 'Solo puedes iniciar conexion remota cuando el ticket esta en proceso.');
+        }
+
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        if (!$employee || (int) $ticket->empleado_id !== (int) $employee->id) {
+            return back()->with('error', 'Solo el empleado asignado puede solicitar conexion remota.');
+        }
+
+        $existing = $ticket->remoteSessions()
+            ->whereIn('status', ['pending', 'accepted'])
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return back()->with('error', 'Ya existe una solicitud de conexion remota activa para este ticket.');
+        }
+
+        $session = $ticket->remoteSessions()->create([
+            'requested_by_user_id' => auth()->id(),
+            'status' => 'pending',
+            'support_code' => (string) random_int(100000, 999999),
+            'requested_at' => now(),
+            'note' => 'Solicitud de control remoto enviada.',
+        ]);
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => 'Solicitud de conexion remota enviada. Codigo: ' . $session->support_code . '.',
+            'tipo' => 'atencion',
+        ]);
+
+        return back()->with('success', 'Solicitud de conexion remota enviada al cliente.');
+    }
+
+    public function updateRemoteSession(Request $request, Ticket $ticket, TicketRemoteSession $remoteSession): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!$this->isRemoteSessionsReady()) {
+            return back()->with('error', 'La funcionalidad remota aun no esta disponible. Ejecuta las migraciones pendientes.');
+        }
+
+        if ((int) $remoteSession->ticket_id !== (int) $ticket->id) {
+            abort(404);
+        }
+
+        $action = (string) $request->input('action');
+        if (!in_array($action, ['accept', 'reject', 'cancel', 'end'], true)) {
+            return back()->with('error', 'Accion no valida.');
+        }
+
+        $isClientOwner = auth()->user()->hasRole('Usuario')
+            && ($ticket->cliente->email ?? null) === auth()->user()->email;
+
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        $isAssignedEmployee = $employee && (int) $ticket->empleado_id === (int) $employee->id;
+
+        if ($ticket->estado !== 'en_proceso') {
+            return back()->with('error', 'La conexion remota solo esta habilitada cuando el ticket esta en proceso.');
+        }
+
+        if (in_array($action, ['accept', 'reject'], true) && !$isClientOwner) {
+            return back()->with('error', 'Solo el cliente del ticket puede responder esta solicitud.');
+        }
+
+        if (in_array($action, ['cancel', 'end'], true) && !$isClientOwner && !$isAssignedEmployee) {
+            return back()->with('error', 'Solo el cliente o el empleado asignado pueden cancelar/finalizar.');
+        }
+
+        if ($action === 'accept' && $remoteSession->status !== 'pending') {
+            return back()->with('error', 'La solicitud ya no se encuentra pendiente.');
+        }
+
+        if ($action === 'reject' && $remoteSession->status !== 'pending') {
+            return back()->with('error', 'La solicitud ya no se encuentra pendiente.');
+        }
+
+        if ($action === 'cancel' && !in_array($remoteSession->status, ['pending', 'accepted'], true)) {
+            return back()->with('error', 'No se puede cancelar una solicitud finalizada.');
+        }
+
+        if ($action === 'end' && $remoteSession->status !== 'accepted') {
+            return back()->with('error', 'Solo se puede finalizar una sesion aceptada.');
+        }
+
+        if ($action === 'accept') {
+            $remoteSession->status = 'accepted';
+            $remoteSession->responded_at = now();
+            $remoteSession->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'El cliente acepto la conexion remota.',
+                'tipo' => 'atencion',
+            ]);
+
+            return back()->with('success', 'Conexion remota aceptada.');
+        }
+
+        if ($action === 'reject') {
+            $remoteSession->status = 'rejected';
+            $remoteSession->responded_at = now();
+            $remoteSession->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'El cliente rechazo la conexion remota.',
+                'tipo' => 'atencion',
+            ]);
+
+            return back()->with('success', 'Conexion remota rechazada.');
+        }
+
+        if ($action === 'cancel') {
+            $remoteSession->status = 'cancelled';
+            $remoteSession->cancelled_by_user_id = auth()->id();
+            $remoteSession->ended_at = now();
+            $remoteSession->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'La solicitud de conexion remota fue cancelada.',
+                'tipo' => 'atencion',
+            ]);
+
+            return back()->with('success', 'Solicitud de conexion remota cancelada.');
+        }
+
+        $remoteSession->status = 'ended';
+        $remoteSession->ended_at = now();
+        $remoteSession->save();
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => 'La sesion de conexion remota fue finalizada.',
+            'tipo' => 'atencion',
+        ]);
+
+        return back()->with('success', 'Sesion remota finalizada.');
     }
 
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
@@ -1067,6 +1233,11 @@ class HomeController extends Controller
 
         return (int) $ticket->empleado_id === (int) $employee->id
             && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
+    }
+
+    private function isRemoteSessionsReady(): bool
+    {
+        return Schema::hasTable('ticket_remote_sessions');
     }
 
 }

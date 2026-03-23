@@ -48,10 +48,11 @@
                     <p class="mb-0">{{ $ticket->descripcion }}</p>
                 </div>
             </div>
+
             @can('atender tickets')
                 @if($ticket->estado === 'pendiente')
                     <div class="card-footer">
-                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a "En proceso" y se asignara a ti.');">
+                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-info">Atender ticket</button>
@@ -73,6 +74,84 @@
                     </div>
                 @endif
             @endcan
+
+            @php
+                $isClientOwner = auth()->user()->hasRole('Usuario')
+                    && (($ticket->cliente->email ?? null) === auth()->user()->email);
+                $isAssignedEmployee = auth()->user()->hasRole('Empleado')
+                    && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0);
+            @endphp
+
+            @if($isClientOwner || $isAssignedEmployee)
+                <div class="card-footer border-top">
+                    <h6 class="mb-2">Soporte remoto (simulado)</h6>
+
+                    @if(!$remoteEnabled)
+                        <div class="alert alert-secondary py-2 mb-0">
+                            Funcionalidad remota no disponible todavia. Falta ejecutar migraciones de base de datos.
+                        </div>
+                    @elseif($ticket->estado === 'pendiente')
+                        <div class="alert alert-warning py-2 mb-0">
+                            La conexion remota estara disponible cuando el ticket sea atendido y pase a <strong>En proceso</strong>.
+                        </div>
+                    @elseif($ticket->estado === 'finalizado')
+                        <div class="alert alert-secondary py-2 mb-0">
+                            Ticket finalizado: la conexion remota esta bloqueada.
+                        </div>
+                    @elseif(!$remoteSession || in_array($remoteSession->status, ['rejected', 'cancelled', 'ended'], true))
+                        @if($isAssignedEmployee)
+                            <form method="POST" action="{{ route('tickets.remote.request', $ticket) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-primary w-100">Conectar</button>
+                            </form>
+                            <small class="text-muted d-block mt-2">El cliente recibira una solicitud para autorizar el control remoto.</small>
+                        @else
+                            <small class="text-muted">Aun no hay solicitud activa de soporte remoto.</small>
+                        @endif
+                    @elseif($remoteSession->status === 'pending')
+                        <div class="alert alert-warning py-2 mb-2">
+                            Solicitud pendiente. Codigo de soporte: <strong>{{ $remoteSession->support_code }}</strong>
+                        </div>
+
+                        @if($isClientOwner)
+                            <div class="d-flex gap-2">
+                                <form class="w-100" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="action" value="accept">
+                                    <button type="submit" class="btn btn-success w-100">Aceptar</button>
+                                </form>
+                                <form class="w-100" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn btn-danger w-100">Rechazar</button>
+                                </form>
+                            </div>
+                        @endif
+
+                        <form class="mt-2" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="action" value="cancel">
+                            <button type="submit" class="btn btn-outline-secondary w-100">Cancelar solicitud</button>
+                        </form>
+                    @elseif($remoteSession->status === 'accepted')
+                        <div class="alert alert-success py-2 mb-2">
+                            Conexion autorizada por el cliente. Codigo de soporte: <strong>{{ $remoteSession->support_code }}</strong>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#remoteSupportModal">
+                            Abrir ventana de conexion
+                        </button>
+                        <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="action" value="end">
+                            <button type="submit" class="btn btn-outline-dark w-100">Finalizar conexion</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 
@@ -156,4 +235,73 @@
         </div>
     </div>
 </div>
+
+@if($remoteEnabled && $remoteSession && $remoteSession->status === 'accepted')
+<div class="modal fade" id="remoteSupportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conexion remota del ticket {{ $ticket->codigo }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    Sesion autorizada. Comparte este codigo en la aplicacion remota para conectar:
+                    <strong id="remoteSupportCode">{{ $remoteSession->support_code }}</strong>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100" id="copyRemoteCodeBtn">Copiar codigo</button>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="anydesk:{{ $remoteSession->support_code }}" class="btn btn-outline-dark w-100">Abrir AnyDesk</a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="ms-quick-assist:" class="btn btn-outline-secondary w-100">Abrir Quick Assist</a>
+                    </div>
+                </div>
+
+                <hr>
+                <p class="mb-1"><strong>Pasos rapidos</strong></p>
+                <ol class="mb-0">
+                    <li>Cliente y empleado abren AnyDesk o Quick Assist.</li>
+                    <li>Ingresan/comparten el codigo de soporte.</li>
+                    <li>El cliente confirma el permiso de control remoto.</li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const copyButton = document.getElementById('copyRemoteCodeBtn');
+        const codeElement = document.getElementById('remoteSupportCode');
+
+        if (!copyButton || !codeElement || !navigator.clipboard) {
+            return;
+        }
+
+        copyButton.addEventListener('click', function () {
+            const code = codeElement.textContent.trim();
+            if (!code) {
+                return;
+            }
+
+            navigator.clipboard.writeText(code).then(function () {
+                copyButton.textContent = 'Codigo copiado';
+                setTimeout(function () {
+                    copyButton.textContent = 'Copiar codigo';
+                }, 1500);
+            });
+        });
+    });
+</script>
+@endpush
+@endif
 @endsection

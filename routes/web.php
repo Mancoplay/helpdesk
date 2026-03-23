@@ -10,6 +10,7 @@ Route::get('/', function () {
 
 Auth::routes(['verify' => true]);
 Route::pattern('ticket', '[0-9]+');
+Route::pattern('remoteSession', '[0-9]+');
 
 Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
@@ -43,6 +44,8 @@ Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::get('/tickets', [HomeController::class, 'tickets'])->name('tickets.index');
     Route::get('/tickets/{ticket}', [HomeController::class, 'showTicket'])->name('tickets.show');
     Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])->name('tickets.messages.store');
+    Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])->name('tickets.remote.request');
+    Route::patch('/tickets/{ticket}/remote/{remoteSession}', [HomeController::class, 'updateRemoteSession'])->name('tickets.remote.update');
 });
 
 Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
