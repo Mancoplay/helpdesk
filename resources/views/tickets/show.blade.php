@@ -68,7 +68,7 @@
                         <form method="POST" action="{{ route('tickets.finalize', $ticket) }}">
                             @csrf
                             @method('PATCH')
-                            <button type="submit" class="btn btn-success">Finalizar ticket</button>
+                            <button type="submit" class="btn btn-success fs-5">Finalizar ticket</button>
                         </form>
                     </div>
                 @endif
@@ -147,8 +147,8 @@
                             <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
                             <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
                         </div>
-                        <div class="text-end">
-                            <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-sm fs-4 w-100">Enviar</button>
                         </div>
                     </form>
                 @endif
