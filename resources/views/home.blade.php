@@ -9,6 +9,11 @@
 @endsection
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->hasRole('Administrador');
+@endphp
+
+@if($isAdmin)
 <div class="row g-3 mb-3">
     <div class="col-lg-3 col-md-6">
         <div class="card dashboard-stat h-100">
@@ -55,7 +60,7 @@
         </div>
     </div>
 </div>
-
+@else
 <div class="row g-3 mb-3">
     <div class="col-lg-3 col-md-6">
         <div class="card dashboard-stat h-100">
@@ -102,6 +107,70 @@
         </div>
     </div>
 </div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
+                <div>
+                    <div class="label">Total Tickets</div>
+                    <p class="value">{{ $stats['total_tickets'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+<div class="row g-3 mb-3">
+    @if($isAdmin)
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-warning"><i class="fas fa-hourglass-half"></i></div>
+                <div>
+                    <div class="label">Tickets pendientes</div>
+                    <p class="value">{{ $stats['pendientes'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon" style="background-color:#6f42c1;"><i class="fas fa-spinner"></i></div>
+                <div>
+                    <div class="label">Tickets en proceso</div>
+                    <p class="value">{{ $stats['en_proceso'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-success"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <div class="label">Tickets finalizados</div>
+                    <p class="value">{{ $stats['finalizado'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-stat h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-danger"><i class="fas fa-times-circle"></i></div>
+                <div>
+                    <div class="label">Tickets cerrados</div>
+                    <p class="value">{{ $stats['cerrado'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
 
 <div class="row g-3">
     <div class="col-lg-8 mx-auto">
