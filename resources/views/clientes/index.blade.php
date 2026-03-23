@@ -49,6 +49,7 @@
                     <td>{{ $cliente->telefono ?? '-' }}</td>
                     <td>{{ $cliente->empresa ?? '-' }}</td>
                     <td>
+                        <a href="{{ route('clientes.review', $cliente) }}" class="btn btn-info btn-sm me-1">Revisar</a>
                         <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
                         <form class="d-inline" method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
                             @csrf

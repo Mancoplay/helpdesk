@@ -65,6 +65,7 @@
                         <td>{{ $empleado->telefono ?? '-' }}</td>
                         <td>{{ $empleado->email }}</td>
                         <td>
+                            <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-info btn-sm me-1">Revisar</a>
                             <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editEmpleadoModal{{ $empleado->id }}">Editar</button>
                             <form class="d-inline" method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
                                 @csrf

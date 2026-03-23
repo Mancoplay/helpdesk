@@ -22,11 +22,13 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::delete('/usuarios/{user}', [HomeController::class, 'destroyUsuario'])->name('usuarios.destroy');
 
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
+    Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');
     Route::put('/clientes/{cliente}', [HomeController::class, 'updateCliente'])->name('clientes.update');
     Route::delete('/clientes/{cliente}', [HomeController::class, 'destroyCliente'])->name('clientes.destroy');
 
     Route::get('/empleados', [HomeController::class, 'empleados'])->name('empleados.index');
+    Route::get('/empleados/{empleado}/revisar', [HomeController::class, 'reviewEmpleado'])->name('empleados.review');
     Route::post('/empleados', [HomeController::class, 'storeEmpleado'])->name('empleados.store');
     Route::put('/empleados/{empleado}', [HomeController::class, 'updateEmpleado'])->name('empleados.update');
     Route::delete('/empleados/{empleado}', [HomeController::class, 'destroyEmpleado'])->name('empleados.destroy');

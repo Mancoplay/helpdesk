@@ -7,6 +7,7 @@ use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -237,6 +238,39 @@ class HomeController extends Controller
         return back()->with('success', 'Cliente eliminado correctamente.');
     }
 
+    public function reviewCliente(Request $request, Cliente $cliente)
+    {
+        [$period, $fromDate, $toDate, $fromInput, $toInput] = $this->resolveHistoryDateRange($request);
+
+        $ticketsBase = Ticket::withTrashed()
+            ->with(['empleado', 'departamento'])
+            ->where('cliente_id', $cliente->id);
+
+        $this->applyDateRangeFilter($ticketsBase, $fromDate, $toDate);
+
+        $tickets = (clone $ticketsBase)
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $summary = [
+            'total_tickets' => (clone $ticketsBase)->count(),
+            'tickets_eliminados' => (clone $ticketsBase)->onlyTrashed()->count(),
+            'tickets_cerrados' => (clone $ticketsBase)->whereIn('estado', ['cerrado', 'finalizado'])->count(),
+            'empleados_distintos' => (clone $ticketsBase)->whereNotNull('empleado_id')->distinct()->count('empleado_id'),
+        ];
+
+        return view('clientes.review', [
+            'cliente' => $cliente,
+            'tickets' => $tickets,
+            'summary' => $summary,
+            'period' => $period,
+            'fromInput' => $fromInput,
+            'toInput' => $toInput,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
     public function empleados(Request $request)
     {
         [$searchQuery, $perPage] = $this->resolveTableFilters($request);
@@ -422,6 +456,39 @@ class HomeController extends Controller
         }
 
         return back()->with('success', 'Empleado eliminado correctamente.');
+    }
+
+    public function reviewEmpleado(Request $request, Empleado $empleado)
+    {
+        [$period, $fromDate, $toDate, $fromInput, $toInput] = $this->resolveHistoryDateRange($request);
+
+        $ticketsBase = Ticket::withTrashed()
+            ->with(['cliente', 'departamento'])
+            ->where('empleado_id', $empleado->id);
+
+        $this->applyDateRangeFilter($ticketsBase, $fromDate, $toDate);
+
+        $tickets = (clone $ticketsBase)
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $summary = [
+            'total_tickets' => (clone $ticketsBase)->count(),
+            'tickets_eliminados' => (clone $ticketsBase)->onlyTrashed()->count(),
+            'tickets_cerrados' => (clone $ticketsBase)->whereIn('estado', ['cerrado', 'finalizado'])->count(),
+            'clientes_atendidos' => (clone $ticketsBase)->whereNotNull('cliente_id')->distinct()->count('cliente_id'),
+        ];
+
+        return view('empleados.review', [
+            'empleado' => $empleado,
+            'tickets' => $tickets,
+            'summary' => $summary,
+            'period' => $period,
+            'fromInput' => $fromInput,
+            'toInput' => $toInput,
+            'menuBadges' => $this->menuBadges(),
+        ]);
     }
 
     public function departamentos(Request $request)
@@ -844,6 +911,54 @@ class HomeController extends Controller
         $searchQuery = trim((string) $request->query('q', ''));
 
         return [$searchQuery, $perPage];
+    }
+
+    private function resolveHistoryDateRange(Request $request): array
+    {
+        $period = (string) $request->query('period', 'month');
+        if (!in_array($period, ['week', 'month', 'year', 'custom'], true)) {
+            $period = 'month';
+        }
+
+        $now = now();
+        $from = null;
+        $to = null;
+        $fromInput = (string) $request->query('from', '');
+        $toInput = (string) $request->query('to', '');
+
+        if ($period === 'custom' && $fromInput !== '' && $toInput !== '') {
+            try {
+                $from = Carbon::parse($fromInput)->startOfDay();
+                $to = Carbon::parse($toInput)->endOfDay();
+            } catch (\Throwable $exception) {
+                $period = 'month';
+            }
+        }
+
+        if (!$from || !$to) {
+            if ($period === 'week') {
+                $from = $now->copy()->startOfWeek();
+                $to = $now->copy()->endOfWeek();
+            } elseif ($period === 'year') {
+                $from = $now->copy()->startOfYear();
+                $to = $now->copy()->endOfYear();
+            } else {
+                $period = 'month';
+                $from = $now->copy()->startOfMonth();
+                $to = $now->copy()->endOfMonth();
+            }
+        }
+
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return [$period, $from, $to, $fromInput, $toInput];
+    }
+
+    private function applyDateRangeFilter(Builder $query, Carbon $from, Carbon $to): void
+    {
+        $query->whereBetween('created_at', [$from, $to]);
     }
 
     private function nextTicketCode(): string
