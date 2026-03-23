@@ -21,8 +21,8 @@
             <div class="col-md-2">
                 <label class="form-label mb-1">Registros</label>
                 <select name="per_page" class="form-select">
-                    @foreach([10, 15, 20] as $size)
-                        <option value="{{ $size }}" @selected(($perPage ?? 10) == $size)>{{ $size }}</option>
+                    @foreach([10, 15] as $size)
+                        <option value="{{ $size }}" @selected(($perPage ?? 5) == $size)>{{ $size }}</option>
                     @endforeach
                 </select>
             </div>
