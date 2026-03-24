@@ -170,19 +170,19 @@
                 <div class="app-content">
                     <div class="container-fluid">
                         @if(session('success'))
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss-alert" role="alert" data-auto-dismiss="2200">
                                 {{ session('success') }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         @endif
                         @if(session('error'))
-                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <div class="alert alert-warning alert-dismissible fade show js-auto-dismiss-alert" role="alert" data-auto-dismiss="2800">
                                 {{ session('error') }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         @endif
                         @if($errors->any())
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <div class="alert alert-danger alert-dismissible fade show js-auto-dismiss-alert" role="alert" data-auto-dismiss="3200">
                                 <strong>Revisa los campos del formulario.</strong>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
@@ -210,6 +210,26 @@
     @livewireScripts
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.js-auto-dismiss-alert').forEach(function (alertElement) {
+                const timeoutValue = parseInt(alertElement.getAttribute('data-auto-dismiss') || '5000', 10);
+
+                window.setTimeout(function () {
+                    if (!alertElement.isConnected) {
+                        return;
+                    }
+
+                    if (window.bootstrap && window.bootstrap.Alert) {
+                        window.bootstrap.Alert.getOrCreateInstance(alertElement).close();
+                        return;
+                    }
+
+                    alertElement.classList.remove('show');
+                    window.setTimeout(function () {
+                        alertElement.remove();
+                    }, 250);
+                }, timeoutValue);
+            });
+
             document.querySelectorAll('form.js-table-filters').forEach(function (form) {
                 const searchInput = form.querySelector('input[name="q"]');
                 const perPageSelect = form.querySelector('select[name="per_page"]');
