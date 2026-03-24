@@ -80,7 +80,7 @@ class HelpdeskDemoSeeder extends Seeder
                 'empleado_id' => $empleado1->id,
                 'departamento_id' => $departamentoSoporte->id,
                 'asunto' => 'No puedo acceder al sistema',
-                'descripcion' => 'El usuario reporta error de autenticacion.',
+                'descripcion' => 'El cliente reporta error de autenticacion.',
                 'estado' => 'pendiente',
                 'prioridad' => 'alta',
             ]
@@ -100,3 +100,4 @@ class HelpdeskDemoSeeder extends Seeder
         );
     }
 }
+

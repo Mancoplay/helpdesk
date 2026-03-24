@@ -76,7 +76,7 @@
             @endcan
 
             @php
-                $isClientOwner = auth()->user()->hasRole('Usuario')
+                $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
                     && (($ticket->cliente->email ?? null) === auth()->user()->email);
                 $isAssignedEmployee = auth()->user()->hasRole('Empleado')
                     && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0);
@@ -348,14 +348,5 @@
 @endpush
 @endif
 @endsection
-
-
-
-
-
-
-
-
-
 
 

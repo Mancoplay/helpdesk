@@ -26,12 +26,13 @@ class UserSeeder extends Seeder
         ]);
         $empleado->assignRole('Empleado');
 
-        // Usuario normal (cliente)
-        $usuario = User::create([
+        // Cliente
+        $cliente = User::create([
             'name' => 'Carlos Rodríguez',
-            'email' => 'usuario@helpdesk.com',
+            'email' => 'cliente@helpdesk.com',
             'password' => Hash::make('password'),
         ]);
-        $usuario->assignRole('Usuario');
+        $cliente->assignRole('Cliente');
     }
 }
+

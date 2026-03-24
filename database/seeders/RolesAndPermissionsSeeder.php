@@ -18,7 +18,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'ver tickets',
             'crear tickets',
             'atender tickets',
-            'gestionar usuarios',
             'gestionar clientes',
             'gestionar empleados',
             'gestionar departamentos',
@@ -30,11 +29,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $admin = Role::firstOrCreate(['name' => 'Administrador']);
         $empleado = Role::firstOrCreate(['name' => 'Empleado']);
-        $usuario = Role::firstOrCreate(['name' => 'Usuario']);
+        $cliente = Role::firstOrCreate(['name' => 'Cliente']);
 
         $admin->syncPermissions(Permission::all());
 
-        $usuario->syncPermissions([
+        $cliente->syncPermissions([
             'ver dashboard',
             'ver tickets',
             'crear tickets',
@@ -47,3 +46,4 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
     }
 }
+

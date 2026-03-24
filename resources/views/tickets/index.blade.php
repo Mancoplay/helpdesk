@@ -86,7 +86,7 @@
                         @if(
                             auth()->user()->hasRole('Administrador')
                             || (auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0))
-                            || (auth()->user()->hasRole('Usuario') && (($ticket->cliente->email ?? null) === auth()->user()->email))
+                            || (auth()->user()->hasAnyRole(['Cliente', 'Usuario']) && (($ticket->cliente->email ?? null) === auth()->user()->email))
                         )
                             <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Deseas eliminar este ticket?');">
                                 @csrf
@@ -113,7 +113,7 @@
 </div>
 
 @if(auth()->user()->can('crear tickets'))
-<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('tickets.store') }}" id="createTicketForm">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo ticket</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Codigo</label><input type="text" name="codigo" id="codigoTicket" class="form-control" value="{{ old('codigo', $nextTicketCode) }}" readonly><small class="text-muted d-block mt-1">El sistema evita codigos duplicados automaticamente.</small></div><div class="col-md-3"><label class="form-label">Departamento</label><select name="departamento_id" class="form-select" required><option value="">Departamento</option>@foreach($departamentosActivos as $departamento)<option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>@endforeach</select></div><div class="col-md-6"><label class="form-label">Asunto</label><input type="text" name="asunto" class="form-control" required></div><div class="col-12"><label class="form-label">Descripcion</label><textarea name="descripcion" class="form-control" rows="3" required></textarea></div><div class="col-md-4"><label class="form-label">Prioridad</label><select name="prioridad" class="form-select" required><option value="baja">Baja</option><option value="media" selected>Media</option><option value="alta">Alta</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" @disabled($departamentosActivos->isEmpty())>Guardar</button></div></form></div></div></div>
+<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('tickets.store') }}" id="createTicketForm">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo ticket</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Codigo</label><input type="text" name="codigo" id="codigoTicket" class="form-control" value="{{ old('codigo', $nextTicketCode) }}" readonly></div><div class="col-md-3"><label class="form-label">Departamento</label><select name="departamento_id" class="form-select" required><option value="">Departamento</option>@foreach($departamentosActivos as $departamento)<option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>@endforeach</select></div><div class="col-md-6"><label class="form-label">Asunto</label><input type="text" name="asunto" class="form-control" required></div><div class="col-12"><label class="form-label">Descripcion</label><textarea name="descripcion" class="form-control" rows="3" required></textarea></div><div class="col-md-4"><label class="form-label">Prioridad</label><select name="prioridad" class="form-select" required><option value="baja">Baja</option><option value="media" selected>Media</option><option value="alta">Alta</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" @disabled($departamentosActivos->isEmpty())>Guardar</button></div></form></div></div></div>
 @endif
 
 @push('scripts')
@@ -139,16 +139,6 @@
                     console.error('No se pudo obtener el siguiente codigo de ticket:', error);
                 });
         });
-
-        if (createTicketForm) {
-            createTicketForm.addEventListener('submit', function (event) {
-                const codeInput = createTicketModal.querySelector('input[name="codigo"]');
-                const code = codeInput ? codeInput.value : '';
-                const confirmed = confirm('Se creara el ticket con el codigo ' + code + '. �Deseas continuar?');
-
-                if (!confirmed) {
-                    event.preventDefault();
-                }
             });
         }
     });
@@ -156,3 +146,6 @@
 @endpush
 
 @endsection
+
+
+

@@ -11,7 +11,7 @@ return [
             'label' => 'Dashboard',
             'route' => 'dashboard',
             'icon' => 'fas fa-gauge-high',
-            'roles' => ['Administrador', 'Empleado', 'Usuario'],
+            'roles' => ['Administrador', 'Empleado', 'Cliente', 'Usuario'],
         ],
         [
             'label' => 'Clientes',
@@ -37,7 +37,7 @@ return [
             'icon' => 'fas fa-ticket-alt',
             'badge_type' => 'warning',
             'badge_key' => 'pendientes',
-            'roles' => ['Administrador', 'Empleado', 'Usuario'],
+            'roles' => ['Administrador', 'Empleado', 'Cliente', 'Usuario'],
         ],
     ],
 
@@ -64,3 +64,5 @@ return [
         ],
     ],
 ];
+
+

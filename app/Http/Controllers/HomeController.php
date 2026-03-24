@@ -52,7 +52,6 @@ class HomeController extends Controller
         }
 
         $stats = [
-            'total_usuarios' => User::count(),
             'total_clientes' => Cliente::count(),
             'total_empleados' => Empleado::count(),
             'total_departamentos' => Departamento::count(),
@@ -71,78 +70,6 @@ class HomeController extends Controller
             'menuBadges' => $this->menuBadges(),
         ]);
     }
-
-    public function usuarios(Request $request)
-    {
-        [$searchQuery, $perPage] = $this->resolveTableFilters($request);
-
-        return view('usuarios.index', [
-            'usuarios' => User::query()
-                ->when($searchQuery !== '', function (Builder $query) use ($searchQuery): void {
-                    $query->where(function (Builder $subQuery) use ($searchQuery): void {
-                        $subQuery->where('name', 'like', "%{$searchQuery}%")
-                            ->orWhere('email', 'like', "%{$searchQuery}%");
-                    });
-                })
-                ->latest()
-                ->paginate($perPage)
-                ->withQueryString(),
-            'searchQuery' => $searchQuery,
-            'perPage' => $perPage,
-            'menuBadges' => $this->menuBadges(),
-        ]);
-    }
-
-    public function storeUsuario(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
-        $user->syncRoles(['Usuario']);
-
-        return back()->with('success', 'Usuario agregado correctamente.');
-    }
-
-    public function updateUsuario(Request $request, User $user): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-
-        if (!empty($validated['password'])) {
-            $user->password = Hash::make($validated['password']);
-        }
-
-        $user->save();
-
-        return back()->with('success', 'Usuario actualizado correctamente.');
-    }
-
-    public function destroyUsuario(User $user): RedirectResponse
-    {
-        if ((int) auth()->id() === (int) $user->id) {
-            return back()->with('error', 'No puedes eliminar tu propio usuario.');
-        }
-
-        $user->delete();
-
-        return back()->with('success', 'Usuario eliminado correctamente.');
-    }
-
     public function clientes(Request $request)
     {
         [$searchQuery, $perPage] = $this->resolveTableFilters($request);
@@ -182,12 +109,12 @@ class HomeController extends Controller
             'empresa' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $usuario = User::create([
+        $clienteUser = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
-        $usuario->syncRoles(['Usuario']);
+        $clienteUser->syncRoles(['Cliente']);
 
         Cliente::create($validated + ['activo' => true]);
 
@@ -214,14 +141,14 @@ class HomeController extends Controller
             $linkedUser->email = $validated['email'];
             $linkedUser->password = Hash::make($validated['password']);
             $linkedUser->save();
-            $linkedUser->syncRoles(['Usuario']);
+            $linkedUser->syncRoles(['Cliente']);
         } else {
             $newUser = User::create([
                 'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
             ]);
-            $newUser->syncRoles(['Usuario']);
+            $newUser->syncRoles(['Cliente']);
         }
 
         $cliente->update($validated);
@@ -852,7 +779,7 @@ class HomeController extends Controller
             return back()->with('error', 'Accion no valida.');
         }
 
-        $isClientOwner = auth()->user()->hasRole('Usuario')
+        $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
             && ($ticket->cliente->email ?? null) === auth()->user()->email;
 
         $employee = Empleado::where('user_id', auth()->id())
@@ -1067,18 +994,21 @@ class HomeController extends Controller
     private function ticketsQueryForCurrentUser(bool $includeDeleted = false)
     {
         $query = Ticket::query();
+        $isAdmin = auth()->check() && auth()->user()->hasRole('Administrador');
+        $isEmployee = auth()->check() && auth()->user()->hasRole('Empleado');
+        $isClient = auth()->check() && auth()->user()->hasAnyRole(['Cliente', 'Usuario']);
 
         if ($includeDeleted) {
             $query->withTrashed();
         }
 
-        if (auth()->check() && auth()->user()->hasRole('Usuario')) {
+        if ($isClient) {
             $query->whereHas('cliente', function ($q): void {
                 $q->where('email', auth()->user()->email);
             });
         }
 
-        if (auth()->check() && auth()->user()->hasRole('Empleado')) {
+        if ($isEmployee) {
             $employee = Empleado::where('user_id', auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->with('departamentos:id')
@@ -1103,6 +1033,10 @@ class HomeController extends Controller
             } else {
                 $query->whereRaw('1 = 0');
             }
+        }
+
+        if (!$isAdmin && !$isEmployee && !$isClient) {
+            $query->whereRaw('1 = 0');
         }
 
         return $query;
@@ -1268,7 +1202,7 @@ class HomeController extends Controller
             return (int) $ticket->empleado_id === (int) $employee->id;
         }
 
-        if (auth()->user()->hasRole('Usuario')) {
+        if (auth()->user()->hasAnyRole(['Cliente', 'Usuario'])) {
             return $ticket->cliente && $ticket->cliente->email === auth()->user()->email;
         }
 
@@ -1299,4 +1233,5 @@ class HomeController extends Controller
     }
 
 }
+
 

@@ -17,10 +17,6 @@ Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
-    Route::get('/usuarios', [HomeController::class, 'usuarios'])->name('usuarios.index');
-    Route::post('/usuarios', [HomeController::class, 'storeUsuario'])->name('usuarios.store');
-    Route::put('/usuarios/{user}', [HomeController::class, 'updateUsuario'])->name('usuarios.update');
-    Route::delete('/usuarios/{user}', [HomeController::class, 'destroyUsuario'])->name('usuarios.destroy');
 
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
     Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
@@ -75,3 +71,4 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::view('/dashboard-livewire', 'dashboard')->name('dashboard.livewire')->middleware('auth');
+
