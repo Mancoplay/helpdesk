@@ -48,7 +48,7 @@
                     <th>Departamentos</th>
                     <th>Contacto</th>
                     <th>Correo</th>
-                    <th style="width:220px;">Accion</th>
+                    <th style="width:300px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,14 +64,16 @@
                         </td>
                         <td>{{ $empleado->telefono ?? '-' }}</td>
                         <td>{{ $empleado->email }}</td>
-                        <td>
-                            <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-info btn-sm me-1">Revisar</a>
-                            <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editEmpleadoModal{{ $empleado->id }}">Editar</button>
-                            <form class="d-inline" method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                            </form>
+                        <td class="text-nowrap">
+                            <div class="d-flex flex-nowrap align-items-center gap-2">
+                                <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-secondary btn-sm">Revisar</a>
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editEmpleadoModal{{ $empleado->id }}">Editar</button>
+                                <form class="d-inline mb-0" method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
 
@@ -306,5 +308,8 @@
 @endpush
 
 @endsection
+
+
+
 
 

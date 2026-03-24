@@ -47,7 +47,7 @@
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Creado</th>
-                    <th style="width:220px;">Accion</th>
+                    <th style="width:260px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,16 +56,18 @@
                         <td>{{ $usuario->name }}</td>
                         <td>{{ $usuario->email }}</td>
                         <td>{{ $usuario->created_at?->format('d/m/Y H:i') }}</td>
-                        <td>
+                        <td class="text-nowrap">
                             @if(auth()->id() === $usuario->id)
                                 <span class="badge text-bg-secondary">Actual</span>
                             @else
-                                <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ $usuario->id }}">Editar</button>
-                                <form class="d-inline" method="POST" action="{{ route('usuarios.destroy', $usuario) }}" onsubmit="return confirm('Deseas eliminar este usuario?');">
+                                <div class="d-flex flex-nowrap align-items-center gap-1">
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ $usuario->id }}">Editar</button>
+                                <form class="d-inline mb-0" method="POST" action="{{ route('usuarios.destroy', $usuario) }}" onsubmit="return confirm('Deseas eliminar este usuario?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
                                 </form>
+                                </div>
                             @endif
                         </td>
                     </tr>
@@ -157,3 +159,4 @@
     </div>
 </div>
 @endsection
+

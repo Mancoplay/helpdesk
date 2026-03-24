@@ -40,7 +40,7 @@
     <div class="card-header"><h3 class="card-title mb-0">Tabla de Clientes</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th>Empresa</th><th style="width:220px;">Accion</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th>Empresa</th><th style="width:300px;">Accion</th></tr></thead>
             <tbody>
             @forelse($clientes as $cliente)
                 <tr>
@@ -48,14 +48,16 @@
                     <td>{{ $cliente->email }}</td>
                     <td>{{ $cliente->telefono ?? '-' }}</td>
                     <td>{{ $cliente->empresa ?? '-' }}</td>
-                    <td>
-                        <a href="{{ route('clientes.review', $cliente) }}" class="btn btn-info btn-sm me-1">Revisar</a>
-                        <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
-                        <form class="d-inline" method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                        </form>
+                    <td class="text-nowrap">
+                        <div class="d-flex flex-nowrap align-items-center gap-2">
+                            <a href="{{ route('clientes.review', $cliente) }}" class="btn btn-secondary btn-sm">Revisar</a>
+                            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
+                            <form class="d-inline mb-0" method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
 
@@ -112,3 +114,7 @@
     </div></div>
 </div>
 @endsection
+
+
+
+
