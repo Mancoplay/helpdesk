@@ -141,11 +141,11 @@
                             Abrir ventana de conexion
                         </button>
                         @if($isAssignedEmployee)
-                            <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                            <form id="endRemoteSessionForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="end">
-                                <button type="submit" class="btn btn-outline-dark w-100">Finalizar conexion</button>
+                                <button type="button" id="endRemoteSessionBtn" class="btn btn-outline-dark w-100">Finalizar conexion</button>
                             </form>
                         @endif
                     @endif
@@ -284,6 +284,14 @@
                     </div>
                 </div>
 
+                @if($isClientOwner || $isAssignedEmployee)
+                    <form class="mt-2" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="action" value="signal_closed">
+                        <button type="submit" class="btn btn-outline-secondary w-100">Ya se cerro AnyDesk</button>
+                    </form>
+                @endif
                 <hr>
                 <p class="mb-1"><strong>Pasos rapidos</strong></p>
                 <ol class="mb-0">
@@ -304,27 +312,50 @@
     document.addEventListener('DOMContentLoaded', function () {
         const copyButton = document.getElementById('copyRemoteCodeBtn');
         const codeElement = document.getElementById('remoteSupportCode');
+        const endButton = document.getElementById('endRemoteSessionBtn');
+        const endForm = document.getElementById('endRemoteSessionForm');
 
-        if (!copyButton || !codeElement || !navigator.clipboard) {
-            return;
+        if (copyButton && codeElement && navigator.clipboard) {
+            copyButton.addEventListener('click', function () {
+                const code = codeElement.value.trim();
+                if (!code) {
+                    return;
+                }
+
+                navigator.clipboard.writeText(code).then(function () {
+                    copyButton.textContent = 'Copiado';
+                    setTimeout(function () {
+                        copyButton.textContent = 'Copiar';
+                    }, 1500);
+                });
+            });
         }
 
-        copyButton.addEventListener('click', function () {
-            const code = codeElement.value.trim();
-            if (!code) {
-                return;
-            }
+        if (endButton && endForm) {
+            endButton.addEventListener('click', function () {
+                if (!confirm('Confirma que deseas finalizar la conexion remota.')) {
+                    return;
+                }
 
-            navigator.clipboard.writeText(code).then(function () {
-                copyButton.textContent = 'Copiado';
+                window.location.href = 'anydesk:';
                 setTimeout(function () {
-                    copyButton.textContent = 'Copiar';
-                }, 1500);
+                    endForm.submit();
+                }, 300);
             });
-        });
+        }
     });
 </script>
 @endpush
 @endif
 @endsection
+
+
+
+
+
+
+
+
+
+
 

@@ -848,7 +848,7 @@ class HomeController extends Controller
         }
 
         $action = (string) $request->input('action');
-        if (!in_array($action, ['accept', 'reject', 'cancel', 'end', 'share_code'], true)) {
+        if (!in_array($action, ['accept', 'reject', 'cancel', 'end', 'share_code', 'signal_closed'], true)) {
             return back()->with('error', 'Accion no valida.');
         }
 
@@ -887,6 +887,10 @@ class HomeController extends Controller
 
         if ($action === 'end' && $remoteSession->status !== 'accepted') {
             return back()->with('error', 'Solo se puede finalizar una sesion aceptada.');
+        }
+
+        if ($action === 'signal_closed' && $remoteSession->status !== 'accepted') {
+            return back()->with('error', 'Solo puedes marcar cierre cuando la sesion esta activa.');
         }
 
         if ($action === 'share_code' && !in_array($remoteSession->status, ['pending', 'accepted'], true)) {
@@ -970,6 +974,20 @@ class HomeController extends Controller
             ]);
 
             return back()->with('success', 'Codigo de AnyDesk enviado correctamente.');
+        }
+
+        if ($action === 'signal_closed') {
+            $remoteSession->status = 'ended';
+            $remoteSession->ended_at = now();
+            $remoteSession->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'Sesion de AnyDesk cerrada. La conexion remota fue finalizada.',
+                'tipo' => 'atencion',
+            ]);
+
+            return back()->with('success', 'Sesion remota cerrada correctamente.');
         }
 
         $remoteSession->status = 'ended';
