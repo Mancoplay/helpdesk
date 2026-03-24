@@ -816,17 +816,17 @@ class HomeController extends Controller
             return back()->with('error', 'Ya existe una solicitud de conexion remota activa para este ticket.');
         }
 
-        $session = $ticket->remoteSessions()->create([
+        $ticket->remoteSessions()->create([
             'requested_by_user_id' => auth()->id(),
             'status' => 'pending',
-            'support_code' => (string) random_int(100000, 999999),
+            'support_code' => null,
             'requested_at' => now(),
-            'note' => 'Solicitud de control remoto enviada.',
+            'note' => json_encode(['tool' => null], JSON_UNESCAPED_UNICODE),
         ]);
 
         $ticket->mensajes()->create([
             'user_id' => auth()->id(),
-            'mensaje' => 'Solicitud de conexion remota enviada. Codigo: ' . $session->support_code . '.',
+            'mensaje' => 'Solicitud de conexion remota enviada. El cliente debe compartir su codigo de AnyDesk.',
             'tipo' => 'atencion',
         ]);
 
@@ -848,7 +848,7 @@ class HomeController extends Controller
         }
 
         $action = (string) $request->input('action');
-        if (!in_array($action, ['accept', 'reject', 'cancel', 'end'], true)) {
+        if (!in_array($action, ['accept', 'reject', 'cancel', 'end', 'share_code'], true)) {
             return back()->with('error', 'Accion no valida.');
         }
 
@@ -865,7 +865,7 @@ class HomeController extends Controller
             return back()->with('error', 'La conexion remota solo esta habilitada cuando el ticket esta en proceso.');
         }
 
-        if (in_array($action, ['accept', 'reject'], true) && !$isClientOwner) {
+        if (in_array($action, ['accept', 'reject', 'share_code'], true) && !$isClientOwner) {
             return back()->with('error', 'Solo el cliente del ticket puede responder esta solicitud.');
         }
 
@@ -887,6 +887,10 @@ class HomeController extends Controller
 
         if ($action === 'end' && $remoteSession->status !== 'accepted') {
             return back()->with('error', 'Solo se puede finalizar una sesion aceptada.');
+        }
+
+        if ($action === 'share_code' && !in_array($remoteSession->status, ['pending', 'accepted'], true)) {
+            return back()->with('error', 'Solo puedes compartir codigo en una solicitud activa.');
         }
 
         if ($action === 'accept') {
@@ -930,6 +934,42 @@ class HomeController extends Controller
             ]);
 
             return back()->with('success', 'Solicitud de conexion remota cancelada.');
+        }
+
+        if ($action === 'share_code') {
+            $validated = $request->validate([
+                'support_code' => ['required', 'string', 'max:40'],
+            ]);
+
+            $supportCode = trim((string) $validated['support_code']);
+            if ($supportCode === '') {
+                return back()->with('error', 'Debes ingresar el codigo de AnyDesk.');
+            }
+
+            $remoteMeta = [];
+            if (is_string($remoteSession->note) && $remoteSession->note !== '') {
+                $decoded = json_decode($remoteSession->note, true);
+                if (is_array($decoded)) {
+                    $remoteMeta = $decoded;
+                }
+            }
+
+            $remoteMeta['tool'] = 'anydesk';
+            $remoteSession->support_code = $supportCode;
+            $remoteSession->note = json_encode($remoteMeta, JSON_UNESCAPED_UNICODE);
+            if ($remoteSession->status === 'pending') {
+                $remoteSession->status = 'accepted';
+                $remoteSession->responded_at = now();
+            }
+            $remoteSession->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'Cliente compartio codigo de AnyDesk para soporte remoto.',
+                'tipo' => 'atencion',
+            ]);
+
+            return back()->with('success', 'Codigo de AnyDesk enviado correctamente.');
         }
 
         $remoteSession->status = 'ended';
@@ -1241,3 +1281,4 @@ class HomeController extends Controller
     }
 
 }
+

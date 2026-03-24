@@ -110,45 +110,44 @@
                         @endif
                     @elseif($remoteSession->status === 'pending')
                         <div class="alert alert-warning py-2 mb-2">
-                            Solicitud pendiente. Codigo de soporte: <strong>{{ $remoteSession->support_code }}</strong>
+                            Solicitud pendiente de aprobacion del cliente.
                         </div>
 
                         @if($isClientOwner)
-                            <div class="d-flex gap-2">
-                                <form class="w-100" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="action" value="accept">
-                                    <button type="submit" class="btn btn-success w-100">Aceptar</button>
-                                </form>
-                                <form class="w-100" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="action" value="reject">
-                                    <button type="submit" class="btn btn-danger w-100">Rechazar</button>
-                                </form>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <form id="remote-accept-form" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="accept">
+                                        <button type="submit" class="btn btn-success w-100">Aceptar</button>
+                                    </form>
+                                </div>
+                                <div class="col-6">
+                                    <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" class="btn btn-danger w-100">Rechazar</button>
+                                    </form>
+                                </div>
                             </div>
                         @endif
-
-                        <form class="mt-2" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="cancel">
-                            <button type="submit" class="btn btn-outline-secondary w-100">Cancelar solicitud</button>
-                        </form>
                     @elseif($remoteSession->status === 'accepted')
                         <div class="alert alert-success py-2 mb-2">
-                            Conexion autorizada por el cliente. Codigo de soporte: <strong>{{ $remoteSession->support_code }}</strong>
+                            Conexion autorizada por el cliente.
                         </div>
                         <button type="button" class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#remoteSupportModal">
                             Abrir ventana de conexion
                         </button>
-                        <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="end">
-                            <button type="submit" class="btn btn-outline-dark w-100">Finalizar conexion</button>
-                        </form>
+                        @if($isAssignedEmployee)
+                            <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="action" value="end">
+                                <button type="submit" class="btn btn-outline-dark w-100">Finalizar conexion</button>
+                            </form>
+                        @endif
                     @endif
                 </div>
             @endif
@@ -246,27 +245,50 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-info mb-3">
-                    Sesion autorizada. Comparte este codigo en la aplicacion remota para conectar:
-                    <strong id="remoteSupportCode">{{ $remoteSession->support_code }}</strong>
+                    Sesion autorizada por el cliente en <strong>AnyDesk</strong>.
                 </div>
 
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-outline-primary w-100" id="copyRemoteCodeBtn">Copiar codigo</button>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label mb-1">Codigo de AnyDesk</label>
+                        @if($isClientOwner)
+                            <form method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="action" value="share_code">
+                                <div class="input-group">
+                                    <input
+                                        type="text"
+                                        id="remoteSupportCode"
+                                        name="support_code"
+                                        class="form-control"
+                                        value="{{ old('support_code', $remoteSession->support_code) }}"
+                                        maxlength="40"
+                                        placeholder="Ej: 123 456 789"
+                                        required
+                                    >
+                                    <button type="submit" class="btn btn-primary">Enviar codigo</button>
+                                </div>
+                            </form>
+                        @else
+                            <div class="input-group">
+                                <input type="text" id="remoteSupportCode" class="form-control" value="{{ $remoteSession->support_code }}" readonly>
+                                @if($isAssignedEmployee)
+                                    <button type="button" class="btn btn-outline-primary" id="copyRemoteCodeBtn">Copiar</button>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                     <div class="col-md-4">
                         <a href="anydesk:{{ $remoteSession->support_code }}" class="btn btn-outline-dark w-100">Abrir AnyDesk</a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="ms-quick-assist:" class="btn btn-outline-secondary w-100">Abrir Quick Assist</a>
                     </div>
                 </div>
 
                 <hr>
                 <p class="mb-1"><strong>Pasos rapidos</strong></p>
                 <ol class="mb-0">
-                    <li>Cliente y empleado abren AnyDesk o Quick Assist.</li>
-                    <li>Ingresan/comparten el codigo de soporte.</li>
+                    <li>El cliente comparte su codigo de AnyDesk.</li>
+                    <li>El empleado abre AnyDesk y pega el codigo.</li>
                     <li>El cliente confirma el permiso de control remoto.</li>
                 </ol>
             </div>
@@ -288,15 +310,15 @@
         }
 
         copyButton.addEventListener('click', function () {
-            const code = codeElement.textContent.trim();
+            const code = codeElement.value.trim();
             if (!code) {
                 return;
             }
 
             navigator.clipboard.writeText(code).then(function () {
-                copyButton.textContent = 'Codigo copiado';
+                copyButton.textContent = 'Copiado';
                 setTimeout(function () {
-                    copyButton.textContent = 'Copiar codigo';
+                    copyButton.textContent = 'Copiar';
                 }, 1500);
             });
         });
@@ -305,3 +327,4 @@
 @endpush
 @endif
 @endsection
+
