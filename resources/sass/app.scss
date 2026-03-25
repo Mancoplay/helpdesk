@@ -19,8 +19,10 @@
     --secondary: #6c757d;
     --success: #28a745;
     --info: #17a2b8;
-    --warning: #ffc107;
+    --warning: #ffcd11;
     --danger: #dc3545;
+    --bs-warning: #ffcd11;
+    --bs-warning-rgb: 255, 205, 17;
 }
 
 .login-page, .register-page {
@@ -30,4 +32,33 @@
 .login-box, .register-box {
     width: 360px;
     margin: 7% auto;
+}
+
+/* Warning/mostaza -> amarillo */
+.btn-warning {
+    --bs-btn-bg: #ffcd11;
+    --bs-btn-border-color: #ffcd11;
+    --bs-btn-color: #1f1f1f;
+    --bs-btn-hover-bg: #f0bd00;
+    --bs-btn-hover-border-color: #f0bd00;
+    --bs-btn-active-bg: #dca900;
+    --bs-btn-active-border-color: #dca900;
+}
+
+.bg-warning,
+.text-bg-warning,
+.badge.text-bg-warning {
+    background-color: #ffcd11 !important;
+    color: #1f1f1f !important;
+}
+
+.alert-warning {
+    --bs-alert-bg: #fff5cf;
+    --bs-alert-border-color: #ffcd11;
+    --bs-alert-color: #4f4300;
+}
+
+.small-box.bg-warning {
+    background-color: #ffcd11 !important;
+    color: #1f1f1f !important;
 }

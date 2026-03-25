@@ -44,7 +44,7 @@ return [
     'ticket_states' => [
         'pendiente' => [
             'label' => 'Tickets pendientes',
-            'color' => '#f39c12',
+            'color' => '#ffcd11',
             'badge' => 'warning',
         ],
         'en_proceso' => [
@@ -64,5 +64,3 @@ return [
         ],
     ],
 ];
-
-
