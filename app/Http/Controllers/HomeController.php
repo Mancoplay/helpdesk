@@ -6,11 +6,14 @@ use App\Models\Cliente;
 use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
+use App\Models\TicketRemoteSession;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -70,16 +73,20 @@ class HomeController extends Controller
     public function usuarios(Request $request)
     {
         $query = User::latest();
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $perPage = $this->resolvePerPage($request);
 
-        if ($search = $request->get('search')) {
+        if ($search !== '') {
             $query->where('name', 'like', '%' . $search . '%')
                 ->orWhere('email', 'like', '%' . $search . '%');
         }
 
-        $usuarios = $query->paginate($request->get('per_page', 10));
+        $usuarios = $query->paginate($perPage)->withQueryString();
 
         return view('usuarios.index', [
             'usuarios' => $usuarios,
+            'searchQuery' => $search,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -137,8 +144,10 @@ class HomeController extends Controller
     public function clientes(Request $request)
     {
         $query = Cliente::latest();
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $perPage = $this->resolvePerPage($request);
 
-        if ($search = $request->get('search')) {
+        if ($search !== '') {
             $query->where('nombres', 'like', '%' . $search . '%')
                 ->orWhere('apellidos', 'like', '%' . $search . '%')
                 ->orWhere('email', 'like', '%' . $search . '%')
@@ -146,10 +155,48 @@ class HomeController extends Controller
                 ->orWhere('empresa', 'like', '%' . $search . '%');
         }
 
-        $clientes = $query->paginate($request->get('per_page', 10));
+        $clientes = $query->paginate($perPage)->withQueryString();
 
         return view('clientes.index', [
             'clientes' => $clientes,
+            'searchQuery' => $search,
+            'perPage' => $perPage,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function reviewCliente(Request $request, Cliente $cliente)
+    {
+        [$period, $fromInput, $toInput, $fromDate, $toDate] = $this->resolveReviewRange($request);
+        $perPage = $this->resolvePerPage($request);
+
+        $baseQuery = Ticket::withTrashed()
+            ->with(['empleado', 'departamento'])
+            ->where('cliente_id', $cliente->id)
+            ->whereBetween('created_at', [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
+
+        $tickets = (clone $baseQuery)
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $summary = [
+            'total_tickets' => (clone $baseQuery)->count(),
+            'empleados_distintos' => (clone $baseQuery)
+                ->whereNotNull('empleado_id')
+                ->distinct('empleado_id')
+                ->count('empleado_id'),
+            'tickets_cerrados' => (clone $baseQuery)->where('estado', 'finalizado')->count(),
+            'tickets_eliminados' => (clone $baseQuery)->onlyTrashed()->count(),
+        ];
+
+        return view('clientes.review', [
+            'cliente' => $cliente,
+            'tickets' => $tickets,
+            'summary' => $summary,
+            'period' => $period,
+            'fromInput' => $fromInput,
+            'toInput' => $toInput,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -228,8 +275,10 @@ class HomeController extends Controller
     public function empleados(Request $request)
     {
         $query = Empleado::with(['departamento', 'departamentos'])->latest();
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $perPage = $this->resolvePerPage($request);
 
-        if ($search = $request->get('search')) {
+        if ($search !== '') {
             $query->where('nombres', 'like', '%' . $search . '%')
                 ->orWhere('apellidos', 'like', '%' . $search . '%')
                 ->orWhere('email', 'like', '%' . $search . '%')
@@ -237,11 +286,51 @@ class HomeController extends Controller
                 ->orWhere('cargo', 'like', '%' . $search . '%');
         }
 
-        $empleados = $query->paginate($request->get('per_page', 10));
+        $empleados = $query->paginate($perPage)->withQueryString();
 
         return view('empleados.index', [
             'empleados' => $empleados,
             'departamentos' => Departamento::orderBy('nombre')->get(),
+            'searchQuery' => $search,
+            'perPage' => $perPage,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function reviewEmpleado(Request $request, Empleado $empleado)
+    {
+        [$period, $fromInput, $toInput, $fromDate, $toDate] = $this->resolveReviewRange($request);
+        $perPage = $this->resolvePerPage($request);
+
+        $empleado->loadMissing(['departamentos', 'departamento']);
+
+        $baseQuery = Ticket::withTrashed()
+            ->with(['cliente', 'departamento'])
+            ->where('empleado_id', $empleado->id)
+            ->whereBetween('created_at', [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
+
+        $tickets = (clone $baseQuery)
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $summary = [
+            'total_tickets' => (clone $baseQuery)->count(),
+            'clientes_atendidos' => (clone $baseQuery)
+                ->whereNotNull('cliente_id')
+                ->distinct('cliente_id')
+                ->count('cliente_id'),
+            'tickets_cerrados' => (clone $baseQuery)->where('estado', 'finalizado')->count(),
+            'tickets_eliminados' => (clone $baseQuery)->onlyTrashed()->count(),
+        ];
+
+        return view('empleados.review', [
+            'empleado' => $empleado,
+            'tickets' => $tickets,
+            'summary' => $summary,
+            'period' => $period,
+            'fromInput' => $fromInput,
+            'toInput' => $toInput,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -256,9 +345,26 @@ class HomeController extends Controller
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'departamento_id' => ['nullable', 'exists:departamentos,id'],
+            'departamento_ids' => ['nullable', 'array'],
+            'departamento_ids.*' => ['integer', 'exists:departamentos,id'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+        $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
+            ->map(static fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($selectedDepartmentIds->isEmpty() && !empty($validated['departamento_id'])) {
+            $selectedDepartmentIds->push((int) $validated['departamento_id']);
+        }
+
+        if ($selectedDepartmentIds->isEmpty()) {
+            return back()
+                ->withErrors(['departamento_ids' => 'Debes seleccionar al menos un departamento.'])
+                ->withInput();
+        }
 
         $user = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
@@ -267,9 +373,9 @@ class HomeController extends Controller
         ]);
         $user->syncRoles(['Empleado']);
 
-        Empleado::create([
+        $empleado = Empleado::create([
             'user_id' => $user->id,
-            'departamento_id' => $validated['departamento_id'],
+            'departamento_id' => $selectedDepartmentIds->first(),
             'nombres' => $validated['nombres'],
             'segundo_nombre' => $validated['segundo_nombre'] ?? null,
             'apellidos' => $validated['apellidos'],
@@ -279,6 +385,7 @@ class HomeController extends Controller
             'cargo' => $validated['cargo'] ?? null,
             'activo' => true,
         ]);
+        $empleado->departamentos()->sync($selectedDepartmentIds->all());
 
         return back()->with('success', 'Empleado agregado correctamente.');
     }
@@ -293,12 +400,29 @@ class HomeController extends Controller
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'departamento_id' => ['nullable', 'exists:departamentos,id'],
+            'departamento_ids' => ['nullable', 'array'],
+            'departamento_ids.*' => ['integer', 'exists:departamentos,id'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
+        $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
+            ->map(static fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($selectedDepartmentIds->isEmpty() && !empty($validated['departamento_id'])) {
+            $selectedDepartmentIds->push((int) $validated['departamento_id']);
+        }
+
+        if ($selectedDepartmentIds->isEmpty()) {
+            return back()
+                ->withErrors(['departamento_ids' => 'Debes seleccionar al menos un departamento.'])
+                ->withInput();
+        }
 
         $empleado->update([
-            'departamento_id' => $validated['departamento_id'],
+            'departamento_id' => $selectedDepartmentIds->first(),
             'nombres' => $validated['nombres'],
             'segundo_nombre' => $validated['segundo_nombre'] ?? null,
             'apellidos' => $validated['apellidos'],
@@ -307,6 +431,7 @@ class HomeController extends Controller
             'direccion' => $validated['direccion'] ?? null,
             'cargo' => $validated['cargo'] ?? null,
         ]);
+        $empleado->departamentos()->sync($selectedDepartmentIds->all());
 
         if ($empleado->user_id) {
             $user = User::find($empleado->user_id);
@@ -343,16 +468,20 @@ class HomeController extends Controller
     public function departamentos(Request $request)
     {
         $query = Departamento::latest();
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $perPage = $this->resolvePerPage($request);
 
-        if ($search = $request->get('search')) {
+        if ($search !== '') {
             $query->where('nombre', 'like', '%' . $search . '%')
                 ->orWhere('descripcion', 'like', '%' . $search . '%');
         }
 
-        $departamentos = $query->paginate($request->get('per_page', 10));
+        $departamentos = $query->paginate($perPage)->withQueryString();
 
         return view('departamentos.index', [
             'departamentos' => $departamentos,
+            'searchQuery' => $search,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -406,8 +535,10 @@ class HomeController extends Controller
     {
         $query = $this->ticketsQueryForCurrentUser()
             ->with(['cliente', 'empleado', 'departamento']);
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $perPage = $this->resolvePerPage($request);
 
-        if ($search = $request->get('search')) {
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('codigo', 'like', '%' . $search . '%')
                     ->orWhere('asunto', 'like', '%' . $search . '%')
@@ -425,7 +556,7 @@ class HomeController extends Controller
             });
         }
 
-        $tickets = $query->latest()->paginate($request->get('per_page', 10));
+        $tickets = $query->latest()->paginate($perPage)->withQueryString();
 
         $currentEmployee = null;
         if (auth()->user()->hasRole('Empleado')) {
@@ -442,6 +573,8 @@ class HomeController extends Controller
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'currentEmployeeId' => $currentEmployee?->id,
             'nextTicketCode' => $this->nextTicketCode(),
+            'searchQuery' => $search,
+            'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -460,13 +593,164 @@ class HomeController extends Controller
             ->get()
             ->sortBy('created_at')
             ->values();
+        $remoteEnabled = Schema::hasTable('ticket_remote_sessions');
+        $remoteSession = $remoteEnabled
+            ? $ticket->remoteSessions()->latest('id')->first()
+            : null;
 
         return view('tickets.show', [
             'ticket' => $ticket,
             'messages' => $messages,
+            'remoteEnabled' => $remoteEnabled,
+            'remoteSession' => $remoteSession,
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
+    }
+
+    public function requestRemoteSession(Ticket $ticket): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!Schema::hasTable('ticket_remote_sessions')) {
+            return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
+        }
+
+        if (!$this->isAssignedEmployeeForTicket($ticket)) {
+            abort(403, 'Solo el empleado asignado puede iniciar la conexion remota.');
+        }
+
+        if ($ticket->estado !== 'en_proceso') {
+            return back()->with('error', 'La conexion remota solo se puede solicitar cuando el ticket esta en proceso.');
+        }
+
+        $hasActive = $ticket->remoteSessions()
+            ->whereIn('status', ['pending', 'accepted'])
+            ->exists();
+
+        if ($hasActive) {
+            return back()->with('error', 'Ya existe una solicitud remota activa para este ticket.');
+        }
+
+        TicketRemoteSession::create([
+            'ticket_id' => $ticket->id,
+            'requested_by_user_id' => auth()->id(),
+            'status' => 'pending',
+            'requested_at' => now(),
+        ]);
+
+        return back()->with('success', 'Solicitud remota enviada al cliente.');
+    }
+
+    public function updateRemoteSession(Request $request, Ticket $ticket, TicketRemoteSession $remoteSession): RedirectResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!Schema::hasTable('ticket_remote_sessions')) {
+            return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
+        }
+
+        if ((int) $remoteSession->ticket_id !== (int) $ticket->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(['accept', 'reject', 'share_code', 'end', 'signal_closed'])],
+            'support_code' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $action = $validated['action'];
+
+        if ($action === 'accept') {
+            if (!$this->isTicketClientOwner($ticket)) {
+                abort(403);
+            }
+            if ($remoteSession->status !== 'pending') {
+                return back()->with('error', 'La solicitud remota ya no esta pendiente.');
+            }
+
+            $remoteSession->update([
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+
+            return back()->with('success', 'Solicitud remota aceptada correctamente.');
+        }
+
+        if ($action === 'reject') {
+            if (!$this->isTicketClientOwner($ticket)) {
+                abort(403);
+            }
+            if ($remoteSession->status !== 'pending') {
+                return back()->with('error', 'La solicitud remota ya no esta pendiente.');
+            }
+
+            $remoteSession->update([
+                'status' => 'rejected',
+                'responded_at' => now(),
+                'cancelled_by_user_id' => auth()->id(),
+            ]);
+
+            return back()->with('success', 'Solicitud remota rechazada.');
+        }
+
+        if ($action === 'share_code') {
+            if (!$this->isTicketClientOwner($ticket)) {
+                abort(403);
+            }
+            if ($remoteSession->status !== 'accepted') {
+                return back()->with('error', 'Debes aceptar la solicitud antes de compartir el codigo.');
+            }
+
+            $supportCode = trim((string) ($validated['support_code'] ?? ''));
+            if ($supportCode === '') {
+                return back()->with('error', 'Debes ingresar el codigo de AnyDesk.');
+            }
+
+            $remoteSession->update([
+                'support_code' => $supportCode,
+            ]);
+
+            return back()->with('success', 'Codigo de AnyDesk compartido.');
+        }
+
+        if ($action === 'end') {
+            if (!$this->isAssignedEmployeeForTicket($ticket)) {
+                abort(403);
+            }
+            if (!in_array($remoteSession->status, ['accepted', 'pending'], true)) {
+                return back()->with('error', 'No hay una sesion remota activa para finalizar.');
+            }
+
+            $remoteSession->update([
+                'status' => 'ended',
+                'ended_at' => now(),
+                'cancelled_by_user_id' => auth()->id(),
+            ]);
+
+            return back()->with('success', 'Conexion remota finalizada correctamente.');
+        }
+
+        if (!$this->isTicketClientOwner($ticket) && !$this->isAssignedEmployeeForTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!in_array($remoteSession->status, ['accepted', 'pending'], true)) {
+            return back()->with('error', 'No hay una sesion remota activa para cerrar.');
+        }
+
+        $remoteSession->update([
+            'status' => 'ended',
+            'ended_at' => now(),
+            'cancelled_by_user_id' => auth()->id(),
+            'note' => 'Cierre informado desde la interfaz.',
+        ]);
+
+        return back()->with('success', 'Se marco la sesion remota como finalizada.');
     }
 
     public function storeTicket(Request $request): RedirectResponse
@@ -773,6 +1057,96 @@ class HomeController extends Controller
 
         return (int) $ticket->empleado_id === (int) $employee->id
             && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
+    }
+
+    private function isAssignedEmployeeForTicket(Ticket $ticket): bool
+    {
+        if (auth()->user()->hasRole('Administrador')) {
+            return true;
+        }
+
+        if (!auth()->user()->hasRole('Empleado')) {
+            return false;
+        }
+
+        $employee = Empleado::where('user_id', auth()->id())
+            ->orWhere('email', auth()->user()->email)
+            ->first();
+
+        if (!$employee) {
+            return false;
+        }
+
+        return (int) $ticket->empleado_id === (int) $employee->id;
+    }
+
+    private function isTicketClientOwner(Ticket $ticket): bool
+    {
+        if (!auth()->user()->hasAnyRole(['Cliente', 'Usuario'])) {
+            return false;
+        }
+
+        return ($ticket->cliente->email ?? null) === auth()->user()->email;
+    }
+
+    private function resolvePerPage(Request $request): int
+    {
+        $perPage = (int) $request->get('per_page', 10);
+
+        return in_array($perPage, [10, 15], true) ? $perPage : 10;
+    }
+
+    private function resolveReviewRange(Request $request): array
+    {
+        $now = Carbon::now();
+        $period = (string) $request->get('period', 'month');
+        $allowedPeriods = ['week', 'month', 'year', 'custom'];
+
+        if (!in_array($period, $allowedPeriods, true)) {
+            $period = 'month';
+        }
+
+        $fromInput = (string) $request->get('from', '');
+        $toInput = (string) $request->get('to', '');
+
+        if ($period === 'week') {
+            $fromDate = $now->copy()->startOfWeek();
+            $toDate = $now->copy()->endOfWeek();
+        } elseif ($period === 'year') {
+            $fromDate = $now->copy()->startOfYear();
+            $toDate = $now->copy()->endOfYear();
+        } elseif ($period === 'custom') {
+            $fromDate = $this->safeParseDate($fromInput) ?? $now->copy()->startOfMonth();
+            $toDate = $this->safeParseDate($toInput) ?? $now->copy()->endOfMonth();
+
+            if ($fromDate->gt($toDate)) {
+                [$fromDate, $toDate] = [$toDate, $fromDate];
+            }
+        } else {
+            $fromDate = $now->copy()->startOfMonth();
+            $toDate = $now->copy()->endOfMonth();
+            $period = 'month';
+        }
+
+        if ($period !== 'custom') {
+            $fromInput = $fromDate->toDateString();
+            $toInput = $toDate->toDateString();
+        }
+
+        return [$period, $fromInput, $toInput, $fromDate, $toDate];
+    }
+
+    private function safeParseDate(string $value): ?Carbon
+    {
+        if (trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable $th) {
+            return null;
+        }
     }
 
     private function markTicketInProgressWhenEmployeeEnters(Ticket $ticket): void
