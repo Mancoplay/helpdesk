@@ -29,6 +29,11 @@ class HomeController extends Controller
         $statusConfig = config('adminlte.ticket_states', []);
         $ticketsBase = $this->ticketsQueryForCurrentUser();
         $ticketsWithDeleted = $this->ticketsQueryForCurrentUser(includeDeleted: true);
+        $recentTickets = (clone $ticketsBase)
+            ->with(['departamento'])
+            ->latest()
+            ->limit(6)
+            ->get();
 
         $statusCounts = (clone $ticketsBase)
             ->selectRaw('estado, COUNT(*) as total')
@@ -66,6 +71,7 @@ class HomeController extends Controller
             'chartLabels' => $chartLabels,
             'chartValues' => $chartValues,
             'chartColors' => $chartColors,
+            'recentTickets' => $recentTickets,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
