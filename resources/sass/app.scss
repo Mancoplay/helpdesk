@@ -10,6 +10,9 @@
 // AdminLTE
 @import 'admin-lte/dist/css/adminlte.css';
 
+// Layout-level custom styles
+@import './layout/app-layout';
+
 // Custom styles
 :root {
     --primary: #007bff;
