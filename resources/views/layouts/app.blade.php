@@ -70,6 +70,17 @@
             width: 12px;
             height: 12px;
         }
+        .page-header-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .page-back-btn {
+            border-radius: 999px;
+            padding: 0.2rem 0.65rem;
+            font-size: 0.86rem;
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
@@ -156,7 +167,21 @@
                     <div class="container-fluid">
                         <div class="row">
                             <div class="col-sm-6">
-                                <h3 class="mb-0">@yield('header', 'Dashboard')</h3>
+                                @php
+                                    $showBackButton = filter_var(trim($__env->yieldContent('show_back_button', '0')), FILTER_VALIDATE_BOOLEAN);
+                                @endphp
+                                <div class="page-header-title-row">
+                                    @if($showBackButton)
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary page-back-btn"
+                                            onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ route('dashboard') }}'; }"
+                                        >
+                                            <i class="fas fa-arrow-left me-1"></i> Volver
+                                        </button>
+                                    @endif
+                                    <h3 class="mb-0">@yield('header', 'Dashboard')</h3>
+                                </div>
                             </div>
                             <div class="col-sm-6">
                                 <ol class="breadcrumb float-sm-end">

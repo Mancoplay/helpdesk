@@ -2,6 +2,7 @@
 
 @section('title', 'Revision de cliente')
 @section('header', 'Revision de cliente')
+@section('show_back_button', '1')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>

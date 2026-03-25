@@ -2,6 +2,7 @@
 
 @section('title', 'Ver ticket')
 @section('header', 'Ver ticket')
+@section('show_back_button', '1')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
@@ -99,6 +100,34 @@
         white-space: nowrap;
         font-size: 0.85rem;
         max-width: 190px;
+    }
+    .chat-image-chip-wrap {
+        position: relative;
+        width: 24px;
+        height: 24px;
+    }
+    .chat-image-remove-overlay {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: none;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.63rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        cursor: pointer;
+        padding: 0;
+    }
+    .chat-file-chip:hover .chat-image-remove-overlay {
+        opacity: 1;
     }
     .chat-file-chip-remove {
         border: none;
@@ -617,3 +646,4 @@
 </script>
 @endpush
 @endsection
+
