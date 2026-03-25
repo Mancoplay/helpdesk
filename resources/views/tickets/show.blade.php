@@ -10,6 +10,51 @@
 @endsection
 
 @section('content')
+<style>
+    .ticket-chat-card-body {
+        height: 72vh;
+        min-height: 520px;
+    }
+    .ticket-chat-scroll {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        background: #f8f9fb;
+    }
+    .ticket-chat-message {
+        display: flex;
+    }
+    .ticket-chat-message.mine {
+        justify-content: flex-end;
+    }
+    .ticket-chat-bubble {
+        width: fit-content;
+        max-width: 78%;
+        border-radius: 14px;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid #dee2e6;
+        background: #ffffff;
+    }
+    .ticket-chat-message.mine .ticket-chat-bubble {
+        background: #d9fdd3;
+        border-color: #b6e8aa;
+    }
+    .ticket-chat-meta {
+        font-size: 0.78rem;
+        color: #6c757d;
+    }
+    .ticket-chat-image {
+        max-height: 220px;
+        max-width: 260px;
+        width: auto;
+    }
+    .ticket-chat-composer {
+        flex: 0 0 auto;
+        border-top: 1px solid #dee2e6;
+        padding-top: 0.75rem;
+        margin-top: 0.25rem;
+    }
+</style>
 <div class="row g-3">
     <div class="col-lg-5">
         <div class="card border-success">
@@ -159,8 +204,8 @@
             <div class="card-header">
                 <h3 class="card-title mb-0">Comunicacion</h3>
             </div>
-            <div class="card-body">
-                <div class="border rounded p-2 mb-3" style="max-height: 360px; overflow-y: auto;">
+            <div class="card-body d-flex flex-column ticket-chat-card-body">
+                <div id="ticketChatScroll" class="ticket-chat-scroll border rounded p-3 mb-2">
                     @php
                         $chatTimezone = config('app.timezone', 'America/La_Paz');
                     @endphp
@@ -171,30 +216,32 @@
                                 'atencion' => 'info',
                                 default => 'secondary',
                             };
+                            $isOwnMessage = (int) ($mensaje->user_id ?? 0) === (int) auth()->id();
                         @endphp
-                        <div class="mb-3 pb-2 border-bottom">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
-                                    <span class="badge text-bg-{{ $tipoBadge }}">{{ $mensaje->tipo }}</span>
+                        <div class="ticket-chat-message {{ $isOwnMessage ? 'mine' : '' }}">
+                            <div class="ticket-chat-bubble">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                    <div>
+                                        <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
+                                        <span class="badge text-bg-{{ $tipoBadge }}">{{ $mensaje->tipo }}</span>
+                                    </div>
+                                    <span class="ticket-chat-meta">
+                                        {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }}
+                                    </span>
                                 </div>
-                                <small class="text-muted">
-                                    {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }} (UTC-04)
-                                </small>
+                                @if(!empty($mensaje->mensaje))
+                                    <p class="mb-1">{{ $mensaje->mensaje }}</p>
+                                @endif
+                                @if($mensaje->imagen_path)
+                                    <a href="{{ asset('storage/' . $mensaje->imagen_path) }}" target="_blank" rel="noopener">
+                                        <img
+                                            src="{{ asset('storage/' . $mensaje->imagen_path) }}"
+                                            alt="Adjunto"
+                                            class="img-fluid rounded border ticket-chat-image"
+                                        >
+                                    </a>
+                                @endif
                             </div>
-                            @if(!empty($mensaje->mensaje))
-                                <p class="mb-1">{{ $mensaje->mensaje }}</p>
-                            @endif
-                            @if($mensaje->imagen_path)
-                                <a href="{{ asset('storage/' . $mensaje->imagen_path) }}" target="_blank" rel="noopener">
-                                    <img
-                                        src="{{ asset('storage/' . $mensaje->imagen_path) }}"
-                                        alt="Adjunto"
-                                        class="img-fluid rounded border"
-                                        style="max-height: 180px;"
-                                    >
-                                </a>
-                            @endif
                         </div>
                     @empty
                         <p class="text-muted mb-0">Sin mensajes por el momento.</p>
@@ -205,31 +252,33 @@
                     $mustAttendFirst = auth()->user()->hasRole('Empleado') && $ticket->estado === 'pendiente';
                 @endphp
 
-                @if($mustAttendFirst)
-                    <div class="alert alert-warning mb-0">
-                        Este ticket aun no esta siendo atendido. Presiona <strong>Atender ticket</strong> para habilitar el chat y la carga de imagenes.
-                    </div>
-                @elseif($ticket->estado === 'finalizado')
-                    <div class="alert alert-secondary mb-0">
-                        Ticket finalizado. El chat esta bloqueado y ya no se permiten comentarios.
-                    </div>
-                @else
-                    <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="mb-2">
-                            <label class="form-label">Nuevo comentario</label>
-                            <textarea name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                <div class="ticket-chat-composer">
+                    @if($mustAttendFirst)
+                        <div class="alert alert-warning mb-0">
+                            Este ticket aun no esta siendo atendido. Presiona <strong>Atender ticket</strong> para habilitar el chat y la carga de imagenes.
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label">Adjuntar imagen (opcional)</label>
-                            <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
-                            <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
+                    @elseif($ticket->estado === 'finalizado')
+                        <div class="alert alert-secondary mb-0">
+                            Ticket finalizado. El chat esta bloqueado y ya no se permiten comentarios.
                         </div>
-                        <div class="text-center">
-                            <button type="submit" class="btn btn-primary btn-sm fs-4 w-100">Enviar</button>
-                        </div>
-                    </form>
-                @endif
+                    @else
+                        <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
+                            @csrf
+                            <div class="mb-2">
+                                <label class="form-label">Nuevo comentario</label>
+                                <textarea name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Adjuntar imagen (opcional)</label>
+                                <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
+                                <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-sm fs-4 w-100">Enviar</button>
+                            </div>
+                        </form>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
@@ -347,6 +396,17 @@
 </script>
 @endpush
 @endif
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatScroll = document.getElementById('ticketChatScroll');
+        if (!chatScroll) {
+            return;
+        }
+
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+    });
+</script>
+@endpush
 @endsection
-
-
