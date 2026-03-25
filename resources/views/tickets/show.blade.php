@@ -54,6 +54,60 @@
         padding-top: 0.75rem;
         margin-top: 0.25rem;
     }
+    .chat-plus-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        line-height: 1;
+        padding: 0;
+    }
+    .chat-composer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.45rem;
+    }
+    .chat-selected-files {
+        display: none;
+        margin-top: 0.45rem;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+    }
+    .chat-selected-files.show {
+        display: flex;
+    }
+    .chat-file-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border: 1px solid #d6d9dc;
+        border-radius: 999px;
+        padding: 0.18rem 0.5rem 0.18rem 0.25rem;
+        background: #fff;
+        max-width: 280px;
+    }
+    .chat-file-chip-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid #e5e7eb;
+    }
+    .chat-file-chip-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        max-width: 190px;
+    }
+    .chat-file-chip-remove {
+        border: none;
+        background: transparent;
+        color: #dc3545;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0 0.1rem;
+    }
 </style>
 <div class="row g-3">
     <div class="col-lg-5">
@@ -233,13 +287,24 @@
                                     <p class="mb-1">{{ $mensaje->mensaje }}</p>
                                 @endif
                                 @if($mensaje->imagen_path)
-                                    <a href="{{ asset('storage/' . $mensaje->imagen_path) }}" target="_blank" rel="noopener">
-                                        <img
-                                            src="{{ asset('storage/' . $mensaje->imagen_path) }}"
-                                            alt="Adjunto"
-                                            class="img-fluid rounded border ticket-chat-image"
-                                        >
-                                    </a>
+                                    @php
+                                        $attachmentUrl = asset('storage/' . $mensaje->imagen_path);
+                                        $isImageAttachment = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
+                                    @endphp
+                                    @if($isImageAttachment)
+                                        <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener">
+                                            <img
+                                                src="{{ $attachmentUrl }}"
+                                                alt="Adjunto"
+                                                class="img-fluid rounded border ticket-chat-image"
+                                            >
+                                        </a>
+                                    @else
+                                        <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-paperclip me-1"></i>
+                                            {{ $mensaje->imagen_nombre ?? 'Descargar archivo' }}
+                                        </a>
+                                    @endif
                                 @endif
                             </div>
                         </div>
@@ -262,17 +327,27 @@
                             Ticket finalizado. El chat esta bloqueado y ya no se permiten comentarios.
                         </div>
                     @else
-                        <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
+                        <form id="chatComposerForm" method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data">
                             @csrf
                             <div class="mb-2">
-                                <label class="form-label">Nuevo comentario</label>
-                                <textarea name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                                <div class="chat-composer-header">
+                                    <label class="form-label mb-0">Nuevo comentario</label>
+                                    <button type="button" class="btn btn-outline-secondary chat-plus-btn" id="chatAttachmentBtn" title="Adjuntar archivo">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <textarea id="chatMessageInput" name="mensaje" class="form-control" rows="3" placeholder="Escribe un mensaje...">{{ old('mensaje') }}</textarea>
+                                <input
+                                    id="chatAttachmentInput"
+                                    type="file"
+                                    name="adjuntos[]"
+                                    class="d-none"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.csv,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,application/zip,application/x-rar-compressed"
+                                >
+                                <div id="chatSelectedFiles" class="chat-selected-files"></div>
                             </div>
-                            <div class="mb-2">
-                                <label class="form-label">Adjuntar imagen (opcional)</label>
-                                <input type="file" name="imagen" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/*">
-                                <small class="text-muted">Maximo 4 MB. Formatos: JPG, PNG, WEBP.</small>
-                            </div>
+                            <small class="text-muted d-block mb-2">Adjunta imagen, documento o archivo. Maximo 5 archivos por mensaje (12 MB c/u).</small>
                             <div class="text-center">
                                 <button type="submit" class="btn btn-primary btn-sm fs-4 w-100">Enviar</button>
                             </div>
@@ -401,11 +476,143 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const chatScroll = document.getElementById('ticketChatScroll');
-        if (!chatScroll) {
+        const form = document.getElementById('chatComposerForm');
+        const attachmentBtn = document.getElementById('chatAttachmentBtn');
+        const attachmentInput = document.getElementById('chatAttachmentInput');
+        const selectedFilesWrap = document.getElementById('chatSelectedFiles');
+        const messageInput = document.getElementById('chatMessageInput');
+
+        const maxFiles = 5;
+        let selectedFiles = [];
+        let objectUrls = [];
+
+        if (chatScroll) {
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+        }
+
+        if (!form || !attachmentInput || !selectedFilesWrap) {
             return;
         }
 
-        chatScroll.scrollTop = chatScroll.scrollHeight;
+        const clearObjectUrls = function () {
+            objectUrls.forEach(function (url) {
+                URL.revokeObjectURL(url);
+            });
+            objectUrls = [];
+        };
+
+        const syncFilesToInput = function () {
+            const transfer = new DataTransfer();
+            selectedFiles.forEach(function (file) {
+                transfer.items.add(file);
+            });
+            attachmentInput.files = transfer.files;
+        };
+
+        const renderFiles = function () {
+            selectedFilesWrap.innerHTML = '';
+            clearObjectUrls();
+
+            if (selectedFiles.length === 0) {
+                selectedFilesWrap.classList.remove('show');
+                syncFilesToInput();
+                return;
+            }
+
+            selectedFilesWrap.classList.add('show');
+
+            selectedFiles.forEach(function (file, index) {
+                const chip = document.createElement('div');
+                chip.className = 'chat-file-chip';
+
+                const isImage = (file.type || '').startsWith('image/');
+                if (isImage) {
+                    const thumb = document.createElement('img');
+                    thumb.className = 'chat-file-chip-thumb';
+                    const url = URL.createObjectURL(file);
+                    objectUrls.push(url);
+                    thumb.src = url;
+                    chip.appendChild(thumb);
+                } else {
+                    const icon = document.createElement('span');
+                    icon.className = 'chat-file-chip-thumb d-inline-flex align-items-center justify-content-center';
+                    icon.innerHTML = '<i class="fas fa-file"></i>';
+                    chip.appendChild(icon);
+                }
+
+                const name = document.createElement('span');
+                name.className = 'chat-file-chip-name';
+                name.textContent = file.name;
+                chip.appendChild(name);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'chat-file-chip-remove';
+                removeBtn.textContent = 'X';
+                removeBtn.addEventListener('click', function () {
+                    selectedFiles.splice(index, 1);
+                    renderFiles();
+                });
+                chip.appendChild(removeBtn);
+
+                selectedFilesWrap.appendChild(chip);
+            });
+
+            syncFilesToInput();
+        };
+
+        const addFiles = function (files, imagesOnly) {
+            const incoming = Array.from(files || []);
+            const filtered = imagesOnly
+                ? incoming.filter(function (file) {
+                    return (file.type || '').startsWith('image/');
+                })
+                : incoming;
+
+            filtered.forEach(function (file) {
+                if (selectedFiles.length >= maxFiles) {
+                    return;
+                }
+                selectedFiles.push(file);
+            });
+
+            renderFiles();
+        };
+
+        attachmentBtn.addEventListener('click', function () {
+            attachmentInput.click();
+        });
+
+        attachmentInput.addEventListener('change', function () {
+            addFiles(attachmentInput.files, false);
+            attachmentInput.value = '';
+        });
+
+        if (messageInput) {
+            messageInput.addEventListener('paste', function (event) {
+                if (!event.clipboardData || !event.clipboardData.items) {
+                    return;
+                }
+
+                const pastedFiles = [];
+                Array.from(event.clipboardData.items).forEach(function (item) {
+                    if (item.kind !== 'file' || !(item.type || '').startsWith('image/')) {
+                        return;
+                    }
+                    const file = item.getAsFile();
+                    if (!file) {
+                        return;
+                    }
+                    const extension = (file.type || '').split('/')[1] || 'png';
+                    const stampedName = `pegado-${Date.now()}-${pastedFiles.length + 1}.${extension}`;
+                    pastedFiles.push(new File([file], stampedName, { type: file.type || 'image/png' }));
+                });
+
+                if (pastedFiles.length > 0) {
+                    addFiles(pastedFiles, true);
+                }
+            });
+        }
     });
 </script>
 @endpush

@@ -856,30 +856,47 @@ class HomeController extends Controller
 
         $validated = $request->validate([
             'mensaje' => ['nullable', 'string', 'max:3000'],
-            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'adjuntos' => ['nullable', 'array', 'max:5'],
+            'adjuntos.*' => ['file', 'max:12288', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,7z,csv'],
+            'adjunto' => ['nullable', 'file', 'max:12288', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,7z,csv'],
+            'imagen' => ['nullable', 'file', 'max:12288', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,7z,csv'],
         ]);
 
-        if (empty($validated['mensaje']) && !$request->hasFile('imagen')) {
-            return back()->with('error', 'Debes escribir un mensaje o subir una imagen.');
+        $files = collect($request->file('adjuntos', []));
+        if ($request->hasFile('adjunto')) {
+            $files->push($request->file('adjunto'));
+        }
+        if ($request->hasFile('imagen')) {
+            $files->push($request->file('imagen'));
+        }
+        $files = $files->filter()->take(5)->values();
+
+        if (empty($validated['mensaje']) && $files->isEmpty()) {
+            return back()->with('error', 'Debes escribir un mensaje o subir un archivo.');
         }
 
-        $payload = [
-            'user_id' => auth()->id(),
-            'mensaje' => $validated['mensaje'] ?? '',
-            'tipo' => 'comentario',
-        ];
+        if ($files->isEmpty()) {
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => $validated['mensaje'] ?? '',
+                'tipo' => 'comentario',
+            ]);
+            return back();
+        }
 
-        if ($request->hasFile('imagen')) {
-            $file = $request->file('imagen');
+        foreach ($files as $index => $file) {
             $path = $file->store('ticket-mensajes', 'public');
 
-            $payload['imagen_path'] = $path;
-            $payload['imagen_nombre'] = $file->getClientOriginalName();
-            $payload['imagen_mime'] = $file->getClientMimeType();
-            $payload['imagen_size'] = $file->getSize();
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => $index === 0 ? ($validated['mensaje'] ?? '') : '',
+                'tipo' => 'comentario',
+                'imagen_path' => $path,
+                'imagen_nombre' => $file->getClientOriginalName(),
+                'imagen_mime' => $file->getClientMimeType(),
+                'imagen_size' => $file->getSize(),
+            ]);
         }
-
-        $ticket->mensajes()->create($payload);
 
         return back();
     }
