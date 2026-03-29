@@ -1,0 +1,205 @@
+:root {
+    --postal-red: #c92a2a;
+    --postal-yellow: #f2b705;
+    --postal-green: #1f7a4c;
+    --postal-blue: #1d4f91;
+    --postal-sky: #eaf2ff;
+    --ink-900: #12233d;
+    --ink-700: #334963;
+    --ink-500: #5e738f;
+    --line-200: #d4deec;
+    --line-300: #bccadd;
+    --surface-100: #f8fbff;
+    --surface-200: #eff4fb;
+}
+
+body {
+    color: var(--ink-700);
+    background:
+        radial-gradient(circle at 12% 2%, rgba(242, 183, 5, 0.14), transparent 34%),
+        radial-gradient(circle at 90% 1%, rgba(201, 42, 42, 0.1), transparent 30%),
+        linear-gradient(180deg, #f4f8ff 0%, #eef3fa 100%) !important;
+}
+
+.app-main,
+.app-content,
+.app-content .container-fluid {
+    background: transparent !important;
+}
+
+.app-content-header {
+    background: transparent;
+}
+
+.card {
+    border: 1px solid var(--line-200) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 24px rgba(20, 43, 77, 0.08);
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%) !important;
+    border-bottom: 1px solid var(--line-200) !important;
+}
+
+.card-body,
+.card-footer {
+    background: #ffffff;
+}
+
+.table {
+    --bs-table-bg: #ffffff;
+    --bs-table-striped-bg: #f4f8ff;
+    --bs-table-hover-bg: #e9f2ff;
+    color: var(--ink-700);
+    margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+    border-bottom-color: #dfe7f4;
+}
+
+.form-control,
+.form-select,
+textarea {
+    border-color: var(--line-300) !important;
+    background-color: #fff !important;
+    color: var(--ink-700) !important;
+    border-radius: 10px !important;
+}
+
+.form-control::placeholder,
+textarea::placeholder {
+    color: #8b9cb2 !important;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea:focus {
+    border-color: var(--postal-blue) !important;
+    box-shadow: 0 0 0 0.22rem rgba(29, 79, 145, 0.18) !important;
+}
+
+.btn {
+    border-radius: 10px !important;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(20, 40, 71, 0.15);
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--postal-blue);
+    --bs-btn-border-color: var(--postal-blue);
+    --bs-btn-hover-bg: #163f75;
+    --bs-btn-hover-border-color: #163f75;
+}
+
+.btn-success {
+    --bs-btn-bg: var(--postal-green);
+    --bs-btn-border-color: var(--postal-green);
+    --bs-btn-hover-bg: #17653f;
+    --bs-btn-hover-border-color: #17653f;
+}
+
+.btn-warning {
+    --bs-btn-bg: var(--postal-yellow);
+    --bs-btn-border-color: var(--postal-yellow);
+    --bs-btn-color: #222;
+    --bs-btn-hover-bg: #deb005;
+    --bs-btn-hover-border-color: #deb005;
+}
+
+.btn-danger {
+    --bs-btn-bg: var(--postal-red);
+    --bs-btn-border-color: var(--postal-red);
+    --bs-btn-hover-bg: #ab2323;
+    --bs-btn-hover-border-color: #ab2323;
+}
+
+.btn-outline-secondary,
+.btn-outline-dark,
+.btn-outline-primary {
+    border-width: 1px;
+}
+
+.alert {
+    border-radius: 10px;
+    border-width: 1px;
+}
+
+.alert-success {
+    --bs-alert-bg: #e9f8ef;
+    --bs-alert-border-color: #98d2ad;
+    --bs-alert-color: #1a5f39;
+}
+
+.alert-warning {
+    --bs-alert-bg: #fff6df;
+    --bs-alert-border-color: #f0cf89;
+    --bs-alert-color: #6d4f11;
+}
+
+.alert-danger {
+    --bs-alert-bg: #ffecec;
+    --bs-alert-border-color: #f3adad;
+    --bs-alert-color: #7e1c1c;
+}
+
+.badge.text-bg-primary { background-color: #236fd8 !important; }
+.badge.text-bg-info { background-color: #0e8db6 !important; color: #fff !important; }
+.badge.text-bg-success { background-color: #22874e !important; }
+.badge.text-bg-warning { background-color: var(--postal-yellow) !important; color: #2d2810 !important; }
+.badge.text-bg-danger { background-color: var(--postal-red) !important; }
+
+.app-sidebar {
+    background: linear-gradient(180deg, #233449 0%, #192735 100%) !important;
+}
+
+.app-header.navbar {
+    background: linear-gradient(90deg, #223348 0%, #1a2736 100%) !important;
+}
+
+.nav.sidebar-menu .nav-link {
+    border-radius: 10px;
+    margin: 3px 8px;
+}
+
+.nav.sidebar-menu .nav-link.active,
+.nav.sidebar-menu .nav-link:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.breadcrumb-item a {
+    color: #2d64b3;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #556a85;
+}
+
+.page-header-title-row h3 {
+    color: var(--ink-900);
+    font-weight: 700;
+}
+
+.modal-content {
+    border: 1px solid var(--line-200) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 35px rgba(17, 35, 63, 0.22);
+}
+
+.modal-header {
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+    border-bottom: 1px solid var(--line-200);
+}
+
+.modal-footer {
+    background: #fafcff;
+    border-top: 1px solid var(--line-200);
+}

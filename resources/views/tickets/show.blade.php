@@ -14,9 +14,9 @@
 @endsection
 
 @section('content')
-<div class="row g-3">
+<div class="row g-3 ticket-detail-page">
     <div class="col-lg-5">
-        <div class="card border-success">
+        <div class="card border-success ticket-panel ticket-panel-detail">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0">Ticket</h3>
                 <div>
@@ -165,7 +165,7 @@
     </div>
 
     <div class="col-lg-7">
-        <div class="card border-primary">
+        <div class="card border-primary ticket-panel ticket-panel-chat">
             <div class="card-header">
                 <h3 class="card-title mb-0">Comunicacion</h3>
             </div>
@@ -584,6 +584,7 @@
 </script>
 @endpush
 @endsection
+
 
 
 

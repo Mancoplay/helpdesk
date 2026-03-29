@@ -8,6 +8,7 @@
     <title>@yield('title', config('adminlte.app_name', config('app.name', 'Help Desk')))</title>
 
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    <link rel="stylesheet" href="{{ asset('css/postal-theme.css') }}?v=20260329-1">
     @livewireStyles
     @stack('styles')
 </head>
