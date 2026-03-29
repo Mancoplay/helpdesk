@@ -17,7 +17,6 @@ Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
-
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
     Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');
@@ -56,9 +55,6 @@ Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::put('/tickets/{ticket}', [HomeController::class, 'updateTicket'])->name('tickets.update');
-});
-
-Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
 });
 
@@ -69,6 +65,3 @@ Route::middleware('auth')->group(function () {
     Volt::route('/settings/password', 'settings.password')->name('settings.password');
     Volt::route('/settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
-
-Route::view('/dashboard-livewire', 'dashboard')->name('dashboard.livewire')->middleware('auth');
-

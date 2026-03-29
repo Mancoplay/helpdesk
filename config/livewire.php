@@ -14,7 +14,6 @@ return [
     */
 
     'component_locations' => [
-        resource_path('views/components'),
         resource_path('views/livewire'),
     ],
 

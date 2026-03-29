@@ -574,7 +574,7 @@ class HomeController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
-            'empleados' => Empleado::orderBy('nombres')->orderBy('apellidos')->get(),
+            'empleados' => Empleado::with('departamentos')->orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::orderBy('nombre')->get(),
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'currentEmployeeId' => $currentEmployee?->id,
@@ -823,11 +823,38 @@ class HomeController extends Controller
             abort(403);
         }
 
-        $employee = Empleado::with('departamentos')->where('user_id', auth()->id())
-            ->orWhere('email', auth()->user()->email)
+        if ($ticket->estado !== 'pendiente') {
+            return back()->with('error', 'Solo se pueden atender tickets en estado pendiente.');
+        }
+
+        $currentUser = auth()->user();
+
+        if ($currentUser->hasRole('Administrador')) {
+            $adminEmployee = Empleado::where('user_id', $currentUser->id)
+                ->orWhere('email', $currentUser->email)
+                ->first();
+
+            if ($adminEmployee) {
+                $ticket->empleado_id = $adminEmployee->id;
+            }
+
+            $ticket->estado = 'en_proceso';
+            $ticket->save();
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'Ticket atendido por ' . $currentUser->name . '.',
+                'tipo' => 'atencion',
+            ]);
+
+            return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
+        }
+
+        $employee = Empleado::with('departamentos')->where('user_id', $currentUser->id)
+            ->orWhere('email', $currentUser->email)
             ->first();
 
-        if (!$employee || !$employee->departamentos->contains('id', $ticket->departamento_id)) {
+        if (!$employee || !$this->employeeBelongsToDepartment($employee, (int) $ticket->departamento_id)) {
             abort(403, 'No tienes acceso a este departamento.');
         }
 
@@ -914,6 +941,16 @@ class HomeController extends Controller
             'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
 
+        if (!empty($validated['empleado_id'])) {
+            $empleado = Empleado::with('departamentos')->find($validated['empleado_id']);
+
+            if (!$empleado || !$this->employeeBelongsToDepartment($empleado, (int) $validated['departamento_id'])) {
+                return back()
+                    ->withErrors(['empleado_id' => 'El empleado seleccionado no pertenece al departamento del ticket.'])
+                    ->withInput();
+            }
+        }
+
         $ticket->update($validated);
 
         return back()->with('success', 'Ticket actualizado correctamente.');
@@ -983,6 +1020,9 @@ class HomeController extends Controller
 
             if ($employee) {
                 $departmentIds = $employee->departamentos->pluck('id')->toArray();
+                if (empty($departmentIds) && !empty($employee->departamento_id)) {
+                    $departmentIds = [(int) $employee->departamento_id];
+                }
                 $query->where(function ($q) use ($employee, $departmentIds): void {
                     $q->where('empleado_id', $employee->id)
                       ->orWhere(function ($q2) use ($departmentIds): void {
@@ -1066,6 +1106,10 @@ class HomeController extends Controller
 
     private function canFinalizeTicket(Ticket $ticket): bool
     {
+        if (auth()->user()->hasRole('Administrador')) {
+            return in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
+        }
+
         if (!auth()->user()->hasRole('Empleado')) {
             return false;
         }
@@ -1080,6 +1124,17 @@ class HomeController extends Controller
 
         return (int) $ticket->empleado_id === (int) $employee->id
             && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
+    }
+
+    private function employeeBelongsToDepartment(Empleado $employee, int $departmentId): bool
+    {
+        $employee->loadMissing('departamentos');
+
+        if ($employee->departamentos->contains('id', $departmentId)) {
+            return true;
+        }
+
+        return (int) ($employee->departamento_id ?? 0) === $departmentId;
     }
 
     private function isAssignedEmployeeForTicket(Ticket $ticket): bool

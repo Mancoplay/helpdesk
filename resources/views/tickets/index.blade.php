@@ -125,16 +125,28 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label">Empleado</label>
-                                                <select name="empleado_id" class="form-select">
+                                                <select name="empleado_id" class="form-select js-ticket-empleado-select">
                                                     <option value="">Sin asignar</option>
                                                     @foreach($empleados as $empleado)
-                                                        <option value="{{ $empleado->id }}" @selected($ticket->empleado_id == $empleado->id)>{{ $empleado->nombre_completo }}</option>
+                                                        @php
+                                                            $employeeDepartmentIds = $empleado->departamentos->pluck('id');
+                                                            if ($employeeDepartmentIds->isEmpty() && !empty($empleado->departamento_id)) {
+                                                                $employeeDepartmentIds = collect([(int) $empleado->departamento_id]);
+                                                            }
+                                                        @endphp
+                                                        <option
+                                                            value="{{ $empleado->id }}"
+                                                            data-departments="{{ $employeeDepartmentIds->implode(',') }}"
+                                                            @selected($ticket->empleado_id == $empleado->id)
+                                                        >
+                                                            {{ $empleado->nombre_completo }}
+                                                        </option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label">Departamento</label>
-                                                <select name="departamento_id" class="form-select" required>
+                                                <select name="departamento_id" class="form-select js-ticket-departamento-select" required>
                                                     @foreach($departamentos as $departamento)
                                                         <option value="{{ $departamento->id }}" @selected($ticket->departamento_id == $departamento->id)>{{ $departamento->nombre }}</option>
                                                     @endforeach
@@ -245,27 +257,85 @@
     document.addEventListener('DOMContentLoaded', function () {
         const createTicketModal = document.getElementById('createTicketModal');
 
-        if (!createTicketModal) {
-            return;
+        if (createTicketModal) {
+            createTicketModal.addEventListener('show.bs.modal', function () {
+                fetch("{{ route('tickets.next-code') }}")
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const codeInput = createTicketModal.querySelector('input[name="codigo"]');
+                        if (codeInput && data && data.codigo) {
+                            codeInput.value = data.codigo;
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error('No se pudo obtener el siguiente codigo de ticket:', error);
+                    });
+            });
         }
 
-        createTicketModal.addEventListener('show.bs.modal', function () {
-            fetch("{{ route('tickets.next-code') }}")
-                .then(function (response) {
-                    return response.json();
-                })
-                .then(function (data) {
-                    const codeInput = createTicketModal.querySelector('input[name="codigo"]');
-                    if (codeInput && data && data.codigo) {
-                        codeInput.value = data.codigo;
-                    }
-                })
-                .catch(function (error) {
-                    console.error('No se pudo obtener el siguiente codigo de ticket:', error);
-                });
+        const updateEmployeeOptionsByDepartment = function (form) {
+            const departmentSelect = form.querySelector('.js-ticket-departamento-select');
+            const employeeSelect = form.querySelector('.js-ticket-empleado-select');
+
+            if (!departmentSelect || !employeeSelect) {
+                return;
+            }
+
+            const selectedDepartmentId = String(departmentSelect.value || '');
+            const currentEmployeeValue = employeeSelect.value;
+            let shouldKeepCurrentValue = false;
+
+            Array.from(employeeSelect.options).forEach(function (option) {
+                if (option.value === '') {
+                    option.hidden = false;
+                    option.disabled = false;
+                    return;
+                }
+
+                const allowedDepartments = String(option.dataset.departments || '')
+                    .split(',')
+                    .map(function (value) {
+                        return value.trim();
+                    })
+                    .filter(Boolean);
+
+                const isAllowed = selectedDepartmentId !== '' && allowedDepartments.includes(selectedDepartmentId);
+
+                option.hidden = !isAllowed;
+                option.disabled = !isAllowed;
+
+                if (isAllowed && option.value === currentEmployeeValue) {
+                    shouldKeepCurrentValue = true;
+                }
+            });
+
+            if (!shouldKeepCurrentValue) {
+                employeeSelect.value = '';
+            }
+        };
+
+        document.querySelectorAll('form[action*="/tickets/"]').forEach(function (form) {
+            const departmentSelect = form.querySelector('.js-ticket-departamento-select');
+            const employeeSelect = form.querySelector('.js-ticket-empleado-select');
+
+            if (!departmentSelect || !employeeSelect) {
+                return;
+            }
+
+            updateEmployeeOptionsByDepartment(form);
+            departmentSelect.addEventListener('change', function () {
+                updateEmployeeOptionsByDepartment(form);
+            });
         });
     });
 </script>
 @endpush
 
 @endsection
+
+
+
+
+
