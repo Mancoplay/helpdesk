@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -9,6 +10,11 @@ Route::get('/', function () {
 })->name('home');
 
 Auth::routes(['verify' => true]);
+
+Route::post('/password/verify-code', [ResetPasswordController::class, 'verifyCode'])
+    ->middleware('guest')
+    ->name('password.verify-code');
+
 Route::pattern('ticket', '[0-9]+');
 Route::pattern('remoteSession', '[0-9]+');
 
