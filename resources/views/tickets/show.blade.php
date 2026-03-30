@@ -283,7 +283,7 @@
                     Sesion autorizada por el cliente en <strong>AnyDesk</strong>.
                 </div>
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-8">
+                    <div class="col-12">
                         <label class="form-label mb-1">Codigo de AnyDesk</label>
                         @if($isClientOwner)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
@@ -301,47 +301,39 @@
                                         placeholder="Ej: 123 456 789"
                                         required
                                     >
-                                    <button type="submit" class="btn btn-primary">Compartir codigo</button>
                                 </div>
                             </form>
-                            <button type="button" class="btn btn-outline-dark w-100 mt-2" id="shareAndOpenAnyDeskBtn">
-                                Compartir codigo y abrir AnyDesk
-                            </button>
                         @else
                             <div class="input-group">
                                 <input type="text" id="remoteSupportCode" class="form-control" value="{{ $remoteSession->support_code }}" readonly>
                             </div>
-                            @if($isAssignedEmployee)
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-dark w-100 mt-2"
-                                    id="connectAnydeskBtn"
-                                    {{ blank($remoteSession->support_code) ? 'disabled' : '' }}
-                                >
-                                    Conectar en AnyDesk
-                                </button>
-                            @endif
                         @endif
                     </div>
-                    <div class="col-md-4">
-                        <a href="anydesk:{{ preg_replace('/\\s+/', '', (string) $remoteSession->support_code) }}" class="btn btn-outline-secondary w-100">Solo abrir AnyDesk</a>
+                    <div class="col-md-6">
+                        <button
+                            type="button"
+                            id="openCopyAnyDeskBtn"
+                            class="btn btn-outline-dark w-100"
+                            {{ blank($remoteSession->support_code) && !$isClientOwner ? 'disabled' : '' }}
+                        >
+                            Abrir y copiar codigo de AnyDesk
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="action" value="signal_closed">
+                            <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesion remota</button>
+                        </form>
                     </div>
                 </div>
-
-                @if($isClientOwner || $isAssignedEmployee)
-                    <form class="mt-2" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                        @csrf
-                        @method('PATCH')
-                        <input type="hidden" name="action" value="signal_closed">
-                        <button type="submit" class="btn btn-outline-secondary w-100">Ya se cerro AnyDesk</button>
-                    </form>
-                @endif
                 <hr>
                 <p class="mb-1"><strong>Pasos rapidos</strong></p>
                 <ol class="mb-0">
-                    <li>El cliente comparte su codigo de AnyDesk.</li>
-                    <li>El empleado usa "Conectar en AnyDesk" y el codigo se copia automaticamente.</li>
-                    <li>El cliente confirma el permiso de control remoto.</li>
+                    <li>Usa "Abrir y copiar codigo de AnyDesk" para abrir la app y copiar el codigo.</li>
+                    <li>Comparte o pega el codigo para iniciar la conexion remota.</li>
+                    <li>Usa "Cerrar sesion remota" para cortar la sesion remota del ticket.</li>
                 </ol>
             </div>
             <div class="modal-footer">
@@ -355,11 +347,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const codeElement = document.getElementById('remoteSupportCode');
-        const connectButton = document.getElementById('connectAnydeskBtn');
-        const shareAndOpenButton = document.getElementById('shareAndOpenAnyDeskBtn');
+        const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
-        const endButton = document.getElementById('endRemoteSessionBtn');
-        const endForm = document.getElementById('endRemoteSessionForm');
+        const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
+        const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();
@@ -393,45 +384,35 @@
             return Promise.resolve(copied);
         };
 
-        if (connectButton && codeElement) {
-            connectButton.addEventListener('click', function () {
+        if (openCopyAnyDeskBtn && codeElement) {
+            openCopyAnyDeskBtn.addEventListener('click', function () {
                 const code = codeElement.value.trim();
+
                 if (!code) {
-                    alert('Aun no hay codigo compartido por el cliente.');
+                    openAnyDesk('');
                     return;
                 }
 
                 copyText(code).finally(function () {
                     openAnyDesk(code);
+                    if (shareCodeForm) {
+                        setTimeout(function () {
+                            shareCodeForm.submit();
+                        }, 150);
+                    }
                 });
             });
         }
 
-        if (shareAndOpenButton && shareCodeForm && codeElement) {
-            shareAndOpenButton.addEventListener('click', function () {
-                const code = codeElement.value.trim();
-                if (!code) {
-                    codeElement.focus();
+        if (closeAnyDeskBtn && closeAnyDeskForm) {
+            closeAnyDeskBtn.addEventListener('click', function () {
+                if (!confirm('Confirma que deseas cerrar la sesion remota y cortar el acceso remoto.')) {
                     return;
                 }
 
-                openAnyDesk(code);
-                setTimeout(function () {
-                    shareCodeForm.submit();
-                }, 150);
-            });
-        }
-
-        if (endButton && endForm) {
-            endButton.addEventListener('click', function () {
-                if (!confirm('Confirma que deseas finalizar la conexion remota.')) {
-                    return;
-                }
-
-                window.location.href = 'anydesk:';
-                setTimeout(function () {
-                    endForm.submit();
-                }, 300);
+                closeAnyDeskBtn.disabled = true;
+                closeAnyDeskBtn.textContent = 'Cerrando...';
+                closeAnyDeskForm.submit();
             });
         }
     });
@@ -584,7 +565,4 @@
 </script>
 @endpush
 @endsection
-
-
-
 

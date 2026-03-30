@@ -912,7 +912,7 @@ class HomeController extends Controller
         }
 
         foreach ($files as $index => $file) {
-            $path = $file->store('ticket-mensajes', 'public');
+            $path = $file->store($this->ticketAttachmentDirectory($ticket), $this->ticketAttachmentDisk());
 
             $ticket->mensajes()->create([
                 'user_id' => auth()->id(),
@@ -964,7 +964,7 @@ class HomeController extends Controller
 
         foreach ($ticket->mensajes as $mensaje) {
             if ($mensaje->imagen_path) {
-                Storage::disk('public')->delete($mensaje->imagen_path);
+                Storage::disk($this->ticketAttachmentDisk())->delete($mensaje->imagen_path);
             }
         }
 
@@ -997,6 +997,21 @@ class HomeController extends Controller
         ]);
 
         return back()->with('success', 'Ticket finalizado correctamente.');
+    }
+
+    private function ticketAttachmentDisk(): string
+    {
+        $configuredDisk = (string) config('helpdesk.chat_attachments.disk', 'public');
+        $availableDisks = array_keys((array) config('filesystems.disks', []));
+
+        return in_array($configuredDisk, $availableDisks, true) ? $configuredDisk : 'public';
+    }
+
+    private function ticketAttachmentDirectory(Ticket $ticket): string
+    {
+        $baseDirectory = trim((string) config('helpdesk.chat_attachments.directory', 'ticket-mensajes'), '/');
+
+        return $baseDirectory . '/ticket-' . $ticket->id . '/' . now()->format('Y/m');
     }
 
     private function ticketsQueryForCurrentUser(bool $includeDeleted = false)
@@ -1258,3 +1273,4 @@ class HomeController extends Controller
         ]);
     }
 }
+
