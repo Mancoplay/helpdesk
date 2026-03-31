@@ -162,6 +162,9 @@ textarea:focus {
 
 .app-header.navbar {
     background: linear-gradient(90deg, #223348 0%, #1a2736 100%) !important;
+    position: sticky;
+    top: 0;
+    z-index: 1035;
 }
 
 .nav.sidebar-menu .nav-link {
@@ -202,4 +205,26 @@ textarea:focus {
 .modal-footer {
     background: #fafcff;
     border-top: 1px solid var(--line-200);
+}
+
+/* Keep a visible mini rail when sidebar is collapsed */
+@media (min-width: 992px) {
+    .sidebar-mini.sidebar-collapse .app-sidebar {
+        width: 4.6rem !important;
+        min-width: 4.6rem !important;
+    }
+
+    .sidebar-mini.sidebar-collapse .app-sidebar .brand-text,
+    .sidebar-mini.sidebar-collapse .app-sidebar .nav-link p {
+        display: none !important;
+    }
+
+    .sidebar-mini.sidebar-collapse .app-sidebar .nav-link {
+        justify-content: center;
+        margin: 3px 6px;
+    }
+
+    .sidebar-mini.sidebar-collapse .app-sidebar .nav-icon {
+        margin-right: 0 !important;
+    }
 }
