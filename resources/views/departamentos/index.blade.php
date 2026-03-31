@@ -45,10 +45,13 @@
                     <td><span class="badge text-bg-{{ $departamento->activo ? 'success' : 'secondary' }}">{{ $departamento->activo ? 'Si' : 'No' }}</span></td>
                     <td>
                         <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editDepartamentoModal{{ $departamento->id }}">Editar</button>
-                        <form class="d-inline" method="POST" action="{{ route('departamentos.destroy', $departamento) }}" onsubmit="return confirm('Deseas eliminar este departamento?');">
+                        <form class="d-inline" method="POST" action="{{ route('departamentos.checkpoint', $departamento) }}">
                             @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            @method('PATCH')
+                            <button type="submit" class="checkpoint-switch {{ $departamento->activo ? 'is-on' : 'is-off' }}" title="{{ $departamento->activo ? 'Habilitado' : 'Deshabilitado' }}">
+                                <span class="checkpoint-switch__label">{{ $departamento->activo ? 'ON' : 'OFF' }}</span>
+                                <span class="checkpoint-switch__knob"></span>
+                            </button>
                         </form>
                     </td>
                 </tr>
@@ -67,3 +70,5 @@
 
 <div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo departamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
 @endsection
+
+

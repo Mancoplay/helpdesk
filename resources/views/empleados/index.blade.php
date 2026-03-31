@@ -68,10 +68,13 @@
                             <div class="d-flex flex-nowrap align-items-center gap-2">
                                 <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-secondary btn-sm">Revisar</a>
                                 <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editEmpleadoModal{{ $empleado->id }}">Editar</button>
-                                <form class="d-inline mb-0" method="POST" action="{{ route('empleados.destroy', $empleado) }}" onsubmit="return confirm('Deseas eliminar este empleado?');">
+                                <form class="d-inline mb-0" method="POST" action="{{ route('empleados.checkpoint', $empleado) }}">
                                     @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                    @method('PATCH')
+                                    <button type="submit" class="checkpoint-switch {{ $empleado->activo ? 'is-on' : 'is-off' }}" title="{{ $empleado->activo ? 'Habilitado' : 'Deshabilitado' }}">
+                                        <span class="checkpoint-switch__label">{{ $empleado->activo ? 'ON' : 'OFF' }}</span>
+                                        <span class="checkpoint-switch__knob"></span>
+                                    </button>
                                 </form>
                             </div>
                         </td>
@@ -115,7 +118,7 @@
                                                         Departamento
                                                     </button>
                                                     <div class="dropdown-menu p-3 w-100" style="max-height: 220px; overflow-y: auto;">
-                                                        @foreach($departamentos as $departamento)
+                                                        @foreach($departamentosActivos as $departamento)
                                                             <div class="form-check mb-2">
                                                                 <input
                                                                     class="form-check-input department-checkbox"
@@ -207,7 +210,7 @@
                                     Departamento
                                 </button>
                                 <div class="dropdown-menu p-3 w-100" style="max-height: 220px; overflow-y: auto;">
-                                    @foreach($departamentos as $departamento)
+                                    @foreach($departamentosActivos as $departamento)
                                         <div class="form-check mb-2">
                                             <input
                                                 class="form-check-input department-checkbox"
@@ -308,6 +311,9 @@
 @endpush
 
 @endsection
+
+
+
 
 
 

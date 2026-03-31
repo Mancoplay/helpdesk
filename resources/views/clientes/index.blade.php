@@ -52,10 +52,13 @@
                         <div class="d-flex flex-nowrap align-items-center gap-2">
                             <a href="{{ route('clientes.review', $cliente) }}" class="btn btn-secondary btn-sm">Revisar</a>
                             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
-                            <form class="d-inline mb-0" method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirm('Deseas eliminar este cliente?');">
+                            <form class="d-inline mb-0" method="POST" action="{{ route('clientes.checkpoint', $cliente) }}">
                                 @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                @method('PATCH')
+                                <button type="submit" class="checkpoint-switch {{ $cliente->activo ? 'is-on' : 'is-off' }}" title="{{ $cliente->activo ? 'Habilitado' : 'Deshabilitado' }}">
+                                    <span class="checkpoint-switch__label">{{ $cliente->activo ? 'ON' : 'OFF' }}</span>
+                                    <span class="checkpoint-switch__knob"></span>
+                                </button>
                             </form>
                         </div>
                     </td>
@@ -114,6 +117,8 @@
     </div></div>
 </div>
 @endsection
+
+
 
 
 

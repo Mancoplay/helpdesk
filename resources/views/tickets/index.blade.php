@@ -59,19 +59,23 @@
                 @forelse($tickets as $ticket)
                     @php
                         $stateMap = config('adminlte.ticket_states');
-                        $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
+                        $isDisabled = $ticket->trashed();
+                        $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
+                        $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
                     @endphp
                     <tr>
                         <td>{{ $ticket->codigo }}</td>
                         <td>{{ $ticket->asunto }}</td>
                         <td>{{ $ticket->cliente->nombre_completo ?? '-' }}</td>
                         <td>{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</td>
-                        <td><span class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span></td>
+                        <td><span class="badge text-bg-{{ $badgeType }}">{{ $stateLabel }}</span></td>
                         <td class="text-nowrap">
-                            <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm me-1">Ver</a>
+                            @if(!$isDisabled)
+                                <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm me-1">Ver</a>
+                            @endif
 
                             @can('atender tickets')
-                                @if($ticket->estado === 'pendiente')
+                                @if(!$isDisabled && $ticket->estado === 'pendiente')
                                     <form class="d-inline" method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
                                         @csrf
                                         @method('PATCH')
@@ -80,16 +84,27 @@
                                 @endif
                             @endcan
 
-                            @if(auth()->user()->hasRole('Administrador'))
+                            @if(auth()->user()->hasRole('Administrador') && !$isDisabled)
                                 <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editTicketModal{{ $ticket->id }}">Editar</button>
                             @endif
 
-                            @if(
-                                auth()->user()->hasRole('Administrador')
-                                || (auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0))
-                                || (auth()->user()->hasAnyRole(['Cliente', 'Usuario']) && (($ticket->cliente->email ?? null) === auth()->user()->email))
+                            @if(auth()->user()->hasRole('Administrador'))
+                                <form class="d-inline" method="POST" action="{{ route('tickets.checkpoint', $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="checkpoint-switch {{ $isDisabled ? 'is-off' : 'is-on' }}" title="{{ $isDisabled ? 'Deshabilitado' : 'Habilitado' }}">
+                                        <span class="checkpoint-switch__label">{{ $isDisabled ? 'OFF' : 'ON' }}</span>
+                                        <span class="checkpoint-switch__knob"></span>
+                                    </button>
+                                </form>
+                            @elseif(
+                                !$isDisabled
+                                && (
+                                    (auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0))
+                                    || (auth()->user()->hasAnyRole(['Cliente', 'Usuario']) && (($ticket->cliente->email ?? null) === auth()->user()->email))
+                                )
                             )
-                                <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Deseas eliminar este ticket?');">
+                                <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
@@ -334,6 +349,9 @@
 @endpush
 
 @endsection
+
+
+
 
 
 

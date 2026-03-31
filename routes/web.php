@@ -27,18 +27,18 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');
     Route::put('/clientes/{cliente}', [HomeController::class, 'updateCliente'])->name('clientes.update');
-    Route::delete('/clientes/{cliente}', [HomeController::class, 'destroyCliente'])->name('clientes.destroy');
+    Route::patch('/clientes/{cliente}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('clientes.checkpoint');
 
     Route::get('/empleados', [HomeController::class, 'empleados'])->name('empleados.index');
     Route::get('/empleados/{empleado}/revisar', [HomeController::class, 'reviewEmpleado'])->name('empleados.review');
     Route::post('/empleados', [HomeController::class, 'storeEmpleado'])->name('empleados.store');
     Route::put('/empleados/{empleado}', [HomeController::class, 'updateEmpleado'])->name('empleados.update');
-    Route::delete('/empleados/{empleado}', [HomeController::class, 'destroyEmpleado'])->name('empleados.destroy');
+    Route::patch('/empleados/{empleado}/checkpoint', [HomeController::class, 'toggleEmpleadoCheckpoint'])->name('empleados.checkpoint');
 
     Route::get('/departamentos', [HomeController::class, 'departamentos'])->name('departamentos.index');
     Route::post('/departamentos', [HomeController::class, 'storeDepartamento'])->name('departamentos.store');
     Route::put('/departamentos/{departamento}', [HomeController::class, 'updateDepartamento'])->name('departamentos.update');
-    Route::delete('/departamentos/{departamento}', [HomeController::class, 'destroyDepartamento'])->name('departamentos.destroy');
+    Route::patch('/departamentos/{departamento}/checkpoint', [HomeController::class, 'toggleDepartamentoCheckpoint'])->name('departamentos.checkpoint');
 });
 
 Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
@@ -47,6 +47,7 @@ Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])->name('tickets.messages.store');
     Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])->name('tickets.remote.request');
     Route::patch('/tickets/{ticket}/remote/{remoteSession}', [HomeController::class, 'updateRemoteSession'])->name('tickets.remote.update');
+    Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
 });
 
 Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
@@ -61,7 +62,7 @@ Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::put('/tickets/{ticket}', [HomeController::class, 'updateTicket'])->name('tickets.update');
-    Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
+    Route::patch('/tickets/{ticket}/checkpoint', [HomeController::class, 'toggleTicketCheckpoint'])->name('tickets.checkpoint');
 });
 
 Route::middleware('auth')->group(function () {

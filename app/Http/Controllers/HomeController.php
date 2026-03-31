@@ -14,7 +14,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
@@ -278,6 +277,20 @@ class HomeController extends Controller
         return back()->with('success', 'Cliente eliminado correctamente.');
     }
 
+    public function toggleClienteCheckpoint(Cliente $cliente): RedirectResponse
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $cliente->activo = !$cliente->activo;
+        $cliente->save();
+
+        return back()->with('success', $cliente->activo
+            ? 'Cliente habilitado correctamente.'
+            : 'Cliente deshabilitado correctamente.');
+    }
+
     public function empleados(Request $request)
     {
         $query = Empleado::with(['departamento', 'departamentos'])->latest();
@@ -296,7 +309,8 @@ class HomeController extends Controller
 
         return view('empleados.index', [
             'empleados' => $empleados,
-            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
+            'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
@@ -351,9 +365,9 @@ class HomeController extends Controller
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['nullable', 'exists:departamentos,id'],
+            'departamento_id' => ['nullable', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'departamento_ids' => ['nullable', 'array'],
-            'departamento_ids.*' => ['integer', 'exists:departamentos,id'],
+            'departamento_ids.*' => ['integer', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
@@ -406,9 +420,9 @@ class HomeController extends Controller
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string'],
             'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['nullable', 'exists:departamentos,id'],
+            'departamento_id' => ['nullable', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'departamento_ids' => ['nullable', 'array'],
-            'departamento_ids.*' => ['integer', 'exists:departamentos,id'],
+            'departamento_ids.*' => ['integer', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
@@ -469,6 +483,20 @@ class HomeController extends Controller
         }
 
         return back()->with('success', 'Empleado eliminado correctamente.');
+    }
+
+    public function toggleEmpleadoCheckpoint(Empleado $empleado): RedirectResponse
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $empleado->activo = !$empleado->activo;
+        $empleado->save();
+
+        return back()->with('success', $empleado->activo
+            ? 'Empleado habilitado correctamente.'
+            : 'Empleado deshabilitado correctamente.');
     }
 
     public function departamentos(Request $request)
@@ -537,6 +565,20 @@ class HomeController extends Controller
         return back()->with('success', 'Departamento eliminado correctamente.');
     }
 
+    public function toggleDepartamentoCheckpoint(Departamento $departamento): RedirectResponse
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $departamento->activo = !$departamento->activo;
+        $departamento->save();
+
+        return back()->with('success', $departamento->activo
+            ? 'Departamento habilitado correctamente.'
+            : 'Departamento deshabilitado correctamente.');
+    }
+
     public function tickets(Request $request)
     {
         $query = $this->ticketsQueryForCurrentUser()
@@ -573,9 +615,9 @@ class HomeController extends Controller
 
         return view('tickets.index', [
             'tickets' => $tickets,
-            'clientes' => Cliente::orderBy('nombres')->orderBy('apellidos')->get(),
-            'empleados' => Empleado::with('departamentos')->orderBy('nombres')->orderBy('apellidos')->get(),
-            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'clientes' => Cliente::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
+            'empleados' => Empleado::with('departamentos')->where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
+            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'currentEmployeeId' => $currentEmployee?->id,
             'nextTicketCode' => $this->nextTicketCode(),
@@ -609,7 +651,7 @@ class HomeController extends Controller
             'messages' => $messages,
             'remoteEnabled' => $remoteEnabled,
             'remoteSession' => $remoteSession,
-            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -932,9 +974,9 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
-            'cliente_id' => ['required', 'exists:clientes,id'],
-            'empleado_id' => ['nullable', 'exists:empleados,id'],
-            'departamento_id' => ['required', 'exists:departamentos,id'],
+            'cliente_id' => ['required', Rule::exists('clientes', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'empleado_id' => ['nullable', Rule::exists('empleados', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
             'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
@@ -962,18 +1004,33 @@ class HomeController extends Controller
             abort(403);
         }
 
-        foreach ($ticket->mensajes as $mensaje) {
-            if ($mensaje->imagen_path) {
-                Storage::disk($this->ticketAttachmentDisk())->delete($mensaje->imagen_path);
-            }
-        }
-
         $ticket->estado = 'cerrado';
         $ticket->fecha_cierre = now();
         $ticket->save();
         $ticket->delete();
 
         return back()->with('success', 'Ticket eliminado correctamente.');
+    }
+
+    public function toggleTicketCheckpoint(int $ticket): RedirectResponse
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $ticketModel = Ticket::withTrashed()->findOrFail($ticket);
+
+        if ($ticketModel->trashed()) {
+            $ticketModel->restore();
+            return back()->with('success', 'Ticket habilitado correctamente.');
+        }
+
+        $ticketModel->estado = 'cerrado';
+        $ticketModel->fecha_cierre = now();
+        $ticketModel->save();
+        $ticketModel->delete();
+
+        return back()->with('success', 'Ticket deshabilitado correctamente.');
     }
 
     public function finalizeTicket(Ticket $ticket): RedirectResponse
@@ -1018,7 +1075,7 @@ class HomeController extends Controller
     {
         $query = Ticket::query();
 
-        if ($includeDeleted) {
+        if ($includeDeleted || (auth()->check() && auth()->user()->hasRole('Administrador'))) {
             $query->withTrashed();
         }
 
@@ -1273,4 +1330,9 @@ class HomeController extends Controller
         ]);
     }
 }
+
+
+
+
+
 
