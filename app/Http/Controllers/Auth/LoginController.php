@@ -52,7 +52,7 @@ class LoginController extends Controller
 
             return redirect()
                 ->route('login')
-                ->withErrors(['email' => 'Tu cuenta esta deshabilitada. Contacta al administrador.'])
+                ->with('disabled_account_error', 'Tu cuenta esta deshabilitada. Contacta al administrador.')
                 ->withInput(['email' => (string) $request->input('email', $user->email)]);
         }
 

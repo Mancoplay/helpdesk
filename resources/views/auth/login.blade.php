@@ -11,7 +11,7 @@
         <div class="card-body">
             <p class="login-box-msg">Inicia sesion para continuar</p>
 
-            <form method="POST" action="{{ route('login') }}">
+            <form id="loginForm" method="POST" action="{{ route('login') }}">
                 @csrf
 
                 <div class="input-group mb-3">
@@ -30,6 +30,9 @@
                     @error('email')
                         <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                     @enderror
+                    @if (session('disabled_account_error'))
+                        <span id="disabledAccountError" class="invalid-feedback d-block" role="alert"><strong>{{ session('disabled_account_error') }}</strong></span>
+                    @endif
                 </div>
 
                 <div class="input-group mb-3">
@@ -69,4 +72,36 @@
         </div>
     </div>
 </div>
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const disabledError = document.getElementById('disabledAccountError');
+        const loginForm = document.getElementById('loginForm');
+
+        if (!disabledError || !loginForm) {
+            return;
+        }
+
+        const clearDisabledError = function () {
+            disabledError.remove();
+        };
+
+        loginForm.addEventListener('submit', clearDisabledError, true);
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        [emailInput, passwordInput].forEach(function (input) {
+            if (!input) {
+                return;
+            }
+
+            input.addEventListener('input', clearDisabledError);
+            input.addEventListener('change', clearDisabledError);
+        });
+    });
+</script>
+@endpush
 @endsection
+
+
