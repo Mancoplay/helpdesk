@@ -52,7 +52,7 @@
                     <th>Cliente</th>
                     <th>Empleado</th>
                     <th>Estado</th>
-                    <th style="width: 360px;">Accion</th>
+                    <th style="width: 290px;">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,26 +70,27 @@
                         <td>{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</td>
                         <td><span class="badge text-bg-{{ $badgeType }}">{{ $stateLabel }}</span></td>
                         <td class="text-nowrap">
+                            <div class="d-flex flex-nowrap align-items-center gap-1">
                             @if(!$isDisabled)
-                                <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm me-1">Ver</a>
+                                <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm">Ver</a>
                             @endif
 
                             @can('atender tickets')
                                 @if(!$isDisabled && $ticket->estado === 'pendiente')
-                                    <form class="d-inline" method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
+                                    <form class="d-inline mb-0" method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" class="btn btn-info btn-sm me-1">Atender</button>
+                                        <button type="submit" class="btn btn-info btn-sm">Atender</button>
                                     </form>
                                 @endif
                             @endcan
 
                             @if(auth()->user()->hasRole('Administrador') && !$isDisabled)
-                                <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editTicketModal{{ $ticket->id }}">Editar</button>
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editTicketModal{{ $ticket->id }}">Editar</button>
                             @endif
 
                             @if(auth()->user()->hasRole('Administrador'))
-                                <form class="d-inline" method="POST" action="{{ route('tickets.checkpoint', $ticket->id) }}">
+                                <form class="d-inline mb-0 ms-auto" method="POST" action="{{ route('tickets.checkpoint', $ticket->id) }}">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="checkpoint-switch {{ $isDisabled ? 'is-off' : 'is-on' }}" title="{{ $isDisabled ? 'Deshabilitado' : 'Habilitado' }}">
@@ -110,12 +111,13 @@
                                     <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
                                 </form>
                             @endif
+                            </div>
                         </td>
                     </tr>
 
                     @if(auth()->user()->hasRole('Administrador'))
-                    <div class="modal fade" id="editTicketModal{{ $ticket->id }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-xl modal-dialog-centered">
+                    <div class="modal fade ticket-edit-modal" id="editTicketModal{{ $ticket->id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                             <div class="modal-content">
                                 <form method="POST" action="{{ route('tickets.update', $ticket) }}">
                                     @csrf
@@ -125,12 +127,12 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <div class="row g-2">
-                                            <div class="col-md-3">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Codigo</label>
                                                 <input type="text" name="codigo" class="form-control" value="{{ $ticket->codigo }}" required>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Cliente</label>
                                                 <select name="cliente_id" class="form-select" required>
                                                     @foreach($clientes as $cliente)
@@ -138,7 +140,7 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Empleado</label>
                                                 <select name="empleado_id" class="form-select js-ticket-empleado-select">
                                                     <option value="">Sin asignar</option>
@@ -159,7 +161,7 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Departamento</label>
                                                 <select name="departamento_id" class="form-select js-ticket-departamento-select" required>
                                                     @foreach($departamentos as $departamento)
@@ -167,15 +169,15 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-12">
                                                 <label class="form-label">Asunto</label>
                                                 <input type="text" name="asunto" class="form-control" value="{{ $ticket->asunto }}" required>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-12">
                                                 <label class="form-label">Descripcion</label>
-                                                <input type="text" name="descripcion" class="form-control" value="{{ $ticket->descripcion }}" required>
+                                                <textarea name="descripcion" class="form-control" rows="3" required>{{ $ticket->descripcion }}</textarea>
                                             </div>
-                                            <div class="col-md-2">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Estado</label>
                                                 <select name="estado" class="form-select" required>
                                                     <option value="pendiente" @selected($ticket->estado == 'pendiente')>Pendiente</option>
@@ -184,7 +186,7 @@
                                                     <option value="cerrado" @selected($ticket->estado == 'cerrado')>Cerrado</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-2">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Prioridad</label>
                                                 <select name="prioridad" class="form-select" required>
                                                     <option value="baja" @selected($ticket->prioridad == 'baja')>Baja</option>
@@ -349,9 +351,6 @@
 @endpush
 
 @endsection
-
-
-
 
 
 

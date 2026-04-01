@@ -30,12 +30,6 @@
 
                     <label class="form-label mt-2">Contacto</label>
                     <input type="text" name="telefono" class="form-control" value="{{ old('telefono', $cliente->telefono) }}">
-
-                    <label class="form-label mt-2">Direccion</label>
-                    <textarea name="direccion" class="form-control" rows="4">{{ old('direccion', $cliente->direccion) }}</textarea>
-
-                    <label class="form-label mt-2">Empresa</label>
-                    <input type="text" name="empresa" class="form-control" value="{{ old('empresa', $cliente->empresa) }}">
                 </div>
 
                 <div class="col-md-6">
@@ -64,3 +58,4 @@
     </div>
 </div>
 @endsection
+

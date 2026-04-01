@@ -102,8 +102,6 @@
                                                 <input type="text" name="apellidos" class="form-control" value="{{ $empleado->apellidos }}" required>
                                                 <label class="form-label mt-2">Contacto</label>
                                                 <input type="text" name="telefono" class="form-control" value="{{ $empleado->telefono }}">
-                                                <label class="form-label mt-2">Direccion</label>
-                                                <textarea name="direccion" class="form-control" rows="3">{{ $empleado->direccion }}</textarea>
                                             </div>
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold">Credenciales del Sistema</h6>
@@ -194,8 +192,6 @@
                             <input type="text" name="apellidos" class="form-control" required>
                             <label class="form-label mt-2">Contacto</label>
                             <input type="text" name="telefono" class="form-control">
-                            <label class="form-label mt-2">Direccion</label>
-                            <textarea name="direccion" class="form-control" rows="3"></textarea>
                         </div>
                         <div class="col-md-6">
                             <h6 class="fw-bold">Credenciales del Sistema</h6>
@@ -311,11 +307,4 @@
 @endpush
 
 @endsection
-
-
-
-
-
-
-
 

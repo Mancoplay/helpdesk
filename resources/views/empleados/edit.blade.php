@@ -31,8 +31,7 @@
                     <label class="form-label mt-2">Contacto</label>
                     <input type="text" name="telefono" class="form-control" value="{{ old('telefono', $empleado->telefono) }}">
 
-                    <label class="form-label mt-2">Direccion</label>
-                    <textarea name="direccion" class="form-control" rows="4">{{ old('direccion', $empleado->direccion) }}</textarea>
+
                 </div>
 
                 <div class="col-md-6">
@@ -157,5 +156,3 @@
 @endpush
 
 @endsection
-
-

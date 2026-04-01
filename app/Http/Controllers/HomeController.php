@@ -586,6 +586,10 @@ class HomeController extends Controller
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
 
+        if (!auth()->user()->hasRole('Administrador')) {
+            $query->where('estado', '!=', 'cerrado');
+        }
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('codigo', 'like', '%' . $search . '%')

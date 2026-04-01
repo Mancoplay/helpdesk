@@ -78,8 +78,6 @@
                                 <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
                                 <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
                                 <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" value="{{ $cliente->telefono }}"></div>
-                                <div class="col-md-6"><label class="form-label">Empresa</label><input type="text" name="empresa" class="form-control" value="{{ $cliente->empresa }}"></div>
-                                <div class="col-12"><label class="form-label">Direccion</label><textarea name="direccion" class="form-control" rows="3">{{ $cliente->direccion }}</textarea></div>
                             </div></div>
                             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
                         </form>
@@ -109,17 +107,9 @@
                 <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
                 <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
                 <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">Empresa</label><input type="text" name="empresa" class="form-control"></div>
-                <div class="col-12"><label class="form-label">Direccion</label><textarea name="direccion" class="form-control" rows="3"></textarea></div>
             </div></div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
         </form>
     </div></div>
 </div>
 @endsection
-
-
-
-
-
-
