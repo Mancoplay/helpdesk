@@ -62,8 +62,11 @@
                         $isDisabled = $ticket->trashed();
                         $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
                         $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
+                        $isRemoteActive = !auth()->user()->hasRole('Administrador')
+                            && !empty($activeRemoteTicketId)
+                            && (int) $ticket->id === (int) $activeRemoteTicketId;
                     @endphp
-                    <tr>
+                    <tr class="{{ $isRemoteActive ? 'ticket-row--remote-active' : '' }}">
                         <td>{{ $ticket->codigo }}</td>
                         <td>{{ $ticket->asunto }}</td>
                         <td>{{ $ticket->cliente->nombre_completo ?? '-' }}</td>
@@ -351,8 +354,5 @@
 @endpush
 
 @endsection
-
-
-
 
 

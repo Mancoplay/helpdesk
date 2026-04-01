@@ -585,6 +585,8 @@ class HomeController extends Controller
             ->with(['cliente', 'empleado', 'departamento']);
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
+        $prioritizeRemoteActive = Schema::hasTable('ticket_remote_sessions') && !auth()->user()->hasRole('Administrador');
+        $activeRemoteTicketId = null;
 
         if (!auth()->user()->hasRole('Administrador')) {
             $query->where('estado', '!=', 'cerrado');
@@ -608,6 +610,18 @@ class HomeController extends Controller
             });
         }
 
+        if ($prioritizeRemoteActive) {
+            $activeRemoteTicketId = TicketRemoteSession::query()
+                ->where('status', 'accepted')
+                ->whereIn('ticket_id', (clone $query)->select('tickets.id'))
+                ->latest('id')
+                ->value('ticket_id');
+
+            if (!empty($activeRemoteTicketId)) {
+                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [$activeRemoteTicketId]);
+            }
+        }
+
         $tickets = $query->latest()->paginate($perPage)->withQueryString();
 
         $currentEmployee = null;
@@ -627,6 +641,7 @@ class HomeController extends Controller
             'nextTicketCode' => $this->nextTicketCode(),
             'searchQuery' => $search,
             'perPage' => $perPage,
+            'activeRemoteTicketId' => $activeRemoteTicketId,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -1334,9 +1349,3 @@ class HomeController extends Controller
         ]);
     }
 }
-
-
-
-
-
-

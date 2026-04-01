@@ -60,6 +60,21 @@ body {
     border-bottom-color: #dfe7f4;
 }
 
+.table.table-striped tbody tr.ticket-row--remote-active > td {
+    --bs-table-accent-bg: #ffe08a !important;
+    background-color: #ffe08a !important;
+    border-bottom-color: #efc449 !important;
+}
+
+.table.table-striped.table-hover tbody tr.ticket-row--remote-active:hover > td {
+    --bs-table-accent-bg: #ffd56f !important;
+    background-color: #ffd56f !important;
+}
+
+.table tbody tr.ticket-row--remote-active > td:first-child {
+    box-shadow: inset 5px 0 0 #ff9f1a;
+}
+
 .form-control,
 .form-select,
 textarea {
@@ -296,7 +311,5 @@ textarea:focus {
 .checkpoint-switch.is-off .checkpoint-switch__knob {
     left: 2px;
 }
-
-
 
 
