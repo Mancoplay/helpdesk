@@ -105,7 +105,7 @@
                                         <button
                                             type="button"
                                             class="btn btn-outline-secondary page-back-btn"
-                                            onclick="@if($backUrl !== '') window.location.href='{{ $backUrl }}'; @else if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ route('dashboard') }}'; } @endif"
+                                            onclick="window.location.href='{{ $backUrl !== '' ? $backUrl : route('dashboard') }}';"
                                         >
                                             <i class="fas fa-arrow-left me-1"></i> Volver
                                         </button>

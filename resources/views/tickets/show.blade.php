@@ -3,6 +3,7 @@
 @section('title', 'Ver ticket')
 @section('header', 'Ver ticket')
 @section('show_back_button', '1')
+@section('back_url', route('tickets.index'))
 @push('styles')
     @vite('resources/sass/pages/ticket-show.scss')
 @endpush
