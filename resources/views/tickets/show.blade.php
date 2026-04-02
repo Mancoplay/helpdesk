@@ -320,21 +320,23 @@
                             Abrir y copiar codigo de AnyDesk
                         </button>
                     </div>
-                    <div class="col-md-6">
-                        <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="signal_closed">
-                            <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesion remota</button>
-                        </form>
-                    </div>
+                    @if($isClientOwner)
+                        <div class="col-md-6">
+                            <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="action" value="signal_closed">
+                                <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesion remota</button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
                 <hr>
                 <p class="mb-1"><strong>Pasos rapidos</strong></p>
                 <ol class="mb-0">
                     <li>Usa "Abrir y copiar codigo de AnyDesk" para abrir la app y copiar el codigo.</li>
                     <li>Comparte o pega el codigo para iniciar la conexion remota.</li>
-                    <li>Usa "Cerrar sesion remota" para cortar la sesion remota del ticket.</li>
+                    <li>Usa "Finalizar conexion" para cortar la sesion remota del ticket.</li>
                 </ol>
             </div>
             <div class="modal-footer">
@@ -351,6 +353,8 @@
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
         const sendSupportCodeBtn = document.getElementById('sendSupportCodeBtn');
+        const endRemoteSessionBtn = document.getElementById('endRemoteSessionBtn');
+        const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
         const shouldSyncSupportCode = {{ $isClientOwner ? 'false' : 'true' }};
@@ -443,13 +447,17 @@
             }, 3000);
         }
 
+        if (endRemoteSessionBtn && endRemoteSessionForm) {
+            endRemoteSessionBtn.addEventListener('click', function () {
+endRemoteSessionBtn.disabled = true;
+                endRemoteSessionBtn.textContent = 'Finalizando...';
+                endRemoteSessionForm.submit();
+            });
+        }
+
         if (closeAnyDeskBtn && closeAnyDeskForm) {
             closeAnyDeskBtn.addEventListener('click', function () {
-                if (!confirm('Confirma que deseas cerrar la sesion remota y cortar el acceso remoto.')) {
-                    return;
-                }
-
-                closeAnyDeskBtn.disabled = true;
+closeAnyDeskBtn.disabled = true;
                 closeAnyDeskBtn.textContent = 'Cerrando...';
                 closeAnyDeskForm.submit();
             });
