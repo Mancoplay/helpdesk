@@ -381,6 +381,51 @@
                 updateEmployeeOptionsByDepartment(form);
             });
         });
+
+        const refreshTableResults = function () {
+            const tableContainer = document.querySelector('.js-table-results');
+            if (!tableContainer) {
+                return;
+            }
+
+            const queryString = window.location.search || '';
+            const url = "{{ route('tickets.index') }}" + queryString;
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    return response.text();
+                })
+                .then(function (html) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const freshTable = doc.querySelector('.js-table-results');
+
+                    if (!freshTable) {
+                        return;
+                    }
+
+                    tableContainer.innerHTML = freshTable.innerHTML;
+                })
+                .catch(function (error) {
+                    console.error('No se pudo actualizar la tabla de tickets:', error);
+                });
+        };
+
+        setInterval(function () {
+            if (!document.hidden) {
+                refreshTableResults();
+            }
+        }, 4000);
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refreshTableResults();
+            }
+        });
     });
 </script>
 @endpush
