@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ReviewRangeService;
 use App\Models\Cliente;
 use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
 use App\Models\TicketRemoteSession;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -1370,58 +1370,7 @@ class HomeController extends Controller
 
     private function resolveReviewRange(Request $request): array
     {
-        $now = Carbon::now();
-        $period = (string) $request->get('period', 'month');
-        $allowedPeriods = ['week', 'month', 'previous_month', 'year', 'custom'];
-
-        if (!in_array($period, $allowedPeriods, true)) {
-            $period = 'month';
-        }
-
-        $fromInput = (string) $request->get('from', '');
-        $toInput = (string) $request->get('to', '');
-
-        if ($period === 'week') {
-            $fromDate = $now->copy()->startOfWeek();
-            $toDate = $now->copy()->endOfWeek();
-        } elseif ($period === 'previous_month') {
-            $fromDate = $now->copy()->subMonthNoOverflow()->startOfMonth();
-            $toDate = $now->copy()->subMonthNoOverflow()->endOfMonth();
-        } elseif ($period === 'year') {
-            $fromDate = $now->copy()->startOfYear();
-            $toDate = $now->copy()->endOfYear();
-        } elseif ($period === 'custom') {
-            $fromDate = $this->safeParseDate($fromInput) ?? $now->copy()->startOfMonth();
-            $toDate = $this->safeParseDate($toInput) ?? $now->copy()->endOfMonth();
-
-            if ($fromDate->gt($toDate)) {
-                [$fromDate, $toDate] = [$toDate, $fromDate];
-            }
-        } else {
-            $fromDate = $now->copy()->startOfMonth();
-            $toDate = $now->copy()->endOfMonth();
-            $period = 'month';
-        }
-
-        if ($period !== 'custom') {
-            $fromInput = $fromDate->toDateString();
-            $toInput = $toDate->toDateString();
-        }
-
-        return [$period, $fromInput, $toInput, $fromDate, $toDate];
-    }
-
-    private function safeParseDate(string $value): ?Carbon
-    {
-        if (trim($value) === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse($value);
-        } catch (\Throwable $th) {
-            return null;
-        }
+        return app(ReviewRangeService::class)->resolveFromRequest($request);
     }
 
     private function markTicketInProgressWhenEmployeeEnters(Ticket $ticket): void
