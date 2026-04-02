@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Revision de empleado')
 @section('header', 'Revision de empleado')
@@ -31,22 +31,23 @@
 <div class="card mb-3">
     <div class="card-body">
         <form method="GET" action="{{ route('empleados.review', $empleado) }}" class="row g-2 align-items-end">
+            @php($isCustomRange = $period === 'custom')
             <div class="col-md-3">
                 <label class="form-label mb-1">Periodo</label>
                 <select name="period" class="form-select" onchange="this.form.submit()">
                     <option value="week" @selected($period === 'week')>Semana actual</option>
                     <option value="month" @selected($period === 'month')>Mes actual</option>
-                    <option value="year" @selected($period === 'year')>Ano actual</option>
+                    <option value="year" @selected($period === 'year')>Año actual</option>
                     <option value="custom" @selected($period === 'custom')>Rango personalizado</option>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label mb-1">Desde</label>
-                <input type="date" name="from" class="form-control" value="{{ $fromInput }}">
+                <input type="date" name="from" class="form-control" value="{{ $fromInput }}" @disabled(!$isCustomRange)>
             </div>
             <div class="col-md-3">
                 <label class="form-label mb-1">Hasta</label>
-                <input type="date" name="to" class="form-control" value="{{ $toInput }}">
+                <input type="date" name="to" class="form-control" value="{{ $toInput }}" @disabled(!$isCustomRange)>
             </div>
             <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100">Filtrar</button>
