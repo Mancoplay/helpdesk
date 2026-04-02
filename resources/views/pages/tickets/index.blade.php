@@ -85,6 +85,8 @@ new #[Title('Tickets - Help Desk')] class extends Component
             'nextTicketCode' => 'TCK-' . str_pad((string) ((int) Ticket::max('id') + 1), 4, '0', STR_PAD_LEFT),
             'searchQuery' => $search,
             'perPage' => $perPage,
+            'activeRemoteTicketId' => null,
+            'pendingRemoteTicketId' => null,
             'menuBadges' => ['pendientes' => Ticket::where('estado', 'pendiente')->count()],
         ]);
     }

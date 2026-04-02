@@ -587,6 +587,7 @@ class HomeController extends Controller
         $perPage = $this->resolvePerPage($request);
         $prioritizeRemoteActive = Schema::hasTable('ticket_remote_sessions') && !auth()->user()->hasRole('Administrador');
         $activeRemoteTicketId = null;
+        $pendingRemoteTicketId = null;
 
         if (!auth()->user()->hasRole('Administrador')) {
             $query->where('estado', '!=', 'cerrado');
@@ -612,13 +613,29 @@ class HomeController extends Controller
 
         if ($prioritizeRemoteActive) {
             $activeRemoteTicketId = TicketRemoteSession::query()
-                ->where('status', 'accepted')
-                ->whereIn('ticket_id', (clone $query)->select('tickets.id'))
-                ->latest('id')
-                ->value('ticket_id');
+                ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                ->where('ticket_remote_sessions.status', 'accepted')
+                ->whereNull('ticket_remote_sessions.ended_at')
+                ->where('tickets.estado', 'en_proceso')
+                ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
+                ->latest('ticket_remote_sessions.id')
+                ->value('ticket_remote_sessions.ticket_id');
+
+            $pendingRemoteTicketId = TicketRemoteSession::query()
+                ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                ->where('ticket_remote_sessions.status', 'pending')
+                ->where('tickets.estado', 'en_proceso')
+                ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
+                ->latest('ticket_remote_sessions.id')
+                ->value('ticket_remote_sessions.ticket_id');
 
             if (!empty($activeRemoteTicketId)) {
-                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [$activeRemoteTicketId]);
+                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 2 WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [
+                    $activeRemoteTicketId,
+                    $pendingRemoteTicketId ?? 0,
+                ]);
+            } elseif (!empty($pendingRemoteTicketId)) {
+                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [$pendingRemoteTicketId]);
             }
         }
 
@@ -642,6 +659,7 @@ class HomeController extends Controller
             'searchQuery' => $search,
             'perPage' => $perPage,
             'activeRemoteTicketId' => $activeRemoteTicketId,
+            'pendingRemoteTicketId' => $pendingRemoteTicketId,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -701,6 +719,16 @@ class HomeController extends Controller
             return back()->with('error', 'Ya existe una solicitud remota activa para este ticket.');
         }
 
+        $employeeId = (int) ($ticket->empleado_id ?? 0);
+        if ($employeeId > 0 && $this->hasActiveRemoteSessionForEmployee($employeeId)) {
+            return back()->with('error', 'No puedes solicitar otra conexion remota hasta finalizar la actual.');
+        }
+
+        $clientId = (int) ($ticket->cliente_id ?? 0);
+        if ($clientId > 0 && $this->hasActiveRemoteSessionForClient($clientId)) {
+            return back()->with('error', 'El cliente ya tiene una conexion remota activa en otro ticket.');
+        }
+
         TicketRemoteSession::create([
             'ticket_id' => $ticket->id,
             'requested_by_user_id' => auth()->id(),
@@ -738,6 +766,16 @@ class HomeController extends Controller
             }
             if ($remoteSession->status !== 'pending') {
                 return back()->with('error', 'La solicitud remota ya no esta pendiente.');
+            }
+
+            $employeeId = (int) ($ticket->empleado_id ?? 0);
+            if ($employeeId > 0 && $this->hasActiveRemoteSessionForEmployee($employeeId, (int) $remoteSession->id)) {
+                return back()->with('error', 'El empleado ya tiene otra conexion remota activa.');
+            }
+
+            $clientId = (int) ($ticket->cliente_id ?? 0);
+            if ($clientId > 0 && $this->hasActiveRemoteSessionForClient($clientId, (int) $remoteSession->id)) {
+                return back()->with('error', 'Ya tienes otra conexion remota activa. Finalizala antes de aceptar una nueva.');
             }
 
             $remoteSession->update([
@@ -1014,6 +1052,10 @@ class HomeController extends Controller
 
         $ticket->update($validated);
 
+        if (in_array((string) ($validated['estado'] ?? ''), ['finalizado', 'cerrado'], true)) {
+            $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue cerrado.');
+        }
+
         return back()->with('success', 'Ticket actualizado correctamente.');
     }
 
@@ -1026,6 +1068,7 @@ class HomeController extends Controller
         $ticket->estado = 'cerrado';
         $ticket->fecha_cierre = now();
         $ticket->save();
+        $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue eliminado.');
         $ticket->delete();
 
         return back()->with('success', 'Ticket eliminado correctamente.');
@@ -1047,6 +1090,7 @@ class HomeController extends Controller
         $ticketModel->estado = 'cerrado';
         $ticketModel->fecha_cierre = now();
         $ticketModel->save();
+        $this->closeActiveRemoteSessionsForTicket($ticketModel, 'La sesion remota se cerro automaticamente porque el ticket fue deshabilitado.');
         $ticketModel->delete();
 
         return back()->with('success', 'Ticket deshabilitado correctamente.');
@@ -1065,6 +1109,7 @@ class HomeController extends Controller
         $ticket->estado = 'finalizado';
         $ticket->fecha_cierre = now();
         $ticket->save();
+        $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue finalizado.');
 
         $ticket->mensajes()->create([
             'user_id' => auth()->id(),
@@ -1256,6 +1301,64 @@ class HomeController extends Controller
         }
 
         return ($ticket->cliente->email ?? null) === auth()->user()->email;
+    }
+
+    private function hasActiveRemoteSessionForEmployee(int $employeeId, ?int $exceptSessionId = null): bool
+    {
+        if ($employeeId <= 0) {
+            return false;
+        }
+
+        return TicketRemoteSession::query()
+            ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+            ->where('tickets.empleado_id', $employeeId)
+            ->whereIn('ticket_remote_sessions.status', ['pending', 'accepted'])
+            ->where('tickets.estado', 'en_proceso')
+            ->when($exceptSessionId, fn ($query) => $query->where('ticket_remote_sessions.id', '!=', $exceptSessionId))
+            ->exists();
+    }
+
+    private function hasActiveRemoteSessionForClient(int $clientId, ?int $exceptSessionId = null): bool
+    {
+        if ($clientId <= 0) {
+            return false;
+        }
+
+        return TicketRemoteSession::query()
+            ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+            ->where('tickets.cliente_id', $clientId)
+            ->whereIn('ticket_remote_sessions.status', ['pending', 'accepted'])
+            ->where('tickets.estado', 'en_proceso')
+            ->when($exceptSessionId, fn ($query) => $query->where('ticket_remote_sessions.id', '!=', $exceptSessionId))
+            ->exists();
+    }
+
+    private function closeActiveRemoteSessionsForTicket(Ticket $ticket, ?string $note = null): void
+    {
+        if (!Schema::hasTable('ticket_remote_sessions')) {
+            return;
+        }
+
+        $activeSessions = $ticket->remoteSessions()
+            ->whereIn('status', ['pending', 'accepted'])
+            ->get();
+
+        if ($activeSessions->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+        $userId = auth()->id();
+        $defaultNote = 'La sesion remota se cerro automaticamente porque el ticket cambio de estado.';
+
+        foreach ($activeSessions as $session) {
+            $session->update([
+                'status' => 'ended',
+                'ended_at' => $now,
+                'cancelled_by_user_id' => $userId,
+                'note' => $note ?? $defaultNote,
+            ]);
+        }
     }
 
     private function resolvePerPage(Request $request): int
