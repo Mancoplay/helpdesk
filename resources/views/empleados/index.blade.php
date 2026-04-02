@@ -66,7 +66,7 @@
                         <td>{{ $empleado->email }}</td>
                         <td class="text-nowrap">
                             <div class="d-flex flex-nowrap align-items-center gap-2">
-                                <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-secondary btn-sm">Revisar</a>
+                                <a href="{{ route('empleados.review', ['empleado' => $empleado, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
                                 <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editEmpleadoModal{{ $empleado->id }}">Editar</button>
                                 <form class="d-inline mb-0" method="POST" action="{{ route('empleados.checkpoint', $empleado) }}">
                                     @csrf

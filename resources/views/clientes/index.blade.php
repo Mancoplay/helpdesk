@@ -50,7 +50,7 @@
                     <td>{{ $cliente->empresa ?? '-' }}</td>
                     <td class="text-nowrap">
                         <div class="d-flex flex-nowrap align-items-center gap-2">
-                            <a href="{{ route('clientes.review', $cliente) }}" class="btn btn-secondary btn-sm">Revisar</a>
+                            <a href="{{ route('clientes.review', ['cliente' => $cliente, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
                             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
                             <form class="d-inline mb-0" method="POST" action="{{ route('clientes.checkpoint', $cliente) }}">
                                 @csrf

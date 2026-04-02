@@ -1,8 +1,9 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Revision de empleado')
 @section('header', 'Revision de empleado')
 @section('show_back_button', '1')
+@section('back_url', route('empleados.index'))
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
@@ -37,6 +38,7 @@
                 <select name="period" class="form-select" onchange="this.form.submit()">
                     <option value="week" @selected($period === 'week')>Semana actual</option>
                     <option value="month" @selected($period === 'month')>Mes actual</option>
+                    <option value="previous_month" @selected($period === 'previous_month')>Mes anterior</option>
                     <option value="year" @selected($period === 'year')>Año actual</option>
                     <option value="custom" @selected($period === 'custom')>Rango personalizado</option>
                 </select>
@@ -51,7 +53,7 @@
             </div>
             <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-                <a href="{{ route('empleados.review', $empleado) }}" class="btn btn-outline-secondary">Limpiar</a>
+
             </div>
         </form>
     </div>

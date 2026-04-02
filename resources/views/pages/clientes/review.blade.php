@@ -15,7 +15,7 @@ new #[Title('Revisar Cliente - Help Desk')] class extends Component
         }
 
         $period = (string) request()->get('period', 'month');
-        $allowedPeriods = ['week', 'month', 'year', 'custom'];
+        $allowedPeriods = ['week', 'month', 'previous_month', 'year', 'custom'];
         if (!in_array($period, $allowedPeriods, true)) {
             $period = 'month';
         }
@@ -27,6 +27,9 @@ new #[Title('Revisar Cliente - Help Desk')] class extends Component
         if ($period === 'week') {
             $fromDate = $now->copy()->startOfWeek();
             $toDate = $now->copy()->endOfWeek();
+        } elseif ($period === 'previous_month') {
+            $fromDate = $now->copy()->subMonthNoOverflow()->startOfMonth();
+            $toDate = $now->copy()->subMonthNoOverflow()->endOfMonth();
         } elseif ($period === 'year') {
             $fromDate = $now->copy()->startOfYear();
             $toDate = $now->copy()->endOfYear();

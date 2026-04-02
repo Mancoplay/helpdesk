@@ -98,13 +98,14 @@
                             <div class="col-sm-6">
                                 @php
                                     $showBackButton = filter_var(trim($__env->yieldContent('show_back_button', '0')), FILTER_VALIDATE_BOOLEAN);
+                                    $backUrl = trim($__env->yieldContent('back_url', ''));
                                 @endphp
                                 <div class="page-header-title-row">
                                     @if($showBackButton)
                                         <button
                                             type="button"
                                             class="btn btn-outline-secondary page-back-btn"
-                                            onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ route('dashboard') }}'; }"
+                                            onclick="@if($backUrl !== '') window.location.href='{{ $backUrl }}'; @else if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ route('dashboard') }}'; } @endif"
                                         >
                                             <i class="fas fa-arrow-left me-1"></i> Volver
                                         </button>
