@@ -301,6 +301,7 @@
                                         placeholder="Ej: 123 456 789"
                                         required
                                     >
+                                    <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar codigo</button>
                                 </div>
                             </form>
                         @else
@@ -349,8 +350,10 @@
         const codeElement = document.getElementById('remoteSupportCode');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
+        const sendSupportCodeBtn = document.getElementById('sendSupportCodeBtn');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
+        const shouldSyncSupportCode = {{ $isClientOwner ? 'false' : 'true' }};
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();
@@ -395,13 +398,49 @@
 
                 copyText(code).finally(function () {
                     openAnyDesk(code);
-                    if (shareCodeForm) {
-                        setTimeout(function () {
-                            shareCodeForm.submit();
-                        }, 150);
-                    }
                 });
             });
+        }
+
+        if (shareCodeForm && sendSupportCodeBtn) {
+            shareCodeForm.addEventListener('submit', function () {
+                sendSupportCodeBtn.disabled = true;
+                sendSupportCodeBtn.textContent = 'Enviando...';
+            });
+        }
+
+        if (shouldSyncSupportCode && codeElement) {
+            setInterval(function () {
+                if (document.hidden) {
+                    return;
+                }
+
+                fetch("{{ route('tickets.show', $ticket) }}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(function (response) {
+                        return response.text();
+                    })
+                    .then(function (html) {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const freshCodeInput = doc.getElementById('remoteSupportCode');
+                        if (!freshCodeInput) {
+                            return;
+                        }
+
+                        const newCode = (freshCodeInput.value || '').trim();
+                        codeElement.value = newCode;
+
+                        if (openCopyAnyDeskBtn) {
+                            openCopyAnyDeskBtn.disabled = newCode === '';
+                        }
+                    })
+                    .catch(function () {
+                        // Ignorar errores intermitentes de red.
+                    });
+            }, 3000);
         }
 
         if (closeAnyDeskBtn && closeAnyDeskForm) {
