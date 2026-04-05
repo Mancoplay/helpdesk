@@ -14,6 +14,12 @@ use Throwable;
 
 class ForgotPasswordController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('guest');
+        $this->middleware('throttle:6,1')->only('sendResetLinkEmail');
+    }
+
     public function showLinkRequestForm()
     {
         return view('auth.passwords.email');
@@ -28,30 +34,23 @@ class ForgotPasswordController extends Controller
         $email = $request->string('email')->toString();
 
         $user = User::query()->where('email', $email)->first();
-        if (!$user) {
-            return back()
-                ->withErrors(['email' => 'No encontramos ese correo en el sistema.'])
-                ->withInput();
-        }
 
         $code = (string) random_int(100000, 999999);
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            [
-                'token' => Hash::make($code),
-                'created_at' => now(),
-            ]
-        );
+        if ($user) {
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                [
+                    'token' => Hash::make($code),
+                    'created_at' => now(),
+                ]
+            );
 
-        try {
-            Mail::to($email)->send(new PasswordVerificationCodeMail($code));
-        } catch (Throwable $e) {
-            report($e);
-
-            return back()
-                ->withErrors(['email' => 'No se pudo enviar el correo en este momento. Revisa la configuracion SMTP e intenta de nuevo.'])
-                ->withInput();
+            try {
+                Mail::to($email)->send(new PasswordVerificationCodeMail($code));
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         session([
@@ -59,6 +58,6 @@ class ForgotPasswordController extends Controller
             'password_reset_email' => $email,
         ]);
 
-        return back()->with('status', 'Te enviamos un codigo de verificacion a tu correo.');
+        return back()->with('status', 'Si el correo existe en el sistema, te enviamos un codigo de verificacion.');
     }
 }

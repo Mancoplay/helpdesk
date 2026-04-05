@@ -15,6 +15,12 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class ResetPasswordController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('guest');
+        $this->middleware('throttle:10,1')->only(['verifyCode', 'reset']);
+    }
+
     public function showResetForm()
     {
         return redirect()->route('password.request');
@@ -34,7 +40,7 @@ class ResetPasswordController extends Controller
 
         if (!$row) {
             return back()
-                ->withErrors(['code' => 'Primero debes solicitar un codigo de verificacion.'])
+                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
                 ->withInput();
         }
 
@@ -45,13 +51,13 @@ class ResetPasswordController extends Controller
             DB::table('password_reset_tokens')->where('email', $email)->delete();
 
             return back()
-                ->withErrors(['code' => 'El codigo ha expirado. Solicita uno nuevo.'])
+                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
                 ->withInput();
         }
 
         if (!Hash::check($code, $row->token)) {
             return back()
-                ->withErrors(['code' => 'El codigo es incorrecto.'])
+                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
                 ->withInput();
         }
 
@@ -79,7 +85,7 @@ class ResetPasswordController extends Controller
 
         $row = DB::table('password_reset_tokens')->where('email', $email)->first();
         if (!$row) {
-            return back()->withErrors(['email' => 'La solicitud ya no es valida. Solicita un nuevo codigo.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
         }
 
         $expirationMinutes = (int) config('auth.passwords.users.expire', 60);
@@ -89,12 +95,12 @@ class ResetPasswordController extends Controller
             DB::table('password_reset_tokens')->where('email', $email)->delete();
             session()->forget(['password_reset_step', 'password_reset_email', 'password_code_verified_at']);
 
-            return back()->withErrors(['email' => 'El codigo ya expiro. Solicita uno nuevo.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
         }
 
         $user = User::query()->where('email', $email)->first();
         if (!$user) {
-            return back()->withErrors(['email' => 'No encontramos ese correo en el sistema.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
         }
 
         $user->forceFill([

@@ -200,7 +200,7 @@
                                 @endif
                                 @if($mensaje->imagen_path)
                                     @php
-                                        $attachmentUrl = asset('storage/' . $mensaje->imagen_path);
+                                        $attachmentUrl = route('tickets.attachments.show', [$ticket, $mensaje]);
                                         $isImageAttachment = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
                                     @endphp
                                     @if($isImageAttachment)
@@ -613,4 +613,3 @@ closeAnyDeskBtn.disabled = true;
 </script>
 @endpush
 @endsection
-

@@ -165,6 +165,12 @@
     @livewireScripts
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            });
+
             document.querySelectorAll('.js-auto-dismiss-alert').forEach(function (alertElement) {
                 const timeoutValue = parseInt(alertElement.getAttribute('data-auto-dismiss') || '5000', 10);
 

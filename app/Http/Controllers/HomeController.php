@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Ticket;
+use App\Models\TicketMensaje;
 use App\Models\TicketRemoteSession;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -14,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
@@ -691,6 +693,35 @@ class HomeController extends Controller
             'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
+    }
+
+    public function showTicketAttachment(Ticket $ticket, TicketMensaje $mensaje)
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if ((int) $mensaje->ticket_id !== (int) $ticket->id || empty($mensaje->imagen_path)) {
+            abort(404);
+        }
+
+        $disk = $this->ticketAttachmentDisk();
+        if (!Storage::disk($disk)->exists($mensaje->imagen_path)) {
+            abort(404);
+        }
+
+        $isImage = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
+        $safeName = $mensaje->imagen_nombre ?: basename($mensaje->imagen_path);
+
+        return Storage::disk($disk)->response(
+            $mensaje->imagen_path,
+            $safeName,
+            [
+                'Content-Type' => $mensaje->imagen_mime ?: 'application/octet-stream',
+                'Content-Disposition' => ($isImage ? 'inline' : 'attachment') . '; filename="' . addslashes($safeName) . '"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
     }
 
     public function requestRemoteSession(Ticket $ticket): RedirectResponse
