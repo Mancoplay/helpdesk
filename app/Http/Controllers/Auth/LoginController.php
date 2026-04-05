@@ -56,7 +56,7 @@ class LoginController extends Controller
                 ->withInput(['email' => (string) $request->input('email', $user->email)]);
         }
 
-        return null;
+        return redirect()->route('dashboard');
     }
 
     private function employeeIsDisabled(User $user): bool
