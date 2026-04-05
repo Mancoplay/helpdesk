@@ -87,13 +87,16 @@
             @endcan
 
             @php
+                $isAdmin = auth()->user()->hasRole('Administrador');
                 $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
                     && (($ticket->cliente->email ?? null) === auth()->user()->email);
                 $isAssignedEmployee = auth()->user()->hasRole('Empleado')
                     && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0);
+                $canManageRemoteAsClient = $isClientOwner || $isAdmin;
+                $canManageRemoteAsEmployee = $isAssignedEmployee || $isAdmin;
             @endphp
 
-            @if($isClientOwner || $isAssignedEmployee)
+            @if($isClientOwner || $isAssignedEmployee || $isAdmin)
                 <div class="card-footer border-top">
                     <h6 class="mb-2">Soporte remoto (simulado)</h6>
 
@@ -110,7 +113,7 @@
                             Ticket finalizado: la conexion remota esta bloqueada.
                         </div>
                     @elseif(!$remoteSession || in_array($remoteSession->status, ['rejected', 'cancelled', 'ended'], true))
-                        @if($isAssignedEmployee)
+                        @if($canManageRemoteAsEmployee)
                             <form method="POST" action="{{ route('tickets.remote.request', $ticket) }}">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-primary w-100">Conectar</button>
@@ -124,7 +127,7 @@
                             Solicitud pendiente de aprobacion del cliente.
                         </div>
 
-                        @if($isClientOwner)
+                        @if($canManageRemoteAsClient)
                             <div class="row g-2">
                                 <div class="col-6">
                                     <form id="remote-accept-form" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
@@ -151,7 +154,7 @@
                         <button type="button" class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#remoteSupportModal">
                             Abrir panel de conexion
                         </button>
-                        @if($isAssignedEmployee)
+                        @if($canManageRemoteAsEmployee)
                             <form id="endRemoteSessionForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
@@ -286,7 +289,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-12">
                         <label class="form-label mb-1">Codigo de AnyDesk</label>
-                        @if($isClientOwner)
+                        @if($canManageRemoteAsClient)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
@@ -316,12 +319,12 @@
                             type="button"
                             id="openCopyAnyDeskBtn"
                             class="btn btn-outline-dark w-100"
-                            {{ blank($remoteSession->support_code) && !$isClientOwner ? 'disabled' : '' }}
+                            {{ blank($remoteSession->support_code) && !$canManageRemoteAsClient ? 'disabled' : '' }}
                         >
                             Abrir y copiar codigo de AnyDesk
                         </button>
                     </div>
-                    @if($isClientOwner)
+                    @if($canManageRemoteAsClient)
                         <div class="col-md-6">
                             <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
@@ -358,7 +361,7 @@
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
-        const shouldSyncSupportCode = {{ $isClientOwner ? 'false' : 'true' }};
+        const shouldSyncSupportCode = {{ $canManageRemoteAsClient ? 'false' : 'true' }};
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();

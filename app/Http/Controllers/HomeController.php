@@ -734,8 +734,8 @@ class HomeController extends Controller
             return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
         }
 
-        if (!$this->isAssignedEmployeeForTicket($ticket)) {
-            abort(403, 'Solo el empleado asignado puede iniciar la conexion remota.');
+        if (!auth()->user()->hasRole('Administrador') && !$this->isAssignedEmployeeForTicket($ticket)) {
+            abort(403, 'Solo el empleado asignado o un administrador puede iniciar la conexion remota.');
         }
 
         if ($ticket->estado !== 'en_proceso') {
@@ -792,7 +792,7 @@ class HomeController extends Controller
         $action = $validated['action'];
 
         if ($action === 'accept') {
-            if (!$this->isTicketClientOwner($ticket)) {
+            if (!auth()->user()->hasRole('Administrador') && !$this->isTicketClientOwner($ticket)) {
                 abort(403);
             }
             if ($remoteSession->status !== 'pending') {
@@ -818,7 +818,7 @@ class HomeController extends Controller
         }
 
         if ($action === 'reject') {
-            if (!$this->isTicketClientOwner($ticket)) {
+            if (!auth()->user()->hasRole('Administrador') && !$this->isTicketClientOwner($ticket)) {
                 abort(403);
             }
             if ($remoteSession->status !== 'pending') {
@@ -835,7 +835,7 @@ class HomeController extends Controller
         }
 
         if ($action === 'share_code') {
-            if (!$this->isTicketClientOwner($ticket)) {
+            if (!auth()->user()->hasRole('Administrador') && !$this->isTicketClientOwner($ticket)) {
                 abort(403);
             }
             if ($remoteSession->status !== 'accepted') {
@@ -855,7 +855,7 @@ class HomeController extends Controller
         }
 
         if ($action === 'end') {
-            if (!$this->isAssignedEmployeeForTicket($ticket)) {
+            if (!auth()->user()->hasRole('Administrador') && !$this->isAssignedEmployeeForTicket($ticket)) {
                 abort(403);
             }
             if (!in_array($remoteSession->status, ['accepted', 'pending'], true)) {
@@ -871,7 +871,11 @@ class HomeController extends Controller
             return back()->with('success', 'Conexion remota finalizada correctamente.');
         }
 
-        if (!$this->isTicketClientOwner($ticket) && !$this->isAssignedEmployeeForTicket($ticket)) {
+        if (
+            !auth()->user()->hasRole('Administrador')
+            && !$this->isTicketClientOwner($ticket)
+            && !$this->isAssignedEmployeeForTicket($ticket)
+        ) {
             abort(403);
         }
 
