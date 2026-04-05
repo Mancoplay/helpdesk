@@ -587,9 +587,11 @@ class HomeController extends Controller
             ->with(['cliente', 'empleado', 'departamento']);
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
-        $prioritizeRemoteActive = Schema::hasTable('ticket_remote_sessions') && !auth()->user()->hasRole('Administrador');
+        $prioritizeRemoteActive = Schema::hasTable('ticket_remote_sessions');
         $activeRemoteTicketId = null;
         $pendingRemoteTicketId = null;
+        $activeRemoteTicketIds = collect();
+        $pendingRemoteTicketIds = collect();
 
         if (!auth()->user()->hasRole('Administrador')) {
             $query->where('estado', '!=', 'cerrado');
@@ -614,30 +616,51 @@ class HomeController extends Controller
         }
 
         if ($prioritizeRemoteActive) {
-            $activeRemoteTicketId = TicketRemoteSession::query()
-                ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                ->where('ticket_remote_sessions.status', 'accepted')
-                ->whereNull('ticket_remote_sessions.ended_at')
-                ->where('tickets.estado', 'en_proceso')
-                ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
-                ->latest('ticket_remote_sessions.id')
-                ->value('ticket_remote_sessions.ticket_id');
+            if (auth()->user()->hasRole('Administrador')) {
+                $ticketIdsSubquery = (clone $query)->select('tickets.id');
 
-            $pendingRemoteTicketId = TicketRemoteSession::query()
-                ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                ->where('ticket_remote_sessions.status', 'pending')
-                ->where('tickets.estado', 'en_proceso')
-                ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
-                ->latest('ticket_remote_sessions.id')
-                ->value('ticket_remote_sessions.ticket_id');
+                $activeRemoteTicketIds = TicketRemoteSession::query()
+                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                    ->where('ticket_remote_sessions.status', 'accepted')
+                    ->whereNull('ticket_remote_sessions.ended_at')
+                    ->where('tickets.estado', 'en_proceso')
+                    ->whereIn('ticket_remote_sessions.ticket_id', $ticketIdsSubquery)
+                    ->distinct()
+                    ->pluck('ticket_remote_sessions.ticket_id');
 
-            if (!empty($activeRemoteTicketId)) {
-                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 2 WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [
-                    $activeRemoteTicketId,
-                    $pendingRemoteTicketId ?? 0,
-                ]);
-            } elseif (!empty($pendingRemoteTicketId)) {
-                $query->orderByRaw('CASE WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [$pendingRemoteTicketId]);
+                $pendingRemoteTicketIds = TicketRemoteSession::query()
+                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                    ->where('ticket_remote_sessions.status', 'pending')
+                    ->where('tickets.estado', 'en_proceso')
+                    ->whereIn('ticket_remote_sessions.ticket_id', $ticketIdsSubquery)
+                    ->distinct()
+                    ->pluck('ticket_remote_sessions.ticket_id');
+            } else {
+                $activeRemoteTicketId = TicketRemoteSession::query()
+                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                    ->where('ticket_remote_sessions.status', 'accepted')
+                    ->whereNull('ticket_remote_sessions.ended_at')
+                    ->where('tickets.estado', 'en_proceso')
+                    ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
+                    ->latest('ticket_remote_sessions.id')
+                    ->value('ticket_remote_sessions.ticket_id');
+
+                $pendingRemoteTicketId = TicketRemoteSession::query()
+                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
+                    ->where('ticket_remote_sessions.status', 'pending')
+                    ->where('tickets.estado', 'en_proceso')
+                    ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
+                    ->latest('ticket_remote_sessions.id')
+                    ->value('ticket_remote_sessions.ticket_id');
+
+                if (!empty($activeRemoteTicketId)) {
+                    $query->orderByRaw('CASE WHEN tickets.id = ? THEN 2 WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [
+                        $activeRemoteTicketId,
+                        $pendingRemoteTicketId ?? 0,
+                    ]);
+                } elseif (!empty($pendingRemoteTicketId)) {
+                    $query->orderByRaw('CASE WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [$pendingRemoteTicketId]);
+                }
             }
         }
 
@@ -662,6 +685,8 @@ class HomeController extends Controller
             'perPage' => $perPage,
             'activeRemoteTicketId' => $activeRemoteTicketId,
             'pendingRemoteTicketId' => $pendingRemoteTicketId,
+            'activeRemoteTicketIds' => $activeRemoteTicketIds,
+            'pendingRemoteTicketIds' => $pendingRemoteTicketIds,
             'menuBadges' => $this->menuBadges(),
         ]);
     }

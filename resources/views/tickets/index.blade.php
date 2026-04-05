@@ -85,18 +85,23 @@
                 @forelse($tickets as $ticket)
                     @php
                         $stateMap = config('adminlte.ticket_states');
+                        $isAdmin = auth()->user()->hasRole('Administrador');
+                        $activeRemoteIds = collect($activeRemoteTicketIds ?? []);
+                        $pendingRemoteIds = collect($pendingRemoteTicketIds ?? []);
                         $isDisabled = $ticket->trashed();
                         $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
                         $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
-                        $isRemoteActive = !auth()->user()->hasRole('Administrador')
-                            && !empty($activeRemoteTicketId)
+                        $isRemoteActive = (string) $ticket->estado === 'en_proceso'
+                            && (
+                                ($isAdmin && $activeRemoteIds->contains((int) $ticket->id))
+                                || (!$isAdmin && !empty($activeRemoteTicketId) && (int) $ticket->id === (int) $activeRemoteTicketId)
+                            );
+                        $isRemotePending = !$isRemoteActive
                             && (string) $ticket->estado === 'en_proceso'
-                            && (int) $ticket->id === (int) $activeRemoteTicketId;
-                        $isRemotePending = !auth()->user()->hasRole('Administrador')
-                            && !$isRemoteActive
-                            && !empty($pendingRemoteTicketId)
-                            && (string) $ticket->estado === 'en_proceso'
-                            && (int) $ticket->id === (int) $pendingRemoteTicketId;
+                            && (
+                                ($isAdmin && $pendingRemoteIds->contains((int) $ticket->id))
+                                || (!$isAdmin && !empty($pendingRemoteTicketId) && (int) $ticket->id === (int) $pendingRemoteTicketId)
+                            );
                     @endphp
                     <tr class="{{ $isRemoteActive ? 'ticket-row--remote-active' : ($isRemotePending ? 'ticket-row--remote-pending' : '') }}">
                         <td>{{ $ticket->codigo }}</td>
