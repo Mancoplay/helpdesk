@@ -1,6 +1,14 @@
-# Helpdesk (Laravel + PostgreSQL)
+ï»¿# Helpdesk (Laravel + PostgreSQL)
 
 Sistema de tickets con chat, adjuntos y soporte remoto simulado.
+
+## Stack tecnologico
+
+- Laravel 12
+- Livewire 4 (v4.2.1)
+- Livewire Volt
+- Livewire Flux
+- PostgreSQL
 
 ## Requisitos
 
@@ -82,15 +90,15 @@ php artisan migrate
 # php artisan db:seed
 ```
 
-## 7) Habilitar archivos públicos (adjuntos)
+## 7) Habilitar archivos pÃºblicos (adjuntos)
 
 ```bash
 php artisan storage:link
 ```
 
-Esto crea el enlace simbólico `public/storage` hacia `storage/app/public`.
+Esto crea el enlace simbÃ³lico `public/storage` hacia `storage/app/public`.
 
-## 8) Limpiar cachés y levantar proyecto
+## 8) Limpiar cachÃ©s y levantar proyecto
 
 ```bash
 php artisan optimize:clear
@@ -104,7 +112,7 @@ Opcional (si usas colas):
 php artisan queue:work
 ```
 
-## Comando único de desarrollo (opcional)
+## Comando Ãºnico de desarrollo (opcional)
 
 ```bash
 composer run dev
@@ -112,7 +120,7 @@ composer run dev
 
 Ejecuta servidor Laravel + queue listener + Vite en paralelo.
 
-## Despliegue básico en servidor
+## Despliegue bÃ¡sico en servidor
 
 ```bash
 composer install --no-dev --optimize-autoloader
@@ -125,17 +133,18 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-## Solución rápida de problemas
+## SoluciÃ³n rÃ¡pida de problemas
 
-- Si no cargan estilos/scripts: ejecutar `npm run dev` (local) o `npm run build` (producción).
+- Si no cargan estilos/scripts: ejecutar `npm run dev` (local) o `npm run build` (producciÃ³n).
 - Si no se ven adjuntos: ejecutar `php artisan storage:link`.
-- Si falla conexión a BD: revisar credenciales PostgreSQL en `.env`.
+- Si falla conexiÃ³n a BD: revisar credenciales PostgreSQL en `.env`.
 - Si cambiaste `.env`: ejecutar `php artisan config:clear`.
 
 ## Notas de adjuntos
 
 - Los archivos se guardan en disco (filesystem), no dentro de la base de datos.
-- PostgreSQL solo guarda metadatos: ruta, nombre, mime y tamaño.
+- PostgreSQL solo guarda metadatos: ruta, nombre, mime y tamaÃ±o.
 - Carpeta base configurable por:
   - `HELPDESK_CHAT_ATTACHMENTS_DISK`
   - `HELPDESK_CHAT_ATTACHMENTS_DIR`
+

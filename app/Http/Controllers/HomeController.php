@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Admin\StoreClienteRequest;
+use App\Http\Requests\Admin\StoreEmpleadoRequest;
+use App\Http\Requests\Admin\UpdateClienteRequest;
+use App\Http\Requests\Admin\UpdateEmpleadoRequest;
 use App\Services\ReviewRangeService;
 use App\Models\Cliente;
 use App\Models\Departamento;
@@ -208,18 +212,9 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeCliente(Request $request): RedirectResponse
+    public function storeCliente(StoreClienteRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
-            'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255', 'unique:clientes,email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
-            'direccion' => ['nullable', 'string'],
-            'empresa' => ['nullable', 'string', 'max:120'],
-        ]);
+        $validated = $request->validated();
 
         $usuario = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
@@ -233,20 +228,11 @@ class HomeController extends Controller
         return back()->with('success', 'Cliente agregado correctamente.');
     }
 
-    public function updateCliente(Request $request, Cliente $cliente): RedirectResponse
+    public function updateCliente(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
     {
         $linkedUser = User::where('email', $cliente->email)->first();
 
-        $validated = $request->validate([
-            'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
-            'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('clientes', 'email')->ignore($cliente->id), Rule::unique('users', 'email')->ignore($linkedUser?->id)],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
-            'direccion' => ['nullable', 'string'],
-            'empresa' => ['nullable', 'string', 'max:120'],
-        ]);
+        $validated = $request->validated();
 
         if ($linkedUser) {
             $linkedUser->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
@@ -357,21 +343,9 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeEmpleado(Request $request): RedirectResponse
+    public function storeEmpleado(StoreEmpleadoRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
-            'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255', 'unique:empleados,email', 'unique:users,email'],
-            'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
-            'direccion' => ['nullable', 'string'],
-            'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['nullable', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'departamento_ids' => ['nullable', 'array'],
-            'departamento_ids.*' => ['integer', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
             ->map(static fn ($id) => (int) $id)
             ->filter()
@@ -412,21 +386,9 @@ class HomeController extends Controller
         return back()->with('success', 'Empleado agregado correctamente.');
     }
 
-    public function updateEmpleado(Request $request, Empleado $empleado): RedirectResponse
+    public function updateEmpleado(UpdateEmpleadoRequest $request, Empleado $empleado): RedirectResponse
     {
-        $validated = $request->validate([
-            'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
-            'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('empleados', 'email')->ignore($empleado->id)],
-            'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
-            'direccion' => ['nullable', 'string'],
-            'cargo' => ['nullable', 'string', 'max:100'],
-            'departamento_id' => ['nullable', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'departamento_ids' => ['nullable', 'array'],
-            'departamento_ids.*' => ['integer', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
             ->map(static fn ($id) => (int) $id)
             ->filter()
