@@ -74,10 +74,10 @@
                                 <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" value="{{ $cliente->nombres }}" required></div>
                                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control" value="{{ $cliente->segundo_nombre }}"></div>
                                 <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" value="{{ $cliente->apellidos }}" required></div>
-                                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" value="{{ $cliente->email }}" required></div>
+                                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" value="{{ $cliente->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
                                 <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
                                 <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
-                                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" value="{{ $cliente->telefono }}"></div>
+                                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" value="{{ $cliente->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
                             </div></div>
                             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
                         </form>
@@ -103,10 +103,10 @@
                 <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" required></div>
                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control"></div>
                 <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
                 <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
                 <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
-                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
             </div></div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
         </form>

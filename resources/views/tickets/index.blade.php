@@ -383,6 +383,10 @@
         });
 
         const refreshTableResults = function () {
+            if (document.querySelector('.modal.show')) {
+                return;
+            }
+
             const tableContainer = document.querySelector('.js-table-results');
             if (!tableContainer) {
                 return;
@@ -426,10 +430,14 @@
                 refreshTableResults();
             }
         });
+
+        document.addEventListener('hidden.bs.modal', function () {
+            if (!document.hidden) {
+                refreshTableResults();
+            }
+        });
     });
 </script>
 @endpush
 
 @endsection
-
-

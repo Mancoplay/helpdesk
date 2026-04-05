@@ -101,7 +101,7 @@
                                                 <label class="form-label mt-2">Apellido</label>
                                                 <input type="text" name="apellidos" class="form-control" value="{{ $empleado->apellidos }}" required>
                                                 <label class="form-label mt-2">Contacto</label>
-                                                <input type="text" name="telefono" class="form-control" value="{{ $empleado->telefono }}">
+                                                <input type="text" name="telefono" class="form-control" value="{{ $empleado->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
                                             </div>
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold">Credenciales del Sistema</h6>
@@ -144,7 +144,7 @@
                                                 <label class="form-label mt-2">Cargo</label>
                                                 <input type="text" name="cargo" class="form-control" value="{{ $empleado->cargo }}">
                                                 <label class="form-label mt-2">Correo</label>
-                                                <input type="email" name="email" class="form-control" value="{{ $empleado->email }}" required>
+                                                <input type="email" name="email" class="form-control" value="{{ $empleado->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com">
                                                 <label class="form-label mt-2">Contrasena (opcional)</label>
                                                 <input type="password" name="password" class="form-control" autocomplete="new-password">
                                                 <label class="form-label mt-2">Confirmar Contrasena</label>
@@ -191,7 +191,7 @@
                             <label class="form-label mt-2">Apellido</label>
                             <input type="text" name="apellidos" class="form-control" required>
                             <label class="form-label mt-2">Contacto</label>
-                            <input type="text" name="telefono" class="form-control">
+                            <input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
                         </div>
                         <div class="col-md-6">
                             <h6 class="fw-bold">Credenciales del Sistema</h6>
@@ -232,7 +232,7 @@
                             <label class="form-label mt-2">Cargo</label>
                             <input type="text" name="cargo" class="form-control">
                             <label class="form-label mt-2">Correo</label>
-                            <input type="email" name="email" class="form-control" required>
+                            <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com">
                             <label class="form-label mt-2">Contrasena</label>
                             <input type="password" name="password" class="form-control" required autocomplete="new-password">
                             <label class="form-label mt-2">Confirmar Contrasena</label>
