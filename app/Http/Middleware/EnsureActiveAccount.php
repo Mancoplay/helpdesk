@@ -23,7 +23,7 @@ class EnsureActiveAccount
                 ->orWhere('email', $user->email)
                 ->first();
 
-            if (!$empleado || !$empleado->activo) {
+            if ($empleado && !$empleado->activo) {
                 return $this->logoutDisabledUser($request, $user->email);
             }
         }

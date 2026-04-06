@@ -21,17 +21,17 @@ class UserSeeder extends Seeder
         $empleado = User::updateOrCreate([
             'email' => 'empleado@helpdesk.com',
         ], [
-            'name' => 'Juan Perez',
+            'name' => 'Empleado',
             'password' => Hash::make('password'),
         ]);
         $empleado->syncRoles(['Empleado']);
 
-        $cliente = User::updateOrCreate([
-            'email' => 'cliente@helpdesk.com',
+        $usuario = User::updateOrCreate([
+            'email' => 'usuario@helpdesk.com',
         ], [
-            'name' => 'Carlos Rodriguez',
+            'name' => 'Usuario',
             'password' => Hash::make('password'),
         ]);
-        $cliente->syncRoles(['Cliente']);
+        $usuario->syncRoles(['Usuario']);
     }
 }

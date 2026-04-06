@@ -69,7 +69,7 @@ class LoginController extends Controller
             ->orWhere('email', $user->email)
             ->first();
 
-        return !$empleado || !$empleado->activo;
+        return $empleado ? !$empleado->activo : false;
     }
 
     private function clientIsDisabled(User $user): bool

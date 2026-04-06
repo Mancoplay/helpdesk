@@ -30,10 +30,17 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'Administrador']);
         $empleado = Role::firstOrCreate(['name' => 'Empleado']);
         $cliente = Role::firstOrCreate(['name' => 'Cliente']);
+        $usuario = Role::firstOrCreate(['name' => 'Usuario']);
 
         $admin->syncPermissions(Permission::all());
 
         $cliente->syncPermissions([
+            'ver dashboard',
+            'ver tickets',
+            'crear tickets',
+        ]);
+
+        $usuario->syncPermissions([
             'ver dashboard',
             'ver tickets',
             'crear tickets',
