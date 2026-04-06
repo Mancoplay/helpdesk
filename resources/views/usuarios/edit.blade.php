@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Cliente')
-@section('header', 'Cliente')
+@section('title', 'Editar Usuario')
+@section('header', 'Usuario')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('clientes.index') }}">Clientes</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('usuarios.index') }}">Usuarios</a></li>
     <li class="breadcrumb-item active">Editar</li>
 @endsection
 
 @section('content')
 <div class="card">
-    <div class="card-header"><h3 class="card-title mb-0">Editar cliente</h3></div>
+    <div class="card-header"><h3 class="card-title mb-0">Editar usuario</h3></div>
     <div class="card-body">
-        <form method="POST" action="{{ route('clientes.update', $cliente) }}">
+        <form method="POST" action="{{ route('usuarios.update', $cliente) }}">
             @csrf
             @method('PUT')
             <div class="row g-3">
@@ -42,7 +42,7 @@
 
                     <label class="form-label mt-2">Confirmar Contrasena</label>
                     <input type="password" class="form-control" placeholder="Opcional" disabled>
-                    <small class="text-muted">La contrasena se gestiona desde el formulario de cliente.</small>
+                    <small class="text-muted">La contrasena se gestiona desde el formulario de usuario.</small>
                 </div>
             </div>
 
@@ -51,11 +51,10 @@
             @endif
 
             <div class="mt-3 text-end">
-                <a href="{{ route('clientes.index') }}" class="btn btn-secondary">Cancelar</a>
+                <a href="{{ route('usuarios.index') }}" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">Guardar cambios</button>
             </div>
         </form>
     </div>
 </div>
 @endsection
-

@@ -14,8 +14,8 @@ return [
             'roles' => ['Administrador', 'Empleado', 'Cliente', 'Usuario'],
         ],
         [
-            'label' => 'Clientes',
-            'route' => 'clientes.index',
+            'label' => 'Usuarios',
+            'route' => 'usuarios.index',
             'icon' => 'fas fa-users',
             'roles' => ['Administrador'],
         ],

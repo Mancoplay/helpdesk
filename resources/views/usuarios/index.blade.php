@@ -1,23 +1,23 @@
 @extends('layouts.app')
 
-@section('title', 'Clientes')
-@section('header', 'Lista de clientes')
+@section('title', 'Usuarios')
+@section('header', 'Lista de usuarios')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
-    <li class="breadcrumb-item active">Clientes</li>
+    <li class="breadcrumb-item active">Usuarios</li>
 @endsection
 
 @section('content')
 <div class="card mb-3">
     <div class="card-body">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClienteModal"><i class="fas fa-plus me-1"></i> Agregar nuevo cliente</button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClienteModal"><i class="fas fa-plus me-1"></i> Agregar nuevo usuario</button>
     </div>
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" action="{{ route('clientes.index') }}" class="row g-2 align-items-end js-table-filters">
+        <form method="GET" action="{{ route('usuarios.index') }}" class="row g-2 align-items-end js-table-filters">
             <div class="col-md-8">
                 <label class="form-label mb-1">Buscar</label>
                 <input type="text" name="q" class="form-control" value="{{ $searchQuery ?? '' }}" placeholder="Ejemplo: red, empresa, telefono...">
@@ -31,13 +31,13 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <a href="{{ route('clientes.index') }}" class="btn btn-outline-secondary w-100">Limpiar</a>
+                <a href="{{ route('usuarios.index') }}" class="btn btn-outline-secondary w-100">Limpiar</a>
             </div>
         </form>
     </div>
 </div>
 <div class="card js-table-results">
-    <div class="card-header"><h3 class="card-title mb-0">Tabla de Clientes</h3></div>
+    <div class="card-header"><h3 class="card-title mb-0">Tabla de Usuarios</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
             <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th style="width:300px;">Accion</th></tr></thead>
@@ -49,9 +49,9 @@
                     <td>{{ $cliente->telefono ?? '-' }}</td>
                     <td class="text-nowrap">
                         <div class="d-flex flex-nowrap align-items-center gap-2">
-                            <a href="{{ route('clientes.review', ['cliente' => $cliente, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
+                            <a href="{{ route('usuarios.review', ['cliente' => $cliente, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
                             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
-                            <form class="d-inline mb-0" method="POST" action="{{ route('clientes.checkpoint', $cliente) }}">
+                            <form class="d-inline mb-0" method="POST" action="{{ route('usuarios.checkpoint', $cliente) }}">
                                 @csrf
                                 @method('PATCH')
                                 <button type="submit" class="checkpoint-switch {{ $cliente->activo ? 'is-on' : 'is-off' }}" title="{{ $cliente->activo ? 'Habilitado' : 'Deshabilitado' }}">
@@ -65,10 +65,10 @@
 
                 <div class="modal fade" id="editClienteModal{{ $cliente->id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
-                        <form method="POST" action="{{ route('clientes.update', $cliente) }}">
+                        <form method="POST" action="{{ route('usuarios.update', $cliente) }}">
                             @csrf
                             @method('PUT')
-                            <div class="modal-header"><h5 class="modal-title">Editar cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                            <div class="modal-header"><h5 class="modal-title">Editar usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                             <div class="modal-body"><div class="row g-2">
                                 <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" value="{{ $cliente->nombres }}" required></div>
                                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control" value="{{ $cliente->segundo_nombre }}"></div>
@@ -95,9 +95,9 @@
 
 <div class="modal fade" id="createClienteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
-        <form method="POST" action="{{ route('clientes.store') }}">
+        <form method="POST" action="{{ route('usuarios.store') }}">
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Nuevo cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5 class="modal-title">Nuevo usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body"><div class="row g-2">
                 <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" required></div>
                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control"></div>

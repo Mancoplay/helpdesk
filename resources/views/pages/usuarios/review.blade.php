@@ -5,7 +5,7 @@ use App\Models\Ticket;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Revisar Cliente - Help Desk')] class extends Component
+new #[Title('Revisar Usuario - Help Desk')] class extends Component
 {
     public function render()
     {
@@ -42,7 +42,7 @@ new #[Title('Revisar Cliente - Help Desk')] class extends Component
             'tickets_eliminados' => (clone $baseQuery)->onlyTrashed()->count(),
         ];
 
-        return view('clientes.review', [
+        return view('usuarios.review', [
             'cliente' => $cliente,
             'tickets' => $tickets,
             'summary' => $summary,

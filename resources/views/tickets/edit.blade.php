@@ -21,7 +21,7 @@
                 <input type="text" name="codigo" class="form-control" value="{{ old('codigo', $ticket->codigo) }}" required>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Cliente</label>
+                <label class="form-label">Usuario</label>
                 <select name="cliente_id" class="form-select" required>
                     @foreach($clientes as $cliente)
                         <option value="{{ $cliente->id }}" @selected(old('cliente_id', $ticket->cliente_id) == $cliente->id)>{{ $cliente->nombre_completo }}</option>

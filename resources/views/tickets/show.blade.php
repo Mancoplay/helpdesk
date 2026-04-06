@@ -39,7 +39,7 @@
                         <div>{{ $ticket->departamento->nombre ?? '-' }}</div>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <strong>Cliente</strong>
+                        <strong>Usuario</strong>
                         <div>{{ $ticket->cliente->nombre_completo ?? '-' }}</div>
                     </div>
                     <div class="col-md-6 mb-3">
@@ -118,13 +118,13 @@
                                 @csrf
                                 <button type="submit" class="btn btn-outline-primary w-100">Conectar</button>
                             </form>
-                            <small class="text-muted d-block mt-2">El cliente recibira una solicitud para autorizar el control remoto.</small>
+                            <small class="text-muted d-block mt-2">El usuario recibira una solicitud para autorizar el control remoto.</small>
                         @else
                             <small class="text-muted">Aun no hay solicitud activa de soporte remoto.</small>
                         @endif
                     @elseif($remoteSession->status === 'pending')
                         <div class="alert alert-warning py-2 mb-2">
-                            Solicitud pendiente de aprobacion del cliente.
+                            Solicitud pendiente de aprobacion del usuario.
                         </div>
 
                         @if($canManageRemoteAsClient)
@@ -149,7 +149,7 @@
                         @endif
                     @elseif($remoteSession->status === 'accepted')
                         <div class="alert alert-success py-2 mb-2">
-                            Conexion autorizada por el cliente.
+                            Conexion autorizada por el usuario.
                         </div>
                         <button type="button" class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#remoteSupportModal">
                             Abrir panel de conexion
@@ -284,7 +284,7 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-info mb-3">
-                    Sesion autorizada por el cliente en <strong>AnyDesk</strong>.
+                    Sesion autorizada por el usuario en <strong>AnyDesk</strong>.
                 </div>
                 <div class="row g-2 align-items-end">
                     <div class="col-12">

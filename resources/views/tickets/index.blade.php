@@ -49,7 +49,7 @@
                 <tr>
                     <th>Codigo</th>
                     <th>Asunto</th>
-                    <th>Cliente</th>
+                    <th>Usuario</th>
                     <th>Empleado</th>
                     <th>Estado</th>
                     <th style="width: 290px;">Accion</th>
@@ -147,7 +147,7 @@
                                                 <input type="text" name="codigo" class="form-control" value="{{ $ticket->codigo }}" required>
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label">Cliente</label>
+                                                <label class="form-label">Usuario</label>
                                                 <select name="cliente_id" class="form-select" required>
                                                     @foreach($clientes as $cliente)
                                                         <option value="{{ $cliente->id }}" @selected($ticket->cliente_id == $cliente->id)>{{ $cliente->nombre_completo }}</option>

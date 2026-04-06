@@ -5,7 +5,7 @@ use App\Models\Ticket;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Clientes - Help Desk')] class extends Component
+new #[Title('Usuarios - Help Desk')] class extends Component
 {
     public function render()
     {
@@ -25,7 +25,7 @@ new #[Title('Clientes - Help Desk')] class extends Component
                 ->orWhere('empresa', 'like', '%' . $search . '%');
         }
 
-        return view('clientes.index', [
+        return view('usuarios.index', [
             'clientes' => $query->paginate($perPage)->withQueryString(),
             'searchQuery' => $search,
             'perPage' => $perPage,

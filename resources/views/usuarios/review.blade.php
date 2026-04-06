@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Revision de cliente')
-@section('header', 'Revision de cliente')
+@section('title', 'Revision de usuario')
+@section('header', 'Revision de usuario')
 @section('show_back_button', '1')
-@section('back_url', route('clientes.index'))
+@section('back_url', route('usuarios.index'))
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('clientes.index') }}">Clientes</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('usuarios.index') }}">Usuarios</a></li>
     <li class="breadcrumb-item active">{{ $cliente->nombre_completo }}</li>
 @endsection
 
@@ -15,7 +15,7 @@
 <div class="card mb-3">
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-md-4"><strong>Cliente:</strong> {{ $cliente->nombre_completo }}</div>
+            <div class="col-md-4"><strong>Usuario:</strong> {{ $cliente->nombre_completo }}</div>
             <div class="col-md-4"><strong>Correo:</strong> {{ $cliente->email }}</div>
             <div class="col-md-4"><strong>Empresa:</strong> {{ $cliente->empresa ?? '-' }}</div>
         </div>
@@ -24,7 +24,7 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" action="{{ route('clientes.review', $cliente) }}" class="row g-2 align-items-end">
+        <form method="GET" action="{{ route('usuarios.review', $cliente) }}" class="row g-2 align-items-end">
             @php($isCustomRange = $period === 'custom')
             <div class="col-md-3">
                 <label class="form-label mb-1">Periodo</label>
@@ -53,7 +53,7 @@
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets del cliente</div><p class="value">{{ $summary['total_tickets'] }}</p></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets del usuario</div><p class="value">{{ $summary['total_tickets'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Empleados que atendieron</div><p class="value">{{ $summary['empleados_distintos'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickeds finalizados</div><p class="value">{{ $summary['tickets_cerrados'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets eliminados</div><p class="value">{{ $summary['tickets_eliminados'] }}</p></div></div></div>

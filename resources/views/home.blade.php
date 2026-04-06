@@ -20,7 +20,7 @@
                 <div class="card-body d-flex align-items-center">
                     <div class="icon bg-secondary"><i class="fas fa-users"></i></div>
                     <div>
-                        <div class="label">Total Clientes</div>
+                        <div class="label">Total Usuarios</div>
                         <p class="value">{{ $stats['total_clientes'] }}</p>
                     </div>
                 </div>

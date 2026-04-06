@@ -168,7 +168,7 @@ class HomeController extends Controller
 
         $clientes = $query->paginate($perPage)->withQueryString();
 
-        return view('clientes.index', [
+        return view('usuarios.index', [
             'clientes' => $clientes,
             'searchQuery' => $search,
             'perPage' => $perPage,
@@ -201,7 +201,7 @@ class HomeController extends Controller
             'tickets_eliminados' => (clone $baseQuery)->onlyTrashed()->count(),
         ];
 
-        return view('clientes.review', [
+        return view('usuarios.review', [
             'cliente' => $cliente,
             'tickets' => $tickets,
             'summary' => $summary,
@@ -225,7 +225,7 @@ class HomeController extends Controller
 
         Cliente::create($validated + ['activo' => true]);
 
-        return back()->with('success', 'Cliente agregado correctamente.');
+        return back()->with('success', 'Usuario agregado correctamente.');
     }
 
     public function updateCliente(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
@@ -251,7 +251,7 @@ class HomeController extends Controller
 
         $cliente->update($validated);
 
-        return back()->with('success', 'Cliente actualizado correctamente.');
+        return back()->with('success', 'Usuario actualizado correctamente.');
     }
 
     public function destroyCliente(Cliente $cliente): RedirectResponse
@@ -259,10 +259,10 @@ class HomeController extends Controller
         try {
             $cliente->delete();
         } catch (QueryException $exception) {
-            return back()->with('error', 'No se puede eliminar el cliente porque tiene registros relacionados.');
+            return back()->with('error', 'No se puede eliminar el usuario porque tiene registros relacionados.');
         }
 
-        return back()->with('success', 'Cliente eliminado correctamente.');
+        return back()->with('success', 'Usuario eliminado correctamente.');
     }
 
     public function toggleClienteCheckpoint(Cliente $cliente): RedirectResponse
@@ -275,8 +275,8 @@ class HomeController extends Controller
         $cliente->save();
 
         return back()->with('success', $cliente->activo
-            ? 'Cliente habilitado correctamente.'
-            : 'Cliente deshabilitado correctamente.');
+            ? 'Usuario habilitado correctamente.'
+            : 'Usuario deshabilitado correctamente.');
     }
 
     public function empleados(Request $request)
@@ -744,7 +744,7 @@ class HomeController extends Controller
 
         $clientId = (int) ($ticket->cliente_id ?? 0);
         if ($clientId > 0 && $this->hasActiveRemoteSessionForClient($clientId)) {
-            return back()->with('error', 'El cliente ya tiene una conexion remota activa en otro ticket.');
+            return back()->with('error', 'El usuario ya tiene una conexion remota activa en otro ticket.');
         }
 
         TicketRemoteSession::create([
@@ -754,7 +754,7 @@ class HomeController extends Controller
             'requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Solicitud remota enviada al cliente.');
+        return back()->with('success', 'Solicitud remota enviada al usuario.');
     }
 
     public function updateRemoteSession(Request $request, Ticket $ticket, TicketRemoteSession $remoteSession): RedirectResponse

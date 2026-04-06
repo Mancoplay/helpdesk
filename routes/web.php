@@ -24,6 +24,13 @@ Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
+    Route::get('/usuarios', [HomeController::class, 'clientes'])->name('usuarios.index');
+    Route::get('/usuarios/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('usuarios.review');
+    Route::post('/usuarios', [HomeController::class, 'storeCliente'])->name('usuarios.store');
+    Route::put('/usuarios/{cliente}', [HomeController::class, 'updateCliente'])->name('usuarios.update');
+    Route::patch('/usuarios/{cliente}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('usuarios.checkpoint');
+
+    // Legacy aliases to avoid breaking existing links/bookmarks.
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
     Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');

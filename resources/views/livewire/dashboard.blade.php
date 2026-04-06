@@ -35,7 +35,7 @@ new #[Title('Dashboard - Help Desk')] class extends Component {
             <div class="small-box bg-success">
                 <div class="inner">
                     <h3>{{ Auth::user()->name }}</h3>
-                    <p>Cliente</p>
+                    <p>Usuario</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-user"></i>
@@ -47,7 +47,7 @@ new #[Title('Dashboard - Help Desk')] class extends Component {
             <div class="small-box bg-warning">
                 <div class="inner">
                     <h3>{{ App\Models\User::count() }}</h3>
-                    <p>Total Clientes</p>
+                    <p>Total Usuarios</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-users"></i>
@@ -70,7 +70,7 @@ new #[Title('Dashboard - Help Desk')] class extends Component {
     
     <div class="card mt-4">
         <div class="card-header">
-            <h3 class="card-title">Informacion de Cliente</h3>
+            <h3 class="card-title">Informacion de Usuario</h3>
         </div>
         <div class="card-body">
             <table class="table table-bordered">
