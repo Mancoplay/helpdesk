@@ -1,8 +1,4 @@
-﻿# Helpdesk (Laravel + PostgreSQL)
-
-Sistema de tickets con chat, adjuntos y soporte remoto simulado.
-
-## Stack tecnologico
+﻿## Stack tecnologico
 
 - Laravel 12
 - Livewire 4 (v4.2.1)
