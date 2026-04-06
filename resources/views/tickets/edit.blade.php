@@ -62,14 +62,6 @@
                     <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Prioridad</label>
-                <select name="prioridad" class="form-select" required>
-                    <option value="baja" @selected(old('prioridad', $ticket->prioridad) == 'baja')>Baja</option>
-                    <option value="media" @selected(old('prioridad', $ticket->prioridad) == 'media')>Media</option>
-                    <option value="alta" @selected(old('prioridad', $ticket->prioridad) == 'alta')>Alta</option>
-                </select>
-            </div>
             <div class="col-12 text-end">
                 <a href="{{ route('tickets.index') }}" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">Guardar cambios</button>

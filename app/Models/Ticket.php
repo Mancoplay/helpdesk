@@ -20,7 +20,6 @@ class Ticket extends Model
         'asunto',
         'descripcion',
         'estado',
-        'prioridad',
         'fecha_cierre',
     ];
 

@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('asunto', 180);
             $table->text('descripcion');
             $table->enum('estado', ['pendiente', 'en_proceso', 'finalizado', 'cerrado'])->default('pendiente');
-            $table->enum('prioridad', ['baja', 'media', 'alta'])->default('media');
             $table->timestamp('fecha_cierre')->nullable();
             $table->timestamps();
         });

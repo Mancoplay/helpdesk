@@ -200,14 +200,6 @@
                                                     <option value="cerrado" @selected($ticket->estado == 'cerrado')>Cerrado</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Prioridad</label>
-                                                <select name="prioridad" class="form-select" required>
-                                                    <option value="baja" @selected($ticket->prioridad == 'baja')>Baja</option>
-                                                    <option value="media" @selected($ticket->prioridad == 'media')>Media</option>
-                                                    <option value="alta" @selected($ticket->prioridad == 'alta')>Alta</option>
-                                                </select>
-                                            </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -262,14 +254,6 @@
                         <div class="col-12">
                             <label class="form-label">Descripcion</label>
                             <textarea name="descripcion" class="form-control" rows="3" required></textarea>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Prioridad</label>
-                            <select name="prioridad" class="form-select" required>
-                                <option value="baja">Baja</option>
-                                <option value="media" selected>Media</option>
-                                <option value="alta">Alta</option>
-                            </select>
                         </div>
                     </div>
                 </div>

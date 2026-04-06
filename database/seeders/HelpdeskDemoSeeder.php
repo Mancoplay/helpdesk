@@ -82,7 +82,6 @@ class HelpdeskDemoSeeder extends Seeder
                 'asunto' => 'No puedo acceder al sistema',
                 'descripcion' => 'El cliente reporta error de autenticacion.',
                 'estado' => 'pendiente',
-                'prioridad' => 'alta',
             ]
         );
 
@@ -95,7 +94,6 @@ class HelpdeskDemoSeeder extends Seeder
                 'asunto' => 'Intermitencia en la red',
                 'descripcion' => 'Se reportan cortes de red en horas pico.',
                 'estado' => 'en_proceso',
-                'prioridad' => 'media',
             ]
         );
     }

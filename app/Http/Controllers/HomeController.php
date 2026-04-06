@@ -887,7 +887,6 @@ class HomeController extends Controller
             'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
-            'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
 
         $currentUser = auth()->user();
@@ -1059,7 +1058,6 @@ class HomeController extends Controller
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
             'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
-            'prioridad' => ['required', Rule::in(['baja', 'media', 'alta'])],
         ]);
 
         if (!empty($validated['empleado_id'])) {
