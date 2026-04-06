@@ -98,7 +98,7 @@
 
             @if($isClientOwner || $isAssignedEmployee || $isAdmin)
                 <div class="card-footer border-top">
-                    <h6 class="mb-2">Soporte remoto (simulado)</h6>
+                    <h6 class="mb-2">Soporte remoto</h6>
 
                     @if(!$remoteEnabled)
                         <div class="alert alert-secondary py-2 mb-0">

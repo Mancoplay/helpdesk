@@ -40,14 +40,13 @@
     <div class="card-header"><h3 class="card-title mb-0">Tabla de Clientes</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th>Empresa</th><th style="width:300px;">Accion</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th style="width:300px;">Accion</th></tr></thead>
             <tbody>
             @forelse($clientes as $cliente)
                 <tr>
                     <td>{{ $cliente->nombre_completo }}</td>
                     <td>{{ $cliente->email }}</td>
                     <td>{{ $cliente->telefono ?? '-' }}</td>
-                    <td>{{ $cliente->empresa ?? '-' }}</td>
                     <td class="text-nowrap">
                         <div class="d-flex flex-nowrap align-items-center gap-2">
                             <a href="{{ route('clientes.review', ['cliente' => $cliente, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
@@ -84,7 +83,7 @@
                     </div></div>
                 </div>
             @empty
-                <tr><td colspan="5" class="text-center text-muted">Sin datos</td></tr>
+                <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
             @endforelse
             </tbody>
         </table>
