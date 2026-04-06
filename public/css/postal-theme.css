@@ -61,18 +61,37 @@ body {
 }
 
 .table.table-striped tbody tr.ticket-row--remote-active > td {
-    --bs-table-accent-bg: #ffe08a !important;
-    background-color: #ffe08a !important;
-    border-bottom-color: #efc449 !important;
+    --bs-table-accent-bg: #ffe699 !important;
+    background-color: #ffe699 !important;
+    border-top-color: #ffbf00 !important;
+    border-bottom-color: #ffbf00 !important;
+    font-weight: 600;
 }
 
 .table.table-striped.table-hover tbody tr.ticket-row--remote-active:hover > td {
-    --bs-table-accent-bg: #ffd56f !important;
-    background-color: #ffd56f !important;
+    --bs-table-accent-bg: #ffe699 !important;
+    background-color: #ffe699 !important;
 }
 
 .table tbody tr.ticket-row--remote-active > td:first-child {
-    box-shadow: inset 5px 0 0 #ff9f1a;
+    box-shadow: inset 4px 0 0 #ff8c00;
+}
+
+.table tbody tr.ticket-row--remote-pending > td {
+    --bs-table-accent-bg: #d8f5d0 !important;
+    background-color: #d8f5d0 !important;
+    border-top-color: #9ad08f !important;
+    border-bottom-color: #9ad08f !important;
+    font-weight: 600;
+}
+
+.table.table-striped.table-hover tbody tr.ticket-row--remote-pending:hover > td {
+    --bs-table-accent-bg: #d8f5d0 !important;
+    background-color: #d8f5d0 !important;
+}
+
+.table tbody tr.ticket-row--remote-pending > td:first-child {
+    box-shadow: inset 4px 0 0 #59a14f;
 }
 
 .form-control,

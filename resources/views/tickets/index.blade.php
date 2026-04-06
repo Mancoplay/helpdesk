@@ -3,32 +3,6 @@
 @section('title', 'Tickets')
 @section('header', 'Lista de tickets')
 
-@push('styles')
-<style>
-    .table tbody tr.ticket-row--remote-active > td {
-        background-color: #ffe699 !important;
-        border-top-color: #ffbf00 !important;
-        border-bottom-color: #ffbf00 !important;
-        font-weight: 600;
-    }
-
-    .table tbody tr.ticket-row--remote-active > td:first-child {
-        box-shadow: inset 4px 0 0 #ff8c00;
-    }
-
-    .table tbody tr.ticket-row--remote-pending > td {
-        background-color: #d8f5d0 !important;
-        border-top-color: #9ad08f !important;
-        border-bottom-color: #9ad08f !important;
-        font-weight: 600;
-    }
-
-    .table tbody tr.ticket-row--remote-pending > td:first-child {
-        box-shadow: inset 4px 0 0 #59a14f;
-    }
-</style>
-@endpush
-
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
     <li class="breadcrumb-item active">Tickets</li>
