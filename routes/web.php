@@ -70,6 +70,7 @@ Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
+    Route::get('/tickets/{ticket}/editar', [HomeController::class, 'editTicket'])->name('tickets.edit');
     Route::put('/tickets/{ticket}', [HomeController::class, 'updateTicket'])->name('tickets.update');
     Route::patch('/tickets/{ticket}/checkpoint', [HomeController::class, 'toggleTicketCheckpoint'])->name('tickets.checkpoint');
 });

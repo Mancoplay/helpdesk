@@ -448,7 +448,7 @@
                     .catch(function () {
                         // Ignorar errores intermitentes de red.
                     });
-            }, 3000);
+            }, 8000);
         }
 
         if (endRemoteSessionBtn && endRemoteSessionForm) {

@@ -545,6 +545,10 @@ class HomeController extends Controller
 
     public function tickets(Request $request)
     {
+        $currentUser = auth()->user();
+        $isAdmin = $currentUser->hasRole('Administrador');
+        $canCreateTickets = $currentUser->can('crear tickets');
+
         $query = $this->ticketsQueryForCurrentUser()
             ->with(['cliente', 'empleado', 'departamento']);
         $search = trim((string) $request->get('q', $request->get('search', '')));
@@ -555,7 +559,7 @@ class HomeController extends Controller
         $activeRemoteTicketIds = collect();
         $pendingRemoteTicketIds = collect();
 
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (!$isAdmin) {
             $query->where('estado', '!=', 'cerrado');
         }
 
@@ -578,7 +582,7 @@ class HomeController extends Controller
         }
 
         if ($prioritizeRemoteActive) {
-            if (auth()->user()->hasRole('Administrador')) {
+            if ($isAdmin) {
                 $ticketIdsSubquery = (clone $query)->select('tickets.id');
 
                 $activeRemoteTicketIds = TicketRemoteSession::query()
@@ -629,26 +633,43 @@ class HomeController extends Controller
         $tickets = $query->latest()->paginate($perPage)->withQueryString();
 
         $currentEmployee = null;
-        if (auth()->user()->hasRole('Empleado')) {
+        if ($currentUser->hasRole('Empleado')) {
             $currentEmployee = Empleado::where('user_id', auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
         }
 
-        return view('tickets.index', [
+        $viewData = [
             'tickets' => $tickets,
-            'clientes' => Cliente::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
-            'empleados' => Empleado::with('departamentos')->where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
-            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
-            'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'currentEmployeeId' => $currentEmployee?->id,
-            'nextTicketCode' => $this->nextTicketCode(),
             'searchQuery' => $search,
             'perPage' => $perPage,
             'activeRemoteTicketId' => $activeRemoteTicketId,
             'pendingRemoteTicketId' => $pendingRemoteTicketId,
             'activeRemoteTicketIds' => $activeRemoteTicketIds,
             'pendingRemoteTicketIds' => $pendingRemoteTicketIds,
+            'menuBadges' => $this->menuBadges(),
+        ];
+
+        if ($canCreateTickets) {
+            $viewData['departamentosActivos'] = Departamento::where('activo', true)->orderBy('nombre')->get();
+            $viewData['nextTicketCode'] = $this->nextTicketCode();
+        }
+
+        return view('tickets.index', $viewData);
+    }
+
+    public function editTicket(Ticket $ticket)
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        return view('tickets.edit', [
+            'ticket' => $ticket,
+            'clientes' => Cliente::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
+            'empleados' => Empleado::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
+            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -677,7 +698,6 @@ class HomeController extends Controller
             'messages' => $messages,
             'remoteEnabled' => $remoteEnabled,
             'remoteSession' => $remoteSession,
-            'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }

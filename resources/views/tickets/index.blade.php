@@ -100,7 +100,7 @@
                             @endcan
 
                             @if(auth()->user()->hasRole('Administrador') && !$isDisabled)
-                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editTicketModal{{ $ticket->id }}">Editar</button>
+                                <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-warning btn-sm">Editar</a>
                             @endif
 
                             @if(auth()->user()->hasRole('Administrador'))
@@ -129,88 +129,6 @@
                         </td>
                     </tr>
 
-                    @if(auth()->user()->hasRole('Administrador'))
-                    <div class="modal fade ticket-edit-modal" id="editTicketModal{{ $ticket->id }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                            <div class="modal-content">
-                                <form method="POST" action="{{ route('tickets.update', $ticket) }}">
-                                    @csrf
-                                    @method('PUT')
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Editar ticket</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Codigo</label>
-                                                <input type="text" name="codigo" class="form-control" value="{{ $ticket->codigo }}" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Usuario</label>
-                                                <select name="cliente_id" class="form-select" required>
-                                                    @foreach($clientes as $cliente)
-                                                        <option value="{{ $cliente->id }}" @selected($ticket->cliente_id == $cliente->id)>{{ $cliente->nombre_completo }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Empleado</label>
-                                                <select name="empleado_id" class="form-select js-ticket-empleado-select">
-                                                    <option value="">Sin asignar</option>
-                                                    @foreach($empleados as $empleado)
-                                                        @php
-                                                            $employeeDepartmentIds = $empleado->departamentos->pluck('id');
-                                                            if ($employeeDepartmentIds->isEmpty() && !empty($empleado->departamento_id)) {
-                                                                $employeeDepartmentIds = collect([(int) $empleado->departamento_id]);
-                                                            }
-                                                        @endphp
-                                                        <option
-                                                            value="{{ $empleado->id }}"
-                                                            data-departments="{{ $employeeDepartmentIds->implode(',') }}"
-                                                            @selected($ticket->empleado_id == $empleado->id)
-                                                        >
-                                                            {{ $empleado->nombre_completo }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Departamento</label>
-                                                <select name="departamento_id" class="form-select js-ticket-departamento-select" required>
-                                                    @foreach($departamentos as $departamento)
-                                                        <option value="{{ $departamento->id }}" @selected($ticket->departamento_id == $departamento->id)>{{ $departamento->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-12">
-                                                <label class="form-label">Asunto</label>
-                                                <input type="text" name="asunto" class="form-control" value="{{ $ticket->asunto }}" required>
-                                            </div>
-                                            <div class="col-12">
-                                                <label class="form-label">Descripcion</label>
-                                                <textarea name="descripcion" class="form-control" rows="3" required>{{ $ticket->descripcion }}</textarea>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Estado</label>
-                                                <select name="estado" class="form-select" required>
-                                                    <option value="pendiente" @selected($ticket->estado == 'pendiente')>Pendiente</option>
-                                                    <option value="en_proceso" @selected($ticket->estado == 'en_proceso')>En proceso</option>
-                                                    <option value="finalizado" @selected($ticket->estado == 'finalizado')>Finalizado</option>
-                                                    <option value="cerrado" @selected($ticket->estado == 'cerrado')>Cerrado</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                        <button type="submit" class="btn btn-primary">Guardar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
                 @empty
                     <tr><td colspan="6" class="text-center text-muted">Sin datos</td></tr>
                 @endforelse
@@ -290,61 +208,6 @@
             });
         }
 
-        const updateEmployeeOptionsByDepartment = function (form) {
-            const departmentSelect = form.querySelector('.js-ticket-departamento-select');
-            const employeeSelect = form.querySelector('.js-ticket-empleado-select');
-
-            if (!departmentSelect || !employeeSelect) {
-                return;
-            }
-
-            const selectedDepartmentId = String(departmentSelect.value || '');
-            const currentEmployeeValue = employeeSelect.value;
-            let shouldKeepCurrentValue = false;
-
-            Array.from(employeeSelect.options).forEach(function (option) {
-                if (option.value === '') {
-                    option.hidden = false;
-                    option.disabled = false;
-                    return;
-                }
-
-                const allowedDepartments = String(option.dataset.departments || '')
-                    .split(',')
-                    .map(function (value) {
-                        return value.trim();
-                    })
-                    .filter(Boolean);
-
-                const isAllowed = selectedDepartmentId !== '' && allowedDepartments.includes(selectedDepartmentId);
-
-                option.hidden = !isAllowed;
-                option.disabled = !isAllowed;
-
-                if (isAllowed && option.value === currentEmployeeValue) {
-                    shouldKeepCurrentValue = true;
-                }
-            });
-
-            if (!shouldKeepCurrentValue) {
-                employeeSelect.value = '';
-            }
-        };
-
-        document.querySelectorAll('form[action*="/tickets/"]').forEach(function (form) {
-            const departmentSelect = form.querySelector('.js-ticket-departamento-select');
-            const employeeSelect = form.querySelector('.js-ticket-empleado-select');
-
-            if (!departmentSelect || !employeeSelect) {
-                return;
-            }
-
-            updateEmployeeOptionsByDepartment(form);
-            departmentSelect.addEventListener('change', function () {
-                updateEmployeeOptionsByDepartment(form);
-            });
-        });
-
         const refreshTableResults = function () {
             if (document.querySelector('.modal.show')) {
                 return;
@@ -382,11 +245,16 @@
                 });
         };
 
-        setInterval(function () {
-            if (!document.hidden) {
-                refreshTableResults();
-            }
-        }, 4000);
+        const searchParams = new URLSearchParams(window.location.search || '');
+        const hasActiveSearch = (searchParams.get('q') || '').trim() !== '';
+
+        if (!hasActiveSearch) {
+            setInterval(function () {
+                if (!document.hidden) {
+                    refreshTableResults();
+                }
+            }, 15000);
+        }
 
         document.addEventListener('visibilitychange', function () {
             if (!document.hidden) {
