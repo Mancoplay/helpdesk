@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'anydesk' => [
+        // Optional: custom command to close/terminate an active AnyDesk session.
+        // Example (Windows + AutoHotkey):
+        // C:\tools\AutoHotkey\AutoHotkey.exe C:\scripts\close-anydesk.ahk
+        'close_command' => env('ANYDESK_CLOSE_COMMAND'),
+    ],
+
 ];

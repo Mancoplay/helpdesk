@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Symfony\Component\Process\Process;
 
 class HomeController extends Controller
 {
@@ -915,7 +916,13 @@ class HomeController extends Controller
                 'cancelled_by_user_id' => auth()->id(),
             ]);
 
-            return back()->with('success', 'Conexion remota finalizada correctamente.');
+            $anyDeskClosed = $this->tryCloseAnyDeskSession();
+
+            if ($anyDeskClosed) {
+                return back()->with('success', 'Conexion remota finalizada correctamente y AnyDesk se cerro.');
+            }
+
+            return back()->with('error', 'Conexion remota finalizada en el sistema, pero no se pudo cerrar AnyDesk automaticamente.');
         }
 
         if (
@@ -937,7 +944,13 @@ class HomeController extends Controller
             'note' => 'Cierre informado desde la interfaz.',
         ]);
 
-        return back()->with('success', 'Se marco la sesion remota como finalizada.');
+        $anyDeskClosed = $this->tryCloseAnyDeskSession();
+
+        if ($anyDeskClosed) {
+            return back()->with('success', 'Se marco la sesion remota como finalizada y AnyDesk se cerro.');
+        }
+
+        return back()->with('error', 'Se finalizo la sesion en el sistema, pero no se pudo cerrar AnyDesk automaticamente.');
     }
 
     public function storeTicket(Request $request): RedirectResponse
@@ -1439,6 +1452,61 @@ class HomeController extends Controller
                 'note' => $note ?? $defaultNote,
             ]);
         }
+    }
+
+    private function tryCloseAnyDeskSession(): bool
+    {
+        $customCommand = trim((string) config('services.anydesk.close_command', ''));
+        if ($customCommand !== '') {
+            $process = Process::fromShellCommandline($customCommand);
+            $process->setTimeout(8);
+            $process->run();
+
+            return $process->isSuccessful();
+        }
+
+        // En Windows evitamos lanzar AnyDesk desde PHP porque puede ejecutarse
+        // en una sesion no interactiva y arrojar "Unable to initialize AnyDesk".
+        // Cerramos el proceso directamente.
+        if (PHP_OS_FAMILY === 'Windows') {
+            try {
+                $kill = new Process(['taskkill', '/IM', 'AnyDesk.exe', '/F']);
+                $kill->setTimeout(8);
+                $kill->run();
+
+                if ($kill->isSuccessful()) {
+                    return true;
+                }
+
+                $output = strtolower($kill->getErrorOutput() . ' ' . $kill->getOutput());
+                if (str_contains($output, 'not found') || str_contains($output, 'no se encuentra') || str_contains($output, 'no se encontraron')) {
+                    return true;
+                }
+            } catch (\Throwable $exception) {
+                return false;
+            }
+
+            return false;
+        }
+
+        try {
+            $kill = new Process(['pkill', '-f', 'anydesk']);
+            $kill->setTimeout(8);
+            $kill->run();
+
+            if ($kill->isSuccessful()) {
+                return true;
+            }
+
+            $output = strtolower($kill->getErrorOutput() . ' ' . $kill->getOutput());
+            if (str_contains($output, 'no process found') || str_contains($output, 'no such process')) {
+                return true;
+            }
+        } catch (\Throwable $exception) {
+            return false;
+        }
+
+        return false;
     }
 
     private function resolvePerPage(Request $request): int
