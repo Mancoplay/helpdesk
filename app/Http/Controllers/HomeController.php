@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -389,6 +390,7 @@ class HomeController extends Controller
     public function updateEmpleado(UpdateEmpleadoRequest $request, Empleado $empleado): RedirectResponse
     {
         $validated = $request->validated();
+        $previousEmail = $empleado->email;
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
             ->map(static fn ($id) => (int) $id)
             ->filter()
@@ -405,32 +407,70 @@ class HomeController extends Controller
                 ->withInput();
         }
 
-        $empleado->update([
-            'departamento_id' => $selectedDepartmentIds->first(),
-            'nombres' => $validated['nombres'],
-            'segundo_nombre' => $validated['segundo_nombre'] ?? null,
-            'apellidos' => $validated['apellidos'],
-            'email' => $validated['email'],
-            'telefono' => $validated['telefono'] ?? null,
-            'direccion' => $validated['direccion'] ?? null,
-            'cargo' => $validated['cargo'] ?? null,
-        ]);
-        $empleado->departamentos()->sync($selectedDepartmentIds->all());
+        try {
+            DB::transaction(function () use ($empleado, $validated, $selectedDepartmentIds, $previousEmail): void {
+                $updated = DB::table('empleados')
+                    ->where('id', $empleado->id)
+                    ->update([
+                        'departamento_id' => $selectedDepartmentIds->first(),
+                        'nombres' => $validated['nombres'],
+                        'segundo_nombre' => $validated['segundo_nombre'] ?? null,
+                        'apellidos' => $validated['apellidos'],
+                        'email' => $validated['email'],
+                        'telefono' => $validated['telefono'] ?? null,
+                        'direccion' => $validated['direccion'] ?? null,
+                        'cargo' => $validated['cargo'] ?? null,
+                        'updated_at' => now(),
+                    ]);
 
-        if ($empleado->user_id) {
-            $user = User::find($empleado->user_id);
-            if ($user) {
-                $user->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
-                $user->email = $validated['email'];
-                if (!empty($validated['password'])) {
-                    $user->password = Hash::make($validated['password']);
+                if ($updated === 0) {
+                    $currentEmail = DB::table('empleados')
+                        ->where('id', $empleado->id)
+                        ->value('email');
+
+                    if ((string) $currentEmail !== (string) $validated['email']) {
+                        throw new \RuntimeException('No se pudo actualizar el correo del empleado.');
+                    }
                 }
-                $user->save();
-                $user->syncRoles(['Empleado']);
-            }
-        }
 
-        return back()->with('success', 'Empleado actualizado correctamente.');
+                $empleado->refresh();
+                $empleado->departamentos()->sync($selectedDepartmentIds->all());
+
+                $user = null;
+                if ($empleado->user_id) {
+                    $user = User::find($empleado->user_id);
+                }
+                if (!$user) {
+                    $user = User::where('email', $previousEmail)->first();
+                }
+
+                if ($user) {
+                    $user->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+                    $user->email = $validated['email'];
+                    if (!empty($validated['password'])) {
+                        $user->password = Hash::make($validated['password']);
+                    }
+                    $user->save();
+                    $user->syncRoles(['Empleado']);
+
+                    if (empty($empleado->user_id) || (int) $empleado->user_id !== (int) $user->id) {
+                        DB::table('empleados')
+                            ->where('id', $empleado->id)
+                            ->update([
+                                'user_id' => $user->id,
+                                'updated_at' => now(),
+                            ]);
+                    }
+                }
+            });
+
+            return back()->with('success', 'Empleado actualizado correctamente.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()
+                ->withInput()
+                ->with('error', 'No se pudo actualizar el empleado. Intenta nuevamente.');
+        }
     }
 
     public function destroyEmpleado(Empleado $empleado): RedirectResponse

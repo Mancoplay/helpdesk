@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Cliente;
+use App\Models\Empleado;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
@@ -25,6 +28,13 @@ new class extends Component {
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
+        $linkedEmpleado = Empleado::query()
+            ->where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+            ->first();
+        $linkedCliente = Cliente::query()
+            ->where('email', $user->email)
+            ->first();
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -32,20 +42,39 @@ new class extends Component {
             'email' => [
                 'required',
                 'string',
-                'lowercase',
                 'email',
                 'max:255',
-                Rule::unique(User::class)->ignore($user->id)
+                Rule::unique(User::class)->ignore($user->id),
+                Rule::unique('empleados', 'email')->ignore($linkedEmpleado?->id),
+                Rule::unique('clientes', 'email')->ignore($linkedCliente?->id),
             ],
         ]);
 
-        $user->fill($validated);
+        DB::transaction(function () use ($user, $linkedEmpleado, $linkedCliente, $validated): void {
+            $oldEmail = $user->email;
+            $user->fill($validated);
 
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
+            if ($user->isDirty('email')) {
+                $user->email_verified_at = null;
+            }
 
-        $user->save();
+            $user->save();
+
+            if ($oldEmail !== $validated['email']) {
+                if ($linkedEmpleado) {
+                    $linkedEmpleado->email = $validated['email'];
+                    if (empty($linkedEmpleado->user_id)) {
+                        $linkedEmpleado->user_id = $user->id;
+                    }
+                    $linkedEmpleado->save();
+                }
+
+                if ($linkedCliente) {
+                    $linkedCliente->email = $validated['email'];
+                    $linkedCliente->save();
+                }
+            }
+        });
 
         $this->dispatch('profile-updated', name: $user->name);
     }

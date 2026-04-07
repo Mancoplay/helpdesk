@@ -16,7 +16,7 @@ class StoreClienteRequest extends FormRequest
         $telefono = preg_replace('/\D+/', '', (string) $this->input('telefono', ''));
 
         $this->merge([
-            'email' => strtolower(trim((string) $this->input('email', ''))),
+            'email' => trim((string) $this->input('email', '')),
             'telefono' => $telefono !== '' ? $telefono : null,
         ]);
     }
