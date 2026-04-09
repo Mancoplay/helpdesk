@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -27,6 +30,19 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->validate();
 
         $this->ensureIsNotRateLimited();
+        $candidate = User::where('email', $this->email)->first();
+
+        if (
+            $candidate
+            && Hash::check($this->password, (string) $candidate->password)
+            && $this->hasActiveSessionForUser((int) $candidate->id)
+        ) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Esta cuenta ya tiene una sesion activa en otro dispositivo.',
+            ]);
+        }
 
         if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
             RateLimiter::hit($this->throttleKey());
@@ -40,6 +56,20 @@ new #[Layout('components.layouts.auth')] class extends Component {
         Session::regenerate();
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
+    }
+
+    private function hasActiveSessionForUser(int $userId): bool
+    {
+        if ($userId <= 0 || config('session.driver') !== 'database') {
+            return false;
+        }
+
+        $cutoff = now()->subMinutes((int) config('session.lifetime', 120))->timestamp;
+
+        return DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $userId)
+            ->where('last_activity', '>=', $cutoff)
+            ->exists();
     }
 
     /**

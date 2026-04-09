@@ -9,6 +9,8 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -43,6 +45,40 @@ class LoginController extends Controller
         $this->middleware('auth')->only('logout');
     }
 
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+
+        if (method_exists($this, 'hasTooManyLoginAttempts') && $this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+
+            return $this->sendLockoutResponse($request);
+        }
+
+        $candidate = User::where('email', (string) $request->input($this->username()))->first();
+        $rawPassword = (string) $request->input('password', '');
+
+        if (
+            $candidate
+            && Hash::check($rawPassword, (string) $candidate->password)
+            && $this->hasActiveSessionForUser((int) $candidate->id)
+        ) {
+            $this->incrementLoginAttempts($request);
+
+            return back()
+                ->withErrors([$this->username() => 'Esta cuenta ya tiene una sesion activa en otro dispositivo.'])
+                ->withInput($request->only($this->username(), 'remember'));
+        }
+
+        if ($this->attemptLogin($request)) {
+            return $this->sendLoginResponse($request);
+        }
+
+        $this->incrementLoginAttempts($request);
+
+        return $this->sendFailedLoginResponse($request);
+    }
+
     protected function authenticated(Request $request, User $user): ?RedirectResponse
     {
         if ($this->employeeIsDisabled($user) || $this->clientIsDisabled($user)) {
@@ -57,6 +93,20 @@ class LoginController extends Controller
         }
 
         return redirect()->route('dashboard');
+    }
+
+    private function hasActiveSessionForUser(int $userId): bool
+    {
+        if ($userId <= 0 || config('session.driver') !== 'database') {
+            return false;
+        }
+
+        $cutoff = now()->subMinutes((int) config('session.lifetime', 120))->timestamp;
+
+        return DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $userId)
+            ->where('last_activity', '>=', $cutoff)
+            ->exists();
     }
 
     private function employeeIsDisabled(User $user): bool
