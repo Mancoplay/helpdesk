@@ -15,6 +15,7 @@ use App\Models\TicketMensaje;
 use App\Models\TicketRemoteSession;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -922,7 +923,7 @@ class HomeController extends Controller
                 return back()->with('success', 'Conexion remota finalizada correctamente y AnyDesk se cerro.');
             }
 
-            return back()->with('error', 'Conexion remota finalizada en el sistema, pero no se pudo cerrar AnyDesk automaticamente.');
+            return back()->with('error', 'Conexion remota finalizada en el sistema.');
         }
 
         if (
@@ -950,7 +951,43 @@ class HomeController extends Controller
             return back()->with('success', 'Se marco la sesion remota como finalizada y AnyDesk se cerro.');
         }
 
-        return back()->with('error', 'Se finalizo la sesion en el sistema, pero no se pudo cerrar AnyDesk automaticamente.');
+        return back()->with('error', 'Se finalizo la sesion en el sistema.');
+    }
+
+    public function fetchRemoteSupportCode(Ticket $ticket, TicketRemoteSession $remoteSession): JsonResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!Schema::hasTable('ticket_remote_sessions')) {
+            return response()->json(['message' => 'La funcionalidad de soporte remoto aun no esta disponible.'], 422);
+        }
+
+        if ((int) $remoteSession->ticket_id !== (int) $ticket->id) {
+            abort(404);
+        }
+
+        if (!auth()->user()->hasRole('Administrador') && !$this->isTicketClientOwner($ticket)) {
+            abort(403);
+        }
+
+        if ($remoteSession->status !== 'accepted') {
+            return response()->json(['message' => 'Debes aceptar la solicitud antes de obtener el codigo.'], 422);
+        }
+
+        $supportCode = $this->resolveAnyDeskSupportCode();
+        if ($supportCode === null) {
+            return response()->json(['message' => 'No se pudo leer automaticamente el codigo de AnyDesk.'], 422);
+        }
+
+        $remoteSession->update([
+            'support_code' => $supportCode,
+        ]);
+
+        return response()->json([
+            'support_code' => $supportCode,
+        ]);
     }
 
     public function storeTicket(Request $request): RedirectResponse
@@ -1465,28 +1502,79 @@ class HomeController extends Controller
             return $process->isSuccessful();
         }
 
-        // En Windows evitamos lanzar AnyDesk desde PHP porque puede ejecutarse
-        // en una sesion no interactiva y arrojar "Unable to initialize AnyDesk".
-        // Cerramos el proceso directamente.
+        // En Windows: localizar procesos AnyDesk, intentar cerrarlos y confirmar
+        // que no queden vivos. Evita reportar "exito" falso.
         if (PHP_OS_FAMILY === 'Windows') {
             try {
-                $kill = new Process(['taskkill', '/IM', 'AnyDesk.exe', '/F']);
-                $kill->setTimeout(8);
-                $kill->run();
+                $script = <<<'POWERSHELL'
+$found = @(
+    Get-Process -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.ProcessName -match '^(?i)anydesk' -or $_.ProcessName -match '^(?i)ad_svc$'
+    }
+)
+$foundCount = $found.Count
+$stoppedCount = 0
 
-                if ($kill->isSuccessful()) {
+foreach ($proc in $found) {
+    try {
+        Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+        $stoppedCount++
+    } catch {
+    }
+}
+
+Start-Sleep -Milliseconds 250
+$remainingCount = @(
+    Get-Process -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.ProcessName -match '^(?i)anydesk' -or $_.ProcessName -match '^(?i)ad_svc$'
+    }
+).Count
+
+if ($remainingCount -gt 0) {
+    try {
+        & taskkill /F /T /FI "IMAGENAME eq AnyDesk*" | Out-Null
+    } catch {
+    }
+    Start-Sleep -Milliseconds 250
+    $remainingCount = @(
+        Get-Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProcessName -match '^(?i)anydesk' -or $_.ProcessName -match '^(?i)ad_svc$'
+        }
+    ).Count
+}
+
+Write-Output "$foundCount|$stoppedCount|$remainingCount"
+POWERSHELL;
+
+                $process = new Process(['powershell', '-NoProfile', '-Command', $script]);
+                $process->setTimeout(10);
+                $process->run();
+
+                if (!$process->isSuccessful()) {
+                    return false;
+                }
+
+                $result = trim((string) $process->getOutput());
+                $parts = explode('|', $result);
+                if (count($parts) !== 3) {
+                    return false;
+                }
+
+                $foundCount = (int) $parts[0];
+                $stoppedCount = (int) $parts[1];
+                $remainingCount = (int) $parts[2];
+
+                if ($foundCount === 0) {
                     return true;
                 }
 
-                $output = strtolower($kill->getErrorOutput() . ' ' . $kill->getOutput());
-                if (str_contains($output, 'not found') || str_contains($output, 'no se encuentra') || str_contains($output, 'no se encontraron')) {
-                    return true;
-                }
+                return $stoppedCount > 0 && $remainingCount === 0;
             } catch (\Throwable $exception) {
                 return false;
             }
-
-            return false;
         }
 
         try {
@@ -1499,14 +1587,116 @@ class HomeController extends Controller
             }
 
             $output = strtolower($kill->getErrorOutput() . ' ' . $kill->getOutput());
-            if (str_contains($output, 'no process found') || str_contains($output, 'no such process')) {
+            if ($this->isProcessNotFoundMessage($output)) {
                 return true;
             }
         } catch (\Throwable $exception) {
             return false;
         }
 
-        return false;
+        return $kill->isSuccessful();
+    }
+
+    private function isProcessNotFoundMessage(string $output): bool
+    {
+        return str_contains($output, 'not found')
+            || str_contains($output, 'no process found')
+            || str_contains($output, 'no such process')
+            || str_contains($output, 'no se encuentra')
+            || str_contains($output, 'no se encontraron')
+            || str_contains($output, 'no se encuentra ningun proceso');
+    }
+
+    private function resolveAnyDeskSupportCode(): ?string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $path = $this->resolveAnyDeskExecutablePathWindows();
+            if ($path === null) {
+                return null;
+            }
+
+            try {
+                $process = new Process([$path, '--get-id']);
+                $process->setTimeout(8);
+                $process->run();
+
+                if (!$process->isSuccessful()) {
+                    return null;
+                }
+
+                return $this->extractAnyDeskCode($process->getOutput() . "\n" . $process->getErrorOutput());
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
+
+        try {
+            $process = new Process(['anydesk', '--get-id']);
+            $process->setTimeout(8);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                return null;
+            }
+
+            return $this->extractAnyDeskCode($process->getOutput() . "\n" . $process->getErrorOutput());
+        } catch (\Throwable $exception) {
+            return null;
+        }
+    }
+
+    private function resolveAnyDeskExecutablePathWindows(): ?string
+    {
+        $configured = trim((string) env('ANYDESK_EXECUTABLE', ''));
+        if ($configured !== '' && is_file($configured)) {
+            return $configured;
+        }
+
+        $candidates = [
+            'C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe',
+            'C:\\Program Files\\AnyDesk\\AnyDesk.exe',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $globPatterns = [
+            'C:\\Program Files\\AnyDesk*\\AnyDesk*.exe',
+            'C:\\Program Files (x86)\\AnyDesk*\\AnyDesk*.exe',
+        ];
+
+        foreach ($globPatterns as $pattern) {
+            $matches = glob($pattern) ?: [];
+            foreach ($matches as $match) {
+                if (is_file($match)) {
+                    return $match;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function extractAnyDeskCode(string $rawOutput): ?string
+    {
+        $output = trim($rawOutput);
+        if ($output === '') {
+            return null;
+        }
+
+        if (preg_match('/\d(?:[\s.-]?\d){7,}/', $output, $match) !== 1) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $match[0] ?? '');
+        if (!is_string($digits) || strlen($digits) < 8) {
+            return null;
+        }
+
+        return trim(chunk_split($digits, 3, ' '));
     }
 
     private function resolvePerPage(Request $request): int
