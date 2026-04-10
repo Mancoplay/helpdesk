@@ -8,4 +8,8 @@ return [
         // Base folder inside the selected disk.
         'directory' => env('HELPDESK_CHAT_ATTACHMENTS_DIR', 'ticket-mensajes'),
     ],
+
+    'pending_ticket_reminders' => [
+        'interval_minutes' => (int) env('HELPDESK_PENDING_TICKET_REMINDER_MINUTES', 5),
+    ],
 ];

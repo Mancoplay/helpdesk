@@ -6,6 +6,7 @@ use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\StoreEmpleadoRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Http\Requests\Admin\UpdateEmpleadoRequest;
+use App\Services\TicketNotificationService;
 use App\Services\ReviewRangeService;
 use App\Models\Cliente;
 use App\Models\Departamento;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\Process\Process;
+use Throwable;
 
 class HomeController extends Controller
 {
@@ -990,7 +992,7 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeTicket(Request $request): RedirectResponse
+    public function storeTicket(Request $request, TicketNotificationService $ticketNotificationService): RedirectResponse
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
@@ -1043,6 +1045,12 @@ class HomeController extends Controller
             'mensaje' => $validated['descripcion'],
             'tipo' => 'creacion',
         ]);
+
+        try {
+            $ticketNotificationService->notifyTicketCreated($ticket);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return back()->with('success', 'Ticket agregado correctamente.');
     }

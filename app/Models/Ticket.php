@@ -21,10 +21,12 @@ class Ticket extends Model
         'descripcion',
         'estado',
         'fecha_cierre',
+        'last_notified_at',
     ];
 
     protected $casts = [
         'fecha_cierre' => 'datetime',
+        'last_notified_at' => 'datetime',
     ];
 
     public function cliente(): BelongsTo
