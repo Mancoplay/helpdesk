@@ -746,6 +746,68 @@ class HomeController extends Controller
         ]);
     }
 
+    public function ticketLiveData(Request $request, Ticket $ticket): JsonResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        $sinceMessageId = max(0, (int) $request->query('since_message_id', 0));
+        $chatTimezone = config('app.timezone', 'America/La_Paz');
+
+        $messages = $ticket->mensajes()
+            ->with('user:id,name')
+            ->where('id', '>', $sinceMessageId)
+            ->orderBy('id')
+            ->limit(40)
+            ->get();
+
+        $messagePayload = $messages->map(function (TicketMensaje $mensaje) use ($ticket, $chatTimezone): array {
+            $isImageAttachment = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
+
+            return [
+                'id' => (int) $mensaje->id,
+                'user_name' => $mensaje->user->name ?? 'Sistema',
+                'tipo' => (string) $mensaje->tipo,
+                'created_at' => $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i'),
+                'is_own' => (int) ($mensaje->user_id ?? 0) === (int) auth()->id(),
+                'mensaje' => (string) ($mensaje->mensaje ?? ''),
+                'attachment' => $mensaje->imagen_path
+                    ? [
+                        'url' => route('tickets.attachments.show', [$ticket, $mensaje]),
+                        'is_image' => $isImageAttachment,
+                        'name' => $mensaje->imagen_nombre ?? 'Descargar archivo',
+                    ]
+                    : null,
+            ];
+        })->values();
+
+        $remoteEnabled = Schema::hasTable('ticket_remote_sessions');
+        $remoteSession = $remoteEnabled
+            ? $ticket->remoteSessions()->latest('id')->first()
+            : null;
+
+        $ticket->loadMissing(['empleado']);
+
+        return response()->json([
+            'ok' => true,
+            'messages' => $messagePayload,
+            'latest_message_id' => (int) ($messages->max('id') ?? $sinceMessageId),
+            'ticket' => [
+                'id' => (int) $ticket->id,
+                'estado' => (string) $ticket->estado,
+                'empleado_id' => (int) ($ticket->empleado_id ?? 0),
+                'empleado_nombre' => $ticket->empleado->nombre_completo ?? 'Sin asignar',
+            ],
+            'remote' => [
+                'enabled' => $remoteEnabled,
+                'id' => (int) ($remoteSession->id ?? 0),
+                'status' => (string) ($remoteSession->status ?? ''),
+                'support_code' => (string) ($remoteSession->support_code ?? ''),
+            ],
+        ]);
+    }
+
     public function showTicketAttachment(Ticket $ticket, TicketMensaje $mensaje)
     {
         if (!$this->canAccessTicket($ticket)) {
@@ -1046,11 +1108,13 @@ class HomeController extends Controller
             'tipo' => 'creacion',
         ]);
 
-        try {
-            $ticketNotificationService->notifyTicketCreated($ticket);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        dispatch(function () use ($ticket, $ticketNotificationService): void {
+            try {
+                $ticketNotificationService->notifyTicketCreated($ticket);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        })->afterResponse();
 
         return back()->with('success', 'Ticket agregado correctamente.');
     }
@@ -1109,13 +1173,17 @@ class HomeController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
     }
 
-    public function storeTicketMessage(Request $request, Ticket $ticket): RedirectResponse
+    public function storeTicketMessage(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
         }
 
         if ($ticket->estado === 'finalizado') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Este ticket ya fue finalizado y no admite mas comentarios.'], 422);
+            }
+
             return back()->with('error', 'Este ticket ya fue finalizado y no admite mas comentarios.');
         }
 
@@ -1137,22 +1205,38 @@ class HomeController extends Controller
         $files = $files->filter()->take(5)->values();
 
         if (empty($validated['mensaje']) && $files->isEmpty()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Debes escribir un mensaje o subir un archivo.'], 422);
+            }
+
             return back()->with('error', 'Debes escribir un mensaje o subir un archivo.');
         }
 
+        $createdMessageIds = [];
+
         if ($files->isEmpty()) {
-            $ticket->mensajes()->create([
+            $createdMessage = $ticket->mensajes()->create([
                 'user_id' => auth()->id(),
                 'mensaje' => $validated['mensaje'] ?? '',
                 'tipo' => 'comentario',
             ]);
+
+            $createdMessageIds[] = (int) $createdMessage->id;
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'latest_message_id' => max($createdMessageIds),
+                ]);
+            }
+
             return back();
         }
 
         foreach ($files as $index => $file) {
             $path = $file->store($this->ticketAttachmentDirectory($ticket), $this->ticketAttachmentDisk());
 
-            $ticket->mensajes()->create([
+            $createdMessage = $ticket->mensajes()->create([
                 'user_id' => auth()->id(),
                 'mensaje' => $index === 0 ? ($validated['mensaje'] ?? '') : '',
                 'tipo' => 'comentario',
@@ -1160,6 +1244,15 @@ class HomeController extends Controller
                 'imagen_nombre' => $file->getClientOriginalName(),
                 'imagen_mime' => $file->getClientMimeType(),
                 'imagen_size' => $file->getSize(),
+            ]);
+
+            $createdMessageIds[] = (int) $createdMessage->id;
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'latest_message_id' => max($createdMessageIds),
             ]);
         }
 

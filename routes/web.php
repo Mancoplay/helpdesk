@@ -52,6 +52,7 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::get('/tickets', [HomeController::class, 'tickets'])->name('tickets.index');
     Route::get('/tickets/{ticket}', [HomeController::class, 'showTicket'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/live', [HomeController::class, 'ticketLiveData'])->name('tickets.live');
     Route::get('/tickets/{ticket}/adjuntos/{mensaje}', [HomeController::class, 'showTicketAttachment'])->name('tickets.attachments.show');
     Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])->name('tickets.messages.store');
     Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])->name('tickets.remote.request');

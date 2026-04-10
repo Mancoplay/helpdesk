@@ -25,7 +25,7 @@
                         $stateMap = config('adminlte.ticket_states');
                         $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
                     @endphp
-                    <span class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
+                    <span id="ticketStateBadge" class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
                 </div>
             </div>
             <div class="card-body">
@@ -44,7 +44,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <strong>Empleado</strong>
-                        <div>{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</div>
+                        <div id="ticketAssignedEmployee">{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</div>
                     </div>
                 </div>
                 <hr>
@@ -174,7 +174,7 @@
                 <h3 class="card-title mb-0">Comunicacion</h3>
             </div>
             <div class="card-body d-flex flex-column ticket-chat-card-body">
-                <div id="ticketChatScroll" class="ticket-chat-scroll border rounded p-3 mb-2">
+                <div id="ticketChatScroll" class="ticket-chat-scroll border rounded p-3 mb-2" data-last-message-id="{{ (int) ($messages->max('id') ?? 0) }}">
                     @php
                         $chatTimezone = config('app.timezone', 'America/La_Paz');
                     @endphp
@@ -361,7 +361,7 @@
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
-        const shouldSyncSupportCode = {{ $canManageRemoteAsClient ? 'false' : 'true' }};
+        const shouldSyncSupportCode = false;
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();
@@ -417,39 +417,7 @@
             });
         }
 
-        if (shouldSyncSupportCode && codeElement) {
-            setInterval(function () {
-                if (document.hidden) {
-                    return;
-                }
-
-                fetch("{{ route('tickets.show', $ticket) }}", {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                    .then(function (response) {
-                        return response.text();
-                    })
-                    .then(function (html) {
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        const freshCodeInput = doc.getElementById('remoteSupportCode');
-                        if (!freshCodeInput) {
-                            return;
-                        }
-
-                        const newCode = (freshCodeInput.value || '').trim();
-                        codeElement.value = newCode;
-
-                        if (openCopyAnyDeskBtn) {
-                            openCopyAnyDeskBtn.disabled = newCode === '';
-                        }
-                    })
-                    .catch(function () {
-                        // Ignorar errores intermitentes de red.
-                    });
-            }, 8000);
-        }
+        // La sincronizacion de codigo y estado se gestiona desde el bloque live polling global.
 
         if (endRemoteSessionBtn && endRemoteSessionForm) {
             endRemoteSessionBtn.addEventListener('click', function () {
@@ -612,6 +580,247 @@ closeAnyDeskBtn.disabled = true;
                 }
             });
         }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            if (form.dataset.sending === '1') {
+                return;
+            }
+
+            form.dataset.sending = '1';
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalLabel = submitButton ? submitButton.textContent : 'Enviar';
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Enviando...';
+            }
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+                .then(function (response) {
+                    return response.json().then(function (payload) {
+                        if (!response.ok) {
+                            throw new Error(payload.message || 'No se pudo enviar el mensaje.');
+                        }
+                        return payload;
+                    });
+                })
+                .then(function () {
+                    form.reset();
+                    selectedFiles = [];
+                    renderFiles();
+
+                    if (messageInput) {
+                        messageInput.value = '';
+                        messageInput.focus();
+                    }
+
+                    const livePollFn = window.__ticketLivePollByTicket && window.__ticketLivePollByTicket[{{ (int) $ticket->id }}];
+                    if (typeof livePollFn === 'function') {
+                        livePollFn();
+                    }
+                })
+                .catch(function (error) {
+                    alert(error.message || 'No se pudo enviar el mensaje.');
+                })
+                .finally(function () {
+                    form.dataset.sending = '0';
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalLabel;
+                    }
+                });
+        });
+    });
+</script>
+@endpush
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatScroll = document.getElementById('ticketChatScroll');
+        if (!chatScroll) {
+            return;
+        }
+
+        const ticketId = {{ (int) $ticket->id }};
+        const liveUrl = @json(route('tickets.live', $ticket));
+        const badgeMap = @json(collect(config('adminlte.ticket_states', []))->mapWithKeys(fn ($state, $key) => [$key => $state['badge'] ?? 'secondary']));
+        const stateBadge = document.getElementById('ticketStateBadge');
+        const assignedEmployee = document.getElementById('ticketAssignedEmployee');
+        const remoteCodeInput = document.getElementById('remoteSupportCode');
+        const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
+
+        let lastMessageId = Number(chatScroll.dataset.lastMessageId || 0);
+        let currentState = @json((string) $ticket->estado);
+        let currentRemoteId = {{ (int) ($remoteSession->id ?? 0) }};
+        let currentRemoteStatus = @json((string) ($remoteSession->status ?? ''));
+        let inFlight = false;
+
+        const escapeHtml = function (value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        const buildMessageHtml = function (message) {
+            const badgeByType = {
+                creacion: 'primary',
+                atencion: 'info',
+                comentario: 'secondary'
+            };
+            const bubbleClass = message.is_own ? 'ticket-chat-message mine' : 'ticket-chat-message';
+            const tipo = escapeHtml(message.tipo || 'comentario');
+            const userName = escapeHtml(message.user_name || 'Sistema');
+            const createdAt = escapeHtml(message.created_at || '');
+            const badge = badgeByType[message.tipo] || 'secondary';
+            const textHtml = message.mensaje ? `<p class="mb-1">${escapeHtml(message.mensaje)}</p>` : '';
+
+            let attachmentHtml = '';
+            if (message.attachment && message.attachment.url) {
+                const url = escapeHtml(message.attachment.url);
+                const name = escapeHtml(message.attachment.name || 'Descargar archivo');
+                if (message.attachment.is_image) {
+                    attachmentHtml = `
+                        <a href="${url}" target="_blank" rel="noopener">
+                            <img src="${url}" alt="Adjunto" class="img-fluid rounded border ticket-chat-image">
+                        </a>
+                    `;
+                } else {
+                    attachmentHtml = `
+                        <a href="${url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-paperclip me-1"></i>${name}
+                        </a>
+                    `;
+                }
+            }
+
+            return `
+                <div class="${bubbleClass}">
+                    <div class="ticket-chat-bubble">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                            <div>
+                                <strong>${userName}</strong>
+                                <span class="badge text-bg-${badge}">${tipo}</span>
+                            </div>
+                            <span class="ticket-chat-meta">${createdAt}</span>
+                        </div>
+                        ${textHtml}
+                        ${attachmentHtml}
+                    </div>
+                </div>
+            `;
+        };
+
+        const shouldStickToBottom = function () {
+            const gap = chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight;
+            return gap < 100;
+        };
+
+        const applyLiveData = function (data) {
+            if (!data || data.ok !== true) {
+                return;
+            }
+
+            const ticketData = data.ticket || {};
+            const remoteData = data.remote || {};
+            const incomingMessages = Array.isArray(data.messages) ? data.messages : [];
+
+            const requiresReload =
+                String(ticketData.estado || '') !== String(currentState || '') ||
+                Number(remoteData.id || 0) !== Number(currentRemoteId || 0) ||
+                String(remoteData.status || '') !== String(currentRemoteStatus || '');
+
+            if (requiresReload) {
+                window.location.reload();
+                return;
+            }
+
+            if (assignedEmployee && ticketData.empleado_nombre) {
+                assignedEmployee.textContent = ticketData.empleado_nombre;
+            }
+
+            if (stateBadge && ticketData.estado) {
+                const nextBadge = badgeMap[ticketData.estado] || 'secondary';
+                stateBadge.className = `badge text-bg-${nextBadge}`;
+                stateBadge.textContent = String(ticketData.estado).replace('_', ' ');
+            }
+
+            if (remoteCodeInput) {
+                const newCode = String(remoteData.support_code || '').trim();
+                remoteCodeInput.value = newCode;
+                if (openCopyAnyDeskBtn) {
+                    openCopyAnyDeskBtn.disabled = newCode === '';
+                }
+            }
+
+            if (incomingMessages.length === 0) {
+                return;
+            }
+
+            const keepBottom = shouldStickToBottom();
+            const emptyState = chatScroll.querySelector('p.text-muted.mb-0');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            incomingMessages.forEach(function (message) {
+                if (Number(message.id || 0) <= lastMessageId) {
+                    return;
+                }
+
+                chatScroll.insertAdjacentHTML('beforeend', buildMessageHtml(message));
+                lastMessageId = Number(message.id || lastMessageId);
+            });
+
+            chatScroll.dataset.lastMessageId = String(lastMessageId);
+            if (keepBottom) {
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+            }
+        };
+
+        const runLivePoll = function () {
+            if (document.hidden || inFlight) {
+                return;
+            }
+
+            inFlight = true;
+
+            fetch(`${liveUrl}?since_message_id=${encodeURIComponent(lastMessageId)}&t=${Date.now()}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('live-failed');
+                    }
+                    return response.json();
+                })
+                .then(applyLiveData)
+                .catch(function () {
+                    // Ignorar fallas intermitentes y reintentar en el siguiente ciclo.
+                })
+                .finally(function () {
+                    inFlight = false;
+                });
+        };
+
+        window.__ticketLivePollByTicket = window.__ticketLivePollByTicket || {};
+        window.__ticketLivePollByTicket[ticketId] = runLivePoll;
+        setInterval(runLivePoll, 3500);
     });
 </script>
 @endpush
