@@ -11,8 +11,12 @@ class NotificationController extends Controller
 {
     public function index(Request $request): View
     {
+        $retentionDays = max(1, (int) config('helpdesk.notifications.retention_days', 30));
+        $cutoff = now()->subDays($retentionDays);
+
         $notifications = $request->user()
             ->notifications()
+            ->where('created_at', '>=', $cutoff)
             ->latest()
             ->paginate(20)
             ->withQueryString();

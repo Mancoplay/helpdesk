@@ -27,7 +27,6 @@
                                 <th>Titulo</th>
                                 <th>Detalle</th>
                                 <th style="width: 120px;">Estado</th>
-                                <th style="width: 140px;" class="text-end">Accion</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -53,11 +52,6 @@
                                         @else
                                             <span class="badge text-bg-secondary">Leida</span>
                                         @endif
-                                    </td>
-                                    <td class="text-end">
-                                        <a href="{{ route('notifications.open', $notification->id) }}" class="btn btn-sm btn-outline-dark">
-                                            Abrir
-                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
