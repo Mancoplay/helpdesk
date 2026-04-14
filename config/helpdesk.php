@@ -12,6 +12,7 @@ return [
     'pending_ticket_reminders' => [
         'interval_minutes' => (int) env('HELPDESK_PENDING_TICKET_REMINDER_MINUTES', 5),
         'web_fallback_enabled' => filter_var(env('HELPDESK_PENDING_TICKET_REMINDER_WEB_FALLBACK', true), FILTER_VALIDATE_BOOLEAN),
+        'fallback_check_seconds' => (int) env('HELPDESK_PENDING_TICKET_REMINDER_FALLBACK_CHECK_SECONDS', 60),
     ],
 
     'notifications' => [

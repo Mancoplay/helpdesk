@@ -51,6 +51,7 @@ class RunPendingTicketReminderFallback
     {
         try {
             $lock = Cache::lock('tickets:notify-pending:fallback-lock', 20);
+            $checkEverySeconds = max(10, (int) config('helpdesk.pending_ticket_reminders.fallback_check_seconds', 60));
 
             if (!$lock->get()) {
                 return;
@@ -58,13 +59,14 @@ class RunPendingTicketReminderFallback
 
             try {
                 $lastRunAt = (int) Cache::get('tickets:notify-pending:fallback-last-run-at', 0);
-                if ($lastRunAt > 0 && (time() - $lastRunAt) < 60) {
+                if ($lastRunAt > 0 && (time() - $lastRunAt) < $checkEverySeconds) {
                     return;
                 }
 
                 app(TicketNotificationService::class)->notifyPendingTickets();
 
-                Cache::put('tickets:notify-pending:fallback-last-run-at', time(), now()->addMinutes(5));
+                $ttlSeconds = max($checkEverySeconds * 2, 180);
+                Cache::put('tickets:notify-pending:fallback-last-run-at', time(), now()->addSeconds($ttlSeconds));
             } finally {
                 $lock->release();
             }

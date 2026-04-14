@@ -32,17 +32,26 @@
 
                     <ul class="navbar-nav ms-auto">
                         @php
-                            $unreadNotifications = Auth::user()->unreadNotifications()->latest()->limit(6)->get();
-                            $unreadNotificationsCount = Auth::user()->unreadNotifications()->count();
+                            $unreadQuery = Auth::user()->unreadNotifications()->latest();
+                            $unreadNotifications = (clone $unreadQuery)->limit(6)->get();
+                            $unreadNotificationsCount = (clone $unreadQuery)->count();
                         @endphp
                         <li class="nav-item dropdown">
-                            <a class="nav-link position-relative" data-bs-toggle="dropdown" href="#" role="button" title="Notificaciones">
+                            <a
+                                class="nav-link position-relative"
+                                data-bs-toggle="dropdown"
+                                href="#"
+                                role="button"
+                                title="Notificaciones"
+                                id="notificationsBellButton"
+                            >
                                 <i class="fas fa-bell"></i>
-                                @if($unreadNotificationsCount > 0)
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger">
-                                        {{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}
-                                    </span>
-                                @endif
+                                <span
+                                    id="notificationsUnreadBadge"
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger {{ $unreadNotificationsCount > 0 ? '' : 'd-none' }}"
+                                >
+                                    {{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}
+                                </span>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 330px;">
                                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -50,22 +59,24 @@
                                     <a href="{{ route('notifications.index') }}" class="small text-decoration-none">Ver todas</a>
                                 </div>
 
-                                @if($unreadNotifications->isEmpty())
-                                    <div class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>
-                                @else
-                                    @foreach($unreadNotifications as $notification)
-                                        @php
-                                            $data = $notification->data;
-                                        @endphp
-                                        <a href="{{ route('notifications.open', $notification->id) }}" class="dropdown-item py-2">
-                                            <div class="fw-semibold">{{ $data['title'] ?? 'Notificacion' }}</div>
-                                            <div class="small text-muted">{{ $data['message'] ?? '' }}</div>
-                                            <div class="small text-muted">
-                                                {{ optional($notification->created_at)->diffForHumans() }}
-                                            </div>
-                                        </a>
-                                    @endforeach
-                                @endif
+                                <div id="notificationsUnreadList">
+                                    @if($unreadNotifications->isEmpty())
+                                        <div id="notificationsEmptyState" class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>
+                                    @else
+                                        @foreach($unreadNotifications as $notification)
+                                            @php
+                                                $data = $notification->data;
+                                            @endphp
+                                            <a href="{{ route('notifications.open', $notification->id) }}" class="dropdown-item py-2 js-notification-item">
+                                                <div class="fw-semibold">{{ $data['title'] ?? 'Notificacion' }}</div>
+                                                <div class="small text-muted">{{ $data['message'] ?? '' }}</div>
+                                                <div class="small text-muted">
+                                                    {{ optional($notification->created_at)->diffForHumans() }}
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    @endif
+                                </div>
 
                                 <div class="border-top px-3 py-2">
                                     <form action="{{ route('notifications.mark-all-read') }}" method="POST">
@@ -209,8 +220,148 @@
     @endauth
 
     @livewireScripts
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+        <div id="notificationsToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="notificationsToastBody">Tienes nuevas notificaciones.</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const notificationsState = {
+                lastCount: parseInt(document.getElementById('notificationsUnreadBadge')?.textContent || '0', 10) || 0,
+            };
+
+            const playNotificationBeep = function () {
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) {
+                        return;
+                    }
+
+                    const audioContext = new AudioCtx();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.15, audioContext.currentTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.22);
+                } catch (error) {
+                    // Audio can be blocked on some browsers until user interaction.
+                }
+            };
+
+            const showBrowserNotification = function (count) {
+                if (!('Notification' in window) || Notification.permission !== 'granted') {
+                    return;
+                }
+
+                const body = count === 1
+                    ? 'Tienes 1 notificacion nueva en Help Desk.'
+                    : `Tienes ${count} notificaciones sin leer en Help Desk.`;
+
+                new Notification('Help Desk', {
+                    body,
+                    tag: 'helpdesk-unread-notifications',
+                    renotify: true,
+                });
+            };
+
+            const renderNotificationDropdown = function (payload) {
+                const badgeElement = document.getElementById('notificationsUnreadBadge');
+                const listElement = document.getElementById('notificationsUnreadList');
+
+                if (!badgeElement || !listElement || !payload || typeof payload.count !== 'number') {
+                    return;
+                }
+
+                const unreadCount = payload.count;
+                if (unreadCount > 0) {
+                    badgeElement.classList.remove('d-none');
+                    badgeElement.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+                } else {
+                    badgeElement.classList.add('d-none');
+                    badgeElement.textContent = '';
+                }
+
+                const items = Array.isArray(payload.items) ? payload.items : [];
+                if (items.length === 0) {
+                    listElement.innerHTML = '<div id="notificationsEmptyState" class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>';
+                } else {
+                    const escapeHtml = function (value) {
+                        return String(value)
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#039;');
+                    };
+
+                    listElement.innerHTML = items.map(function (item) {
+                        const title = escapeHtml(item.title || 'Notificacion');
+                        const message = escapeHtml(item.message || '');
+                        const created = escapeHtml(item.created_human || '');
+                        const openUrl = escapeHtml(item.open_url || '#');
+                        return `
+                            <a href="${openUrl}" class="dropdown-item py-2 js-notification-item">
+                                <div class="fw-semibold">${title}</div>
+                                <div class="small text-muted">${message}</div>
+                                <div class="small text-muted">${created}</div>
+                            </a>
+                        `;
+                    }).join('');
+                }
+
+                if (unreadCount > notificationsState.lastCount) {
+                    playNotificationBeep();
+                    showBrowserNotification(unreadCount);
+
+                    if (window.bootstrap && window.bootstrap.Toast) {
+                        const toastEl = document.getElementById('notificationsToast');
+                        const toastBody = document.getElementById('notificationsToastBody');
+
+                        if (toastEl && toastBody) {
+                            toastBody.textContent = unreadCount === 1
+                                ? 'Tienes 1 notificacion nueva.'
+                                : `Tienes ${unreadCount} notificaciones sin leer.`;
+                            window.bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 }).show();
+                        }
+                    }
+                }
+
+                notificationsState.lastCount = unreadCount;
+            };
+
+            const refreshNotificationSummary = function () {
+                fetch('{{ route('notifications.summary') }}', {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            return null;
+                        }
+                        return response.json();
+                    })
+                    .then(function (payload) {
+                        if (payload) {
+                            renderNotificationDropdown(payload);
+                        }
+                    })
+                    .catch(function () {
+                        // Ignore transient network errors silently.
+                    });
+            };
+
             window.addEventListener('pageshow', function (event) {
                 if (event.persisted) {
                     window.location.reload();
@@ -331,6 +482,18 @@
                     loadFilteredTable(paginationLink.href);
                 });
             });
+
+            refreshNotificationSummary();
+            window.setInterval(refreshNotificationSummary, 20000);
+
+            const bellButton = document.getElementById('notificationsBellButton');
+            if (bellButton && 'Notification' in window) {
+                bellButton.addEventListener('click', function () {
+                    if (Notification.permission === 'default') {
+                        Notification.requestPermission();
+                    }
+                });
+            }
         });
     </script>
     @stack('scripts')

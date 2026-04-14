@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\PendingTicketAlertMail;
 use App\Models\Empleado;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -35,7 +36,8 @@ class TicketNotificationService
 
         $sentTo = 0;
         foreach ($tickets as $ticket) {
-            $sentTo += $this->sendPendingTicketAlert($ticket, true);
+            $isReminder = !is_null($ticket->last_notified_at);
+            $sentTo += $this->sendPendingTicketAlert($ticket, $isReminder);
         }
 
         return $sentTo;
@@ -47,19 +49,24 @@ class TicketNotificationService
             return 0;
         }
 
-        $recipientEmails = $this->departmentRecipientEmails((int) $ticket->departamento_id);
-        if ($recipientEmails->isEmpty()) {
+        $recipients = $this->departmentRecipients((int) $ticket->departamento_id);
+        $recipientEmails = $recipients['emails'];
+        $recipientUsers = $recipients['users'];
+
+        if ($recipientEmails->isEmpty() && $recipientUsers->isEmpty()) {
             return 0;
         }
 
         $ticket->loadMissing(['departamento', 'cliente']);
 
-        $databaseRecipientCount = $this->sendDatabaseNotifications($ticket, $isReminder);
+        $databaseRecipientCount = $this->sendDatabaseNotifications($recipientUsers, $ticket, $isReminder);
         $mailWasSent = false;
 
         try {
-            Mail::to($recipientEmails->all())->send(new PendingTicketAlertMail($ticket, $isReminder));
-            $mailWasSent = true;
+            if ($recipientEmails->isNotEmpty()) {
+                Mail::to($recipientEmails->all())->send(new PendingTicketAlertMail($ticket, $isReminder));
+                $mailWasSent = true;
+            }
         } catch (Throwable $exception) {
             report($exception);
         }
@@ -77,9 +84,9 @@ class TicketNotificationService
             : $databaseRecipientCount;
     }
 
-    private function departmentRecipientEmails(int $departmentId): Collection
+    private function departmentRecipients(int $departmentId): array
     {
-        return Empleado::query()
+        $employees = Empleado::query()
             ->where('activo', true)
             ->where(function ($query) use ($departmentId): void {
                 $query->where('departamento_id', $departmentId)
@@ -87,31 +94,45 @@ class TicketNotificationService
                         $departmentQuery->where('departamentos.id', $departmentId);
                     });
             })
+            ->with('user:id,name,email')
+            ->get();
+
+        $emails = $employees
             ->pluck('email')
             ->filter(fn ($email) => is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL))
             ->map(fn (string $email) => mb_strtolower(trim($email)))
             ->unique()
             ->values();
-    }
 
-    private function sendDatabaseNotifications(Ticket $ticket, bool $isReminder): int
-    {
-        $recipientUsers = Empleado::query()
-            ->where('activo', true)
-            ->whereNotNull('user_id')
-            ->where(function (Builder $query) use ($ticket): void {
-                $query->where('departamento_id', (int) $ticket->departamento_id)
-                    ->orWhereHas('departamentos', function (Builder $departmentQuery) use ($ticket): void {
-                        $departmentQuery->where('departamentos.id', (int) $ticket->departamento_id);
-                    });
-            })
-            ->with('user:id,name,email')
-            ->get()
+        $usersFromRelation = $employees
             ->pluck('user')
             ->filter()
             ->unique('id')
             ->values();
 
+        // Fallback: if an employee was left without user_id, match by email.
+        $usersFromEmail = $emails->isEmpty()
+            ? collect()
+            : User::query()
+                ->whereIn('email', $emails->all())
+                ->get(['id', 'name', 'email']);
+
+        $emailsFromUsers = $usersFromRelation
+            ->concat($usersFromEmail)
+            ->pluck('email')
+            ->filter(fn ($email) => is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL))
+            ->map(fn (string $email) => mb_strtolower(trim($email)))
+            ->unique()
+            ->values();
+
+        return [
+            'emails' => $emails->concat($emailsFromUsers)->unique()->values(),
+            'users' => $usersFromRelation->concat($usersFromEmail)->unique('id')->values(),
+        ];
+    }
+
+    private function sendDatabaseNotifications(Collection $recipientUsers, Ticket $ticket, bool $isReminder): int
+    {
         if ($recipientUsers->isEmpty()) {
             return 0;
         }

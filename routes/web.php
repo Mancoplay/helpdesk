@@ -79,6 +79,7 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notificaciones/resumen', [NotificationController::class, 'unreadSummary'])->name('notifications.summary');
     Route::get('/notificaciones/{notificationId}/abrir', [NotificationController::class, 'open'])->name('notifications.open');
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 

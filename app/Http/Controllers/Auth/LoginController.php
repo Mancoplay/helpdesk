@@ -10,7 +10,6 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -55,21 +54,6 @@ class LoginController extends Controller
             return $this->sendLockoutResponse($request);
         }
 
-        $candidate = User::where('email', (string) $request->input($this->username()))->first();
-        $rawPassword = (string) $request->input('password', '');
-
-        if (
-            $candidate
-            && Hash::check($rawPassword, (string) $candidate->password)
-            && $this->hasActiveSessionForUser((int) $candidate->id)
-        ) {
-            $this->incrementLoginAttempts($request);
-
-            return back()
-                ->withErrors([$this->username() => 'Esta cuenta ya tiene una sesion activa en otro dispositivo.'])
-                ->withInput($request->only($this->username(), 'remember'));
-        }
-
         if ($this->attemptLogin($request)) {
             return $this->sendLoginResponse($request);
         }
@@ -81,6 +65,8 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, User $user): ?RedirectResponse
     {
+        $this->closeOtherSessionsForUser((int) $user->id, (string) $request->session()->getId());
+
         if ($this->employeeIsDisabled($user) || $this->clientIsDisabled($user)) {
             auth()->logout();
             $request->session()->invalidate();
@@ -95,18 +81,25 @@ class LoginController extends Controller
         return redirect()->route('dashboard');
     }
 
-    private function hasActiveSessionForUser(int $userId): bool
+    protected function attemptLogin(Request $request): bool
     {
-        if ($userId <= 0 || config('session.driver') !== 'database') {
-            return false;
+        // Seguridad: no persistir sesion con "remember me".
+        return $this->guard()->attempt(
+            $this->credentials($request),
+            false
+        );
+    }
+
+    private function closeOtherSessionsForUser(int $userId, string $currentSessionId): void
+    {
+        if ($userId <= 0 || $currentSessionId === '' || config('session.driver') !== 'database') {
+            return;
         }
 
-        $cutoff = now()->subMinutes((int) config('session.lifetime', 120))->timestamp;
-
-        return DB::table(config('session.table', 'sessions'))
+        DB::table(config('session.table', 'sessions'))
             ->where('user_id', $userId)
-            ->where('last_activity', '>=', $cutoff)
-            ->exists();
+            ->where('id', '!=', $currentSessionId)
+            ->delete();
     }
 
     private function employeeIsDisabled(User $user): bool

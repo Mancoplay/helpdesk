@@ -1,10 +1,8 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -20,8 +18,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
     #[Validate('required|string')]
     public string $password = '';
 
-    public bool $remember = false;
-
     /**
      * Handle an incoming authentication request.
      */
@@ -30,21 +26,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->validate();
 
         $this->ensureIsNotRateLimited();
-        $candidate = User::where('email', $this->email)->first();
 
-        if (
-            $candidate
-            && Hash::check($this->password, (string) $candidate->password)
-            && $this->hasActiveSessionForUser((int) $candidate->id)
-        ) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'email' => 'Esta cuenta ya tiene una sesion activa en otro dispositivo.',
-            ]);
-        }
-
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], false)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -54,22 +37,21 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
+        $this->closeOtherSessionsForUser((int) Auth::id(), (string) Session::getId());
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }
 
-    private function hasActiveSessionForUser(int $userId): bool
+    private function closeOtherSessionsForUser(int $userId, string $currentSessionId): void
     {
-        if ($userId <= 0 || config('session.driver') !== 'database') {
-            return false;
+        if ($userId <= 0 || $currentSessionId === '' || config('session.driver') !== 'database') {
+            return;
         }
 
-        $cutoff = now()->subMinutes((int) config('session.lifetime', 120))->timestamp;
-
-        return DB::table(config('session.table', 'sessions'))
+        DB::table(config('session.table', 'sessions'))
             ->where('user_id', $userId)
-            ->where('last_activity', '>=', $cutoff)
-            ->exists();
+            ->where('id', '!=', $currentSessionId)
+            ->delete();
     }
 
     /**
@@ -130,9 +112,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 </x-text-link>
             @endif
         </div>
-
-        <!-- Remember Me -->
-        <flux:checkbox wire:model="remember" label="{{ __('Remember me') }}" />
 
         <div class="flex items-center justify-end">
             <flux:button variant="primary" type="submit" class="w-full">{{ __('Log in') }}</flux:button>
