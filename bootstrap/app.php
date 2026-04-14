@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureActiveAccount::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\PreventBackHistory::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\RunPendingTicketReminderFallback::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

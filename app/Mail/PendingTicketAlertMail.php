@@ -22,7 +22,9 @@ class PendingTicketAlertMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $fromAddress = config('mail.from.address') ?: 'noreply@helpdesk.local';
+        $fromAddress = config('mail.from.address')
+            ?: config('mail.mailers.smtp.username')
+            ?: 'noreply@helpdesk.local';
         $fromName = config('mail.from.name') ?: config('app.name', 'Helpdesk');
 
         $subjectPrefix = $this->isReminder ? '[Recordatorio] ' : '';

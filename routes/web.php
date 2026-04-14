@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -77,6 +78,10 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notificaciones/{notificationId}/abrir', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+
     Route::redirect('/settings', '/settings/profile');
 
     Volt::route('/settings/profile', 'settings.profile')->name('settings.profile');

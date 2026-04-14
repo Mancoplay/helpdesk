@@ -31,6 +31,52 @@
                     </ul>
 
                     <ul class="navbar-nav ms-auto">
+                        @php
+                            $unreadNotifications = Auth::user()->unreadNotifications()->latest()->limit(6)->get();
+                            $unreadNotificationsCount = Auth::user()->unreadNotifications()->count();
+                        @endphp
+                        <li class="nav-item dropdown">
+                            <a class="nav-link position-relative" data-bs-toggle="dropdown" href="#" role="button" title="Notificaciones">
+                                <i class="fas fa-bell"></i>
+                                @if($unreadNotificationsCount > 0)
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger">
+                                        {{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}
+                                    </span>
+                                @endif
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 330px;">
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                    <strong>Notificaciones</strong>
+                                    <a href="{{ route('notifications.index') }}" class="small text-decoration-none">Ver todas</a>
+                                </div>
+
+                                @if($unreadNotifications->isEmpty())
+                                    <div class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>
+                                @else
+                                    @foreach($unreadNotifications as $notification)
+                                        @php
+                                            $data = $notification->data;
+                                        @endphp
+                                        <a href="{{ route('notifications.open', $notification->id) }}" class="dropdown-item py-2">
+                                            <div class="fw-semibold">{{ $data['title'] ?? 'Notificacion' }}</div>
+                                            <div class="small text-muted">{{ $data['message'] ?? '' }}</div>
+                                            <div class="small text-muted">
+                                                {{ optional($notification->created_at)->diffForHumans() }}
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                @endif
+
+                                <div class="border-top px-3 py-2">
+                                    <form action="{{ route('notifications.mark-all-read') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                            Marcar todas como leidas
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link" data-bs-toggle="dropdown" href="#" role="button">
                                 <i class="fas fa-user"></i>

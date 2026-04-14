@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Mail\PendingTicketAlertMail;
 use App\Models\Empleado;
 use App\Models\Ticket;
+use App\Notifications\PendingTicketDatabaseNotification;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Throwable;
 
 class TicketNotificationService
 {
@@ -51,13 +54,27 @@ class TicketNotificationService
 
         $ticket->loadMissing(['departamento', 'cliente']);
 
-        Mail::to($recipientEmails->all())->send(new PendingTicketAlertMail($ticket, $isReminder));
+        $databaseRecipientCount = $this->sendDatabaseNotifications($ticket, $isReminder);
+        $mailWasSent = false;
+
+        try {
+            Mail::to($recipientEmails->all())->send(new PendingTicketAlertMail($ticket, $isReminder));
+            $mailWasSent = true;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        if (!$mailWasSent && $databaseRecipientCount === 0) {
+            return 0;
+        }
 
         $ticket->forceFill([
             'last_notified_at' => now(),
         ])->save();
 
-        return $recipientEmails->count();
+        return $mailWasSent
+            ? $recipientEmails->count()
+            : $databaseRecipientCount;
     }
 
     private function departmentRecipientEmails(int $departmentId): Collection
@@ -75,5 +92,32 @@ class TicketNotificationService
             ->map(fn (string $email) => mb_strtolower(trim($email)))
             ->unique()
             ->values();
+    }
+
+    private function sendDatabaseNotifications(Ticket $ticket, bool $isReminder): int
+    {
+        $recipientUsers = Empleado::query()
+            ->where('activo', true)
+            ->whereNotNull('user_id')
+            ->where(function (Builder $query) use ($ticket): void {
+                $query->where('departamento_id', (int) $ticket->departamento_id)
+                    ->orWhereHas('departamentos', function (Builder $departmentQuery) use ($ticket): void {
+                        $departmentQuery->where('departamentos.id', (int) $ticket->departamento_id);
+                    });
+            })
+            ->with('user:id,name,email')
+            ->get()
+            ->pluck('user')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        if ($recipientUsers->isEmpty()) {
+            return 0;
+        }
+
+        Notification::send($recipientUsers, new PendingTicketDatabaseNotification($ticket, $isReminder));
+
+        return $recipientUsers->count();
     }
 }
