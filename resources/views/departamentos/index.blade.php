@@ -9,7 +9,39 @@
 @endsection
 
 @section('content')
-<div class="card mb-3"><div class="card-body"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDepartamentoModal"><i class="fas fa-plus me-1"></i> Agregar nuevo departamento</button></div></div>
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-lg-auto">
+                <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#createDepartamentoModal">
+                    <i class="fas fa-plus me-1"></i> Agregar nuevo departamento
+                </button>
+            </div>
+            <div class="col-lg">
+                <form method="POST" action="{{ route('departamentos.notification-email.update') }}" class="row g-2 align-items-end">
+                    @csrf
+                    <div class="col-md-8">
+                        <label class="form-label mb-1">Correo para notificaciones</label>
+                        <input
+                            type="email"
+                            name="notification_email"
+                            class="form-control"
+                            value="{{ old('notification_email', $notificationEmail ?? '') }}"
+                            required
+                            maxlength="255"
+                            placeholder="correo@ejemplo.com"
+                            pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                            title="Ingresa un correo valido, por ejemplo admin@dominio.com"
+                        >
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-outline-primary w-100">Guardar correo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="card mb-3">
     <div class="card-body">

@@ -47,6 +47,7 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::get('/departamentos', [HomeController::class, 'departamentos'])->name('departamentos.index');
     Route::post('/departamentos', [HomeController::class, 'storeDepartamento'])->name('departamentos.store');
     Route::put('/departamentos/{departamento}', [HomeController::class, 'updateDepartamento'])->name('departamentos.update');
+    Route::post('/departamentos/notificaciones/correo', [HomeController::class, 'updateNotificationEmail'])->name('departamentos.notification-email.update');
     Route::patch('/departamentos/{departamento}/checkpoint', [HomeController::class, 'toggleDepartamentoCheckpoint'])->name('departamentos.checkpoint');
 });
 

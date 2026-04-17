@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\PendingTicketAlertMail;
 use App\Models\Empleado;
+use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
@@ -11,6 +12,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class TicketNotificationService
@@ -125,9 +127,24 @@ class TicketNotificationService
             ->unique()
             ->values();
 
+        $configuredEmail = $this->configuredNotificationEmail();
+        $configuredEmailCollection = $configuredEmail ? collect([$configuredEmail]) : collect();
+        $configuredUser = $configuredEmail
+            ? User::query()->where('email', $configuredEmail)->first(['id', 'name', 'email'])
+            : null;
+        $configuredUsers = $configuredUser ? collect([$configuredUser]) : collect();
+
         return [
-            'emails' => $emails->concat($emailsFromUsers)->unique()->values(),
-            'users' => $usersFromRelation->concat($usersFromEmail)->unique('id')->values(),
+            'emails' => $emails
+                ->concat($emailsFromUsers)
+                ->concat($configuredEmailCollection)
+                ->unique()
+                ->values(),
+            'users' => $usersFromRelation
+                ->concat($usersFromEmail)
+                ->concat($configuredUsers)
+                ->unique('id')
+                ->values(),
         ];
     }
 
@@ -140,5 +157,24 @@ class TicketNotificationService
         Notification::send($recipientUsers, new PendingTicketDatabaseNotification($ticket, $isReminder));
 
         return $recipientUsers->count();
+    }
+
+    private function configuredNotificationEmail(): ?string
+    {
+        if (!Schema::hasTable('system_settings')) {
+            return null;
+        }
+
+        $email = SystemSetting::query()
+            ->where('key', 'pending_ticket_notification_email')
+            ->value('value');
+
+        if (!is_string($email)) {
+            return null;
+        }
+
+        $email = mb_strtolower(trim($email));
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
     }
 }

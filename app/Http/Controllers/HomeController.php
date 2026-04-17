@@ -11,6 +11,7 @@ use App\Services\ReviewRangeService;
 use App\Models\Cliente;
 use App\Models\Departamento;
 use App\Models\Empleado;
+use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\TicketMensaje;
 use App\Models\TicketRemoteSession;
@@ -526,10 +527,33 @@ class HomeController extends Controller
 
         return view('departamentos.index', [
             'departamentos' => $departamentos,
+            'notificationEmail' => $this->notificationRecipientEmail(),
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
         ]);
+    }
+
+    public function updateNotificationEmail(Request $request): RedirectResponse
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'notification_email' => ['required', 'email:rfc', 'max:255'],
+        ]);
+
+        if (!Schema::hasTable('system_settings')) {
+            return back()->with('error', 'Falta ejecutar migraciones para guardar la configuracion.');
+        }
+
+        SystemSetting::query()->updateOrCreate(
+            ['key' => 'pending_ticket_notification_email'],
+            ['value' => mb_strtolower(trim((string) $validated['notification_email']))],
+        );
+
+        return back()->with('success', 'Correo de notificaciones actualizado correctamente.');
     }
 
     public function storeDepartamento(Request $request): RedirectResponse
@@ -589,6 +613,25 @@ class HomeController extends Controller
         return back()->with('success', $departamento->activo
             ? 'Departamento habilitado correctamente.'
             : 'Departamento deshabilitado correctamente.');
+    }
+
+    private function notificationRecipientEmail(): ?string
+    {
+        if (!Schema::hasTable('system_settings')) {
+            return null;
+        }
+
+        $email = SystemSetting::query()
+            ->where('key', 'pending_ticket_notification_email')
+            ->value('value');
+
+        if (!is_string($email)) {
+            return null;
+        }
+
+        $email = mb_strtolower(trim($email));
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
     }
 
     public function tickets(Request $request)
