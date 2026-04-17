@@ -10,7 +10,10 @@ class TicketRemoteSession extends Model
 {
     use HasFactory;
 
+    protected $table = 'ticket_eventos';
+
     protected $fillable = [
+        'event_type',
         'ticket_id',
         'requested_by_user_id',
         'cancelled_by_user_id',
@@ -28,6 +31,19 @@ class TicketRemoteSession extends Model
         'ended_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::addGlobalScope('remote_event', function ($query): void {
+            $query->where('event_type', 'remote');
+        });
+
+        static::creating(function (TicketRemoteSession $session): void {
+            if (blank($session->event_type)) {
+                $session->event_type = 'remote';
+            }
+        });
+    }
+
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class);
@@ -43,4 +59,3 @@ class TicketRemoteSession extends Model
         return $this->belongsTo(User::class, 'cancelled_by_user_id');
     }
 }
-

@@ -21,12 +21,13 @@ new #[Title('Tickets - Help Desk')] class extends Component
 
         if (auth()->check() && auth()->user()->hasRole('Usuario')) {
             $query->whereHas('cliente', function ($q): void {
-                $q->where('email', auth()->user()->email);
+                $q->whereKey(auth()->id())
+                    ->orWhere('email', auth()->user()->email);
             });
         }
 
         if (auth()->check() && auth()->user()->hasRole('Empleado')) {
-            $employee = Empleado::with('departamentos')->where('user_id', auth()->id())
+            $employee = Empleado::with('departamentos')->whereKey(auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
 
@@ -70,7 +71,7 @@ new #[Title('Tickets - Help Desk')] class extends Component
 
         $currentEmployee = null;
         if (auth()->user()->hasRole('Empleado')) {
-            $currentEmployee = Empleado::where('user_id', auth()->id())
+            $currentEmployee = Empleado::whereKey(auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
         }

@@ -590,7 +590,7 @@ class HomeController extends Controller
             ->with(['cliente', 'empleado', 'departamento']);
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
-        $prioritizeRemoteActive = Schema::hasTable('ticket_remote_sessions');
+        $prioritizeRemoteActive = Schema::hasTable('ticket_eventos');
         $activeRemoteTicketId = null;
         $pendingRemoteTicketId = null;
         $activeRemoteTicketIds = collect();
@@ -623,38 +623,42 @@ class HomeController extends Controller
                 $ticketIdsSubquery = (clone $query)->select('tickets.id');
 
                 $activeRemoteTicketIds = TicketRemoteSession::query()
-                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                    ->where('ticket_remote_sessions.status', 'accepted')
-                    ->whereNull('ticket_remote_sessions.ended_at')
-                    ->where('tickets.estado', 'en_proceso')
-                    ->whereIn('ticket_remote_sessions.ticket_id', $ticketIdsSubquery)
+                    ->where('status', 'accepted')
+                    ->whereNull('ended_at')
+                    ->whereHas('ticket', function ($ticketQuery) use ($ticketIdsSubquery): void {
+                        $ticketQuery->where('estado', 'en_proceso')
+                            ->whereIn('tickets.id', $ticketIdsSubquery);
+                    })
                     ->distinct()
-                    ->pluck('ticket_remote_sessions.ticket_id');
+                    ->pluck('ticket_id');
 
                 $pendingRemoteTicketIds = TicketRemoteSession::query()
-                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                    ->where('ticket_remote_sessions.status', 'pending')
-                    ->where('tickets.estado', 'en_proceso')
-                    ->whereIn('ticket_remote_sessions.ticket_id', $ticketIdsSubquery)
+                    ->where('status', 'pending')
+                    ->whereHas('ticket', function ($ticketQuery) use ($ticketIdsSubquery): void {
+                        $ticketQuery->where('estado', 'en_proceso')
+                            ->whereIn('tickets.id', $ticketIdsSubquery);
+                    })
                     ->distinct()
-                    ->pluck('ticket_remote_sessions.ticket_id');
+                    ->pluck('ticket_id');
             } else {
                 $activeRemoteTicketId = TicketRemoteSession::query()
-                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                    ->where('ticket_remote_sessions.status', 'accepted')
-                    ->whereNull('ticket_remote_sessions.ended_at')
-                    ->where('tickets.estado', 'en_proceso')
-                    ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
-                    ->latest('ticket_remote_sessions.id')
-                    ->value('ticket_remote_sessions.ticket_id');
+                    ->where('status', 'accepted')
+                    ->whereNull('ended_at')
+                    ->whereHas('ticket', function ($ticketQuery) use ($query): void {
+                        $ticketQuery->where('estado', 'en_proceso')
+                            ->whereIn('tickets.id', (clone $query)->select('tickets.id'));
+                    })
+                    ->latest('id')
+                    ->value('ticket_id');
 
                 $pendingRemoteTicketId = TicketRemoteSession::query()
-                    ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-                    ->where('ticket_remote_sessions.status', 'pending')
-                    ->where('tickets.estado', 'en_proceso')
-                    ->whereIn('ticket_remote_sessions.ticket_id', (clone $query)->select('tickets.id'))
-                    ->latest('ticket_remote_sessions.id')
-                    ->value('ticket_remote_sessions.ticket_id');
+                    ->where('status', 'pending')
+                    ->whereHas('ticket', function ($ticketQuery) use ($query): void {
+                        $ticketQuery->where('estado', 'en_proceso')
+                            ->whereIn('tickets.id', (clone $query)->select('tickets.id'));
+                    })
+                    ->latest('id')
+                    ->value('ticket_id');
 
                 if (!empty($activeRemoteTicketId)) {
                     $query->orderByRaw('CASE WHEN tickets.id = ? THEN 2 WHEN tickets.id = ? THEN 1 ELSE 0 END DESC', [
@@ -725,7 +729,7 @@ class HomeController extends Controller
             ->get()
             ->sortBy('created_at')
             ->values();
-        $remoteEnabled = Schema::hasTable('ticket_remote_sessions');
+        $remoteEnabled = Schema::hasTable('ticket_eventos');
         $remoteSession = $remoteEnabled
             ? $ticket->remoteSessions()->latest('id')->first()
             : null;
@@ -775,7 +779,7 @@ class HomeController extends Controller
             ];
         })->values();
 
-        $remoteEnabled = Schema::hasTable('ticket_remote_sessions');
+        $remoteEnabled = Schema::hasTable('ticket_eventos');
         $remoteSession = $remoteEnabled
             ? $ticket->remoteSessions()->latest('id')->first()
             : null;
@@ -836,7 +840,7 @@ class HomeController extends Controller
             abort(403);
         }
 
-        if (!Schema::hasTable('ticket_remote_sessions')) {
+        if (!Schema::hasTable('ticket_eventos')) {
             return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
         }
 
@@ -882,7 +886,7 @@ class HomeController extends Controller
             abort(403);
         }
 
-        if (!Schema::hasTable('ticket_remote_sessions')) {
+        if (!Schema::hasTable('ticket_eventos')) {
             return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
         }
 
@@ -1017,7 +1021,7 @@ class HomeController extends Controller
             abort(403);
         }
 
-        if (!Schema::hasTable('ticket_remote_sessions')) {
+        if (!Schema::hasTable('ticket_eventos')) {
             return response()->json(['message' => 'La funcionalidad de soporte remoto aun no esta disponible.'], 422);
         }
 
@@ -1556,11 +1560,12 @@ class HomeController extends Controller
         }
 
         return TicketRemoteSession::query()
-            ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-            ->where('tickets.empleado_id', $employeeId)
-            ->whereIn('ticket_remote_sessions.status', ['pending', 'accepted'])
-            ->where('tickets.estado', 'en_proceso')
-            ->when($exceptSessionId, fn ($query) => $query->where('ticket_remote_sessions.id', '!=', $exceptSessionId))
+            ->whereIn('status', ['pending', 'accepted'])
+            ->whereHas('ticket', function ($ticketQuery) use ($employeeId): void {
+                $ticketQuery->where('empleado_id', $employeeId)
+                    ->where('estado', 'en_proceso');
+            })
+            ->when($exceptSessionId, fn ($query) => $query->where('id', '!=', $exceptSessionId))
             ->exists();
     }
 
@@ -1571,17 +1576,18 @@ class HomeController extends Controller
         }
 
         return TicketRemoteSession::query()
-            ->join('tickets', 'tickets.id', '=', 'ticket_remote_sessions.ticket_id')
-            ->where('tickets.cliente_id', $clientId)
-            ->whereIn('ticket_remote_sessions.status', ['pending', 'accepted'])
-            ->where('tickets.estado', 'en_proceso')
-            ->when($exceptSessionId, fn ($query) => $query->where('ticket_remote_sessions.id', '!=', $exceptSessionId))
+            ->whereIn('status', ['pending', 'accepted'])
+            ->whereHas('ticket', function ($ticketQuery) use ($clientId): void {
+                $ticketQuery->where('cliente_id', $clientId)
+                    ->where('estado', 'en_proceso');
+            })
+            ->when($exceptSessionId, fn ($query) => $query->where('id', '!=', $exceptSessionId))
             ->exists();
     }
 
     private function closeActiveRemoteSessionsForTicket(Ticket $ticket, ?string $note = null): void
     {
-        if (!Schema::hasTable('ticket_remote_sessions')) {
+        if (!Schema::hasTable('ticket_eventos')) {
             return;
         }
 

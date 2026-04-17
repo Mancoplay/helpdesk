@@ -10,7 +10,10 @@ class TicketMensaje extends Model
 {
     use HasFactory;
 
+    protected $table = 'ticket_eventos';
+
     protected $fillable = [
+        'event_type',
         'ticket_id',
         'user_id',
         'mensaje',
@@ -20,6 +23,19 @@ class TicketMensaje extends Model
         'imagen_size',
         'tipo',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('mensaje_event', function ($query): void {
+            $query->where('event_type', 'mensaje');
+        });
+
+        static::creating(function (TicketMensaje $mensaje): void {
+            if (blank($mensaje->event_type)) {
+                $mensaje->event_type = 'mensaje';
+            }
+        });
+    }
 
     public function ticket(): BelongsTo
     {
