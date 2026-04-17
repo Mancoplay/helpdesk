@@ -74,8 +74,24 @@
                                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control" value="{{ $cliente->segundo_nombre }}"></div>
                                 <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" value="{{ $cliente->apellidos }}" required></div>
                                 <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" value="{{ $cliente->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
-                                <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
-                                <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Contrasena (opcional)</label>
+                                    <div class="input-group">
+                                        <input type="password" name="password" class="form-control js-password-input" autocomplete="new-password" placeholder="Escribe una nueva contrasena para cambiarla">
+                                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Confirmar contrasena</label>
+                                    <div class="input-group">
+                                        <input type="password" name="password_confirmation" class="form-control js-password-input" autocomplete="new-password" placeholder="Repite la nueva contrasena">
+                                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" value="{{ $cliente->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
                             </div></div>
                             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
@@ -103,8 +119,24 @@
                 <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control"></div>
                 <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" required></div>
                 <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
-                <div class="col-md-6"><label class="form-label">Contrasena</label><input type="password" name="password" class="form-control" required autocomplete="new-password"></div>
-                <div class="col-md-6"><label class="form-label">Confirmar contrasena</label><input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password"></div>
+                <div class="col-md-6">
+                    <label class="form-label">Contrasena</label>
+                    <div class="input-group">
+                        <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
+                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Confirmar contrasena</label>
+                    <div class="input-group">
+                        <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
+                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
             </div></div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
@@ -112,3 +144,52 @@
     </div></div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .js-password-input::-ms-reveal,
+    .js-password-input::-ms-clear {
+        display: none;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+    function setupPasswordToggles(root = document) {
+        root.querySelectorAll('.js-password-toggle').forEach((button) => {
+            if (button.dataset.bound === '1') {
+                return;
+            }
+
+            button.dataset.bound = '1';
+            button.addEventListener('click', () => {
+                const inputGroup = button.closest('.input-group');
+                const input = inputGroup ? inputGroup.querySelector('input') : null;
+                const icon = button.querySelector('i');
+
+                if (!input) {
+                    return;
+                }
+
+                const showPassword = input.type === 'password';
+                input.type = showPassword ? 'text' : 'password';
+                button.setAttribute('aria-label', showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena');
+
+                if (icon) {
+                    icon.classList.toggle('fa-eye', !showPassword);
+                    icon.classList.toggle('fa-eye-slash', showPassword);
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupPasswordToggles();
+    });
+
+    document.addEventListener('shown.bs.modal', (event) => {
+        setupPasswordToggles(event.target);
+    });
+</script>
+@endpush

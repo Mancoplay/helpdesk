@@ -146,9 +146,19 @@
                                                 <label class="form-label mt-2">Correo</label>
                                                 <input type="email" name="email" class="form-control" value="{{ $empleado->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com">
                                                 <label class="form-label mt-2">Contrasena (opcional)</label>
-                                                <input type="password" name="password" class="form-control" autocomplete="new-password">
+                                                <div class="input-group">
+                                                    <input type="password" name="password" class="form-control js-password-input" autocomplete="new-password" placeholder="Escribe una nueva contrasena para cambiarla">
+                                                    <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
                                                 <label class="form-label mt-2">Confirmar Contrasena</label>
-                                                <input type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
+                                                <div class="input-group">
+                                                    <input type="password" name="password_confirmation" class="form-control js-password-input" autocomplete="new-password" placeholder="Repite la nueva contrasena">
+                                                    <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -234,9 +244,19 @@
                             <label class="form-label mt-2">Correo</label>
                             <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com">
                             <label class="form-label mt-2">Contrasena</label>
-                            <input type="password" name="password" class="form-control" required autocomplete="new-password">
+                            <div class="input-group">
+                                <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                             <label class="form-label mt-2">Confirmar Contrasena</label>
-                            <input type="password" name="password_confirmation" class="form-control" required autocomplete="new-password">
+                            <div class="input-group">
+                                <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -249,8 +269,45 @@
     </div>
 </div>
 
+@push('styles')
+<style>
+    .js-password-input::-ms-reveal,
+    .js-password-input::-ms-clear {
+        display: none;
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
+    function setupPasswordToggles(root = document) {
+        root.querySelectorAll('.js-password-toggle').forEach((button) => {
+            if (button.dataset.bound === '1') {
+                return;
+            }
+
+            button.dataset.bound = '1';
+            button.addEventListener('click', () => {
+                const inputGroup = button.closest('.input-group');
+                const input = inputGroup ? inputGroup.querySelector('input') : null;
+                const icon = button.querySelector('i');
+
+                if (!input) {
+                    return;
+                }
+
+                const showPassword = input.type === 'password';
+                input.type = showPassword ? 'text' : 'password';
+                button.setAttribute('aria-label', showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena');
+
+                if (icon) {
+                    icon.classList.toggle('fa-eye', !showPassword);
+                    icon.classList.toggle('fa-eye-slash', showPassword);
+                }
+            });
+        });
+    }
+
     function renderDepartmentPicklist(wrapper) {
         const selectedContainer = wrapper.closest('.col-md-6').querySelector('.departments-selected-list');
         const button = wrapper.querySelector('[data-bs-toggle="dropdown"]');
@@ -298,10 +355,12 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.department-picker').forEach(setupDepartmentPicker);
+        setupPasswordToggles();
     });
 
     document.addEventListener('shown.bs.modal', (event) => {
         event.target.querySelectorAll('.department-picker').forEach(renderDepartmentPicklist);
+        setupPasswordToggles(event.target);
     });
 </script>
 @endpush

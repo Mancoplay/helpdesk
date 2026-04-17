@@ -242,16 +242,20 @@ class HomeController extends Controller
         if ($linkedUser) {
             $linkedUser->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
             $linkedUser->email = $validated['email'];
-            $linkedUser->password = Hash::make($validated['password']);
+            if (!empty($validated['password'])) {
+                $linkedUser->password = Hash::make($validated['password']);
+            }
             $linkedUser->save();
             $linkedUser->syncRoles(['Usuario']);
         } else {
-            $newUser = User::create([
-                'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-            ]);
-            $newUser->syncRoles(['Usuario']);
+            if (!empty($validated['password'])) {
+                $newUser = User::create([
+                    'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                ]);
+                $newUser->syncRoles(['Usuario']);
+            }
         }
 
         $cliente->update($validated);
