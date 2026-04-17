@@ -23,13 +23,13 @@ class Departamento extends Model
 
     public function empleados(): BelongsToMany
     {
-        return $this->belongsToMany(Empleado::class, 'departamento_empleado')
+        return $this->belongsToMany(Empleado::class, 'departamento_empleado', 'departamento_id', 'user_id')
             ->withTimestamps();
     }
 
     public function empleadosPrimarios(): HasMany
     {
-        return $this->hasMany(Empleado::class);
+        return $this->hasMany(Empleado::class, 'departamento_id');
     }
 
     public function tickets(): HasMany

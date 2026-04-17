@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -14,8 +13,16 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'nombres',
+        'apellidos',
         'email',
         'password',
+        'telefono',
+        'direccion',
+        'empresa',
+        'cargo',
+        'activo',
+        'departamento_id',
     ];
 
     protected $hidden = [
@@ -28,29 +35,15 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
-    }
-
-    public function empleado(): HasOne
-    {
-        return $this->hasOne(Empleado::class);
-    }
-
-    public function cliente(): HasOne
-    {
-        return $this->hasOne(Cliente::class, 'email', 'email');
     }
 
     public function getNombreCompletoAttribute(): string
     {
-        $empleado = $this->empleado;
-        if ($empleado && !empty($empleado->nombre_completo)) {
-            return $empleado->nombre_completo;
-        }
-
-        $cliente = $this->cliente;
-        if ($cliente && !empty($cliente->nombre_completo)) {
-            return $cliente->nombre_completo;
+        $fullName = trim(collect([$this->nombres, $this->apellidos])->filter()->implode(' '));
+        if ($fullName !== '') {
+            return $fullName;
         }
 
         return $this->name;

@@ -26,22 +26,15 @@ class UpdateEmpleadoRequest extends FormRequest
     public function rules(): array
     {
         $empleado = $this->route('empleado');
-        $linkedUser = $empleado
-            ? User::query()
-                ->where('id', $empleado->user_id)
-                ->orWhere('email', $empleado->email)
-                ->first()
-            : null;
+        $linkedUser = $empleado ? User::find($empleado->id) : null;
 
         return [
             'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
             'email' => [
                 'required',
                 'email:rfc',
                 'max:255',
-                Rule::unique('empleados', 'email')->ignore($empleado?->id),
                 Rule::unique('users', 'email')->ignore($linkedUser?->id),
             ],
             'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],

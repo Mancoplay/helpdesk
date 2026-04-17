@@ -96,7 +96,6 @@ class TicketNotificationService
                         $departmentQuery->where('departamentos.id', $departmentId);
                     });
             })
-            ->with('user:id,name,email')
             ->get();
 
         $emails = $employees
@@ -106,11 +105,11 @@ class TicketNotificationService
             ->unique()
             ->values();
 
-        $usersFromRelation = $employees
-            ->pluck('user')
-            ->filter()
-            ->unique('id')
-            ->values();
+        $usersFromRelation = $employees->isEmpty()
+            ? collect()
+            : User::query()
+                ->whereIn('id', $employees->pluck('id')->all())
+                ->get(['id', 'name', 'email']);
 
         // Fallback: if an employee was left without user_id, match by email.
         $usersFromEmail = $emails->isEmpty()

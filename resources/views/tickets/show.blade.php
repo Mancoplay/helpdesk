@@ -89,7 +89,10 @@
             @php
                 $isAdmin = auth()->user()->hasRole('Administrador');
                 $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
-                    && (($ticket->cliente->email ?? null) === auth()->user()->email);
+                    && (
+                        (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
+                        || (($ticket->cliente->email ?? null) === auth()->user()->email)
+                    );
                 $isAssignedEmployee = auth()->user()->hasRole('Empleado')
                     && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0);
                 $canManageRemoteAsClient = $isClientOwner || $isAdmin;

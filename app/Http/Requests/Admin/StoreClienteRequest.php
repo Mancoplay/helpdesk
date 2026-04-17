@@ -25,9 +25,8 @@ class StoreClienteRequest extends FormRequest
     {
         return [
             'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255', 'unique:clientes,email', 'unique:users,email'],
+            'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
             'direccion' => ['nullable', 'string'],

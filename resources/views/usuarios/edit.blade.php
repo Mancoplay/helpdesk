@@ -19,13 +19,10 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <h6 class="fw-bold">Informacion Personal</h6>
-                    <label class="form-label">Nombre</label>
+                    <label class="form-label">Nombre(s)</label>
                     <input type="text" name="nombres" class="form-control" value="{{ old('nombres', $cliente->nombres) }}" required>
 
-                    <label class="form-label mt-2">Segundo Nombre</label>
-                    <input type="text" name="segundo_nombre" class="form-control" value="{{ old('segundo_nombre', $cliente->segundo_nombre) }}">
-
-                    <label class="form-label mt-2">Apellido</label>
+                    <label class="form-label mt-2">Apellidos</label>
                     <input type="text" name="apellidos" class="form-control" value="{{ old('apellidos', $cliente->apellidos) }}" required>
 
                     <label class="form-label mt-2">Contacto</label>

@@ -116,7 +116,13 @@
                                 !$isDisabled
                                 && (
                                     (auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0))
-                                    || (auth()->user()->hasAnyRole(['Cliente', 'Usuario']) && (($ticket->cliente->email ?? null) === auth()->user()->email))
+                                    || (
+                                        auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
+                                        && (
+                                            (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
+                                            || (($ticket->cliente->email ?? null) === auth()->user()->email)
+                                        )
+                                    )
                                 )
                             )
                                 <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}">

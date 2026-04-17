@@ -26,17 +26,15 @@ class UpdateClienteRequest extends FormRequest
     public function rules(): array
     {
         $cliente = $this->route('cliente');
-        $linkedUser = $cliente ? User::where('email', $cliente->email)->first() : null;
+        $linkedUser = $cliente ? User::find($cliente->id) : null;
 
         return [
             'nombres' => ['required', 'string', 'max:100'],
-            'segundo_nombre' => ['nullable', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
             'email' => [
                 'required',
                 'email:rfc',
                 'max:255',
-                Rule::unique('clientes', 'email')->ignore($cliente?->id),
                 Rule::unique('users', 'email')->ignore($linkedUser?->id),
             ],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],

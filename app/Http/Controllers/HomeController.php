@@ -224,42 +224,37 @@ class HomeController extends Controller
 
         $usuario = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
+            'nombres' => $validated['nombres'],
+            'apellidos' => $validated['apellidos'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'telefono' => $validated['telefono'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'empresa' => $validated['empresa'] ?? null,
+            'activo' => true,
         ]);
         $usuario->syncRoles(['Usuario']);
-
-        Cliente::create($validated + ['activo' => true]);
 
         return back()->with('success', 'Usuario agregado correctamente.');
     }
 
     public function updateCliente(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
     {
-        $linkedUser = User::where('email', $cliente->email)->first();
-
         $validated = $request->validated();
+        $cliente->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+        $cliente->nombres = $validated['nombres'];
+        $cliente->apellidos = $validated['apellidos'];
+        $cliente->email = $validated['email'];
+        $cliente->telefono = $validated['telefono'] ?? null;
+        $cliente->direccion = $validated['direccion'] ?? null;
+        $cliente->empresa = $validated['empresa'] ?? null;
 
-        if ($linkedUser) {
-            $linkedUser->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
-            $linkedUser->email = $validated['email'];
-            if (!empty($validated['password'])) {
-                $linkedUser->password = Hash::make($validated['password']);
-            }
-            $linkedUser->save();
-            $linkedUser->syncRoles(['Usuario']);
-        } else {
-            if (!empty($validated['password'])) {
-                $newUser = User::create([
-                    'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
-                    'email' => $validated['email'],
-                    'password' => Hash::make($validated['password']),
-                ]);
-                $newUser->syncRoles(['Usuario']);
-            }
+        if (!empty($validated['password'])) {
+            $cliente->password = Hash::make($validated['password']);
         }
 
-        $cliente->update($validated);
+        $cliente->save();
+        $cliente->syncRoles(['Usuario']);
 
         return back()->with('success', 'Usuario actualizado correctamente.');
     }
@@ -374,24 +369,18 @@ class HomeController extends Controller
 
         $user = User::create([
             'name' => trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? '')),
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
-        $user->syncRoles(['Empleado']);
-
-        $empleado = Empleado::create([
-            'user_id' => $user->id,
-            'departamento_id' => $selectedDepartmentIds->first(),
             'nombres' => $validated['nombres'],
-            'segundo_nombre' => $validated['segundo_nombre'] ?? null,
             'apellidos' => $validated['apellidos'],
             'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
             'telefono' => $validated['telefono'] ?? null,
             'direccion' => $validated['direccion'] ?? null,
             'cargo' => $validated['cargo'] ?? null,
             'activo' => true,
+            'departamento_id' => $selectedDepartmentIds->first(),
         ]);
-        $empleado->departamentos()->sync($selectedDepartmentIds->all());
+        $user->syncRoles(['Empleado']);
+        Empleado::find($user->id)?->departamentos()->sync($selectedDepartmentIds->all());
 
         return back()->with('success', 'Empleado agregado correctamente.');
     }
@@ -399,7 +388,6 @@ class HomeController extends Controller
     public function updateEmpleado(UpdateEmpleadoRequest $request, Empleado $empleado): RedirectResponse
     {
         $validated = $request->validated();
-        $previousEmail = $empleado->email;
         $selectedDepartmentIds = collect($validated['departamento_ids'] ?? [])
             ->map(static fn ($id) => (int) $id)
             ->filter()
@@ -417,60 +405,23 @@ class HomeController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($empleado, $validated, $selectedDepartmentIds, $previousEmail): void {
-                $updated = DB::table('empleados')
-                    ->where('id', $empleado->id)
-                    ->update([
-                        'departamento_id' => $selectedDepartmentIds->first(),
-                        'nombres' => $validated['nombres'],
-                        'segundo_nombre' => $validated['segundo_nombre'] ?? null,
-                        'apellidos' => $validated['apellidos'],
-                        'email' => $validated['email'],
-                        'telefono' => $validated['telefono'] ?? null,
-                        'direccion' => $validated['direccion'] ?? null,
-                        'cargo' => $validated['cargo'] ?? null,
-                        'updated_at' => now(),
-                    ]);
+            DB::transaction(function () use ($empleado, $validated, $selectedDepartmentIds): void {
+                $empleado->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+                $empleado->nombres = $validated['nombres'];
+                $empleado->apellidos = $validated['apellidos'];
+                $empleado->email = $validated['email'];
+                $empleado->telefono = $validated['telefono'] ?? null;
+                $empleado->direccion = $validated['direccion'] ?? null;
+                $empleado->cargo = $validated['cargo'] ?? null;
+                $empleado->departamento_id = $selectedDepartmentIds->first();
 
-                if ($updated === 0) {
-                    $currentEmail = DB::table('empleados')
-                        ->where('id', $empleado->id)
-                        ->value('email');
-
-                    if ((string) $currentEmail !== (string) $validated['email']) {
-                        throw new \RuntimeException('No se pudo actualizar el correo del empleado.');
-                    }
+                if (!empty($validated['password'])) {
+                    $empleado->password = Hash::make($validated['password']);
                 }
 
-                $empleado->refresh();
+                $empleado->save();
+                $empleado->syncRoles(['Empleado']);
                 $empleado->departamentos()->sync($selectedDepartmentIds->all());
-
-                $user = null;
-                if ($empleado->user_id) {
-                    $user = User::find($empleado->user_id);
-                }
-                if (!$user) {
-                    $user = User::where('email', $previousEmail)->first();
-                }
-
-                if ($user) {
-                    $user->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
-                    $user->email = $validated['email'];
-                    if (!empty($validated['password'])) {
-                        $user->password = Hash::make($validated['password']);
-                    }
-                    $user->save();
-                    $user->syncRoles(['Empleado']);
-
-                    if (empty($empleado->user_id) || (int) $empleado->user_id !== (int) $user->id) {
-                        DB::table('empleados')
-                            ->where('id', $empleado->id)
-                            ->update([
-                                'user_id' => $user->id,
-                                'updated_at' => now(),
-                            ]);
-                    }
-                }
             });
 
             return back()->with('success', 'Empleado actualizado correctamente.');
@@ -485,12 +436,7 @@ class HomeController extends Controller
     public function destroyEmpleado(Empleado $empleado): RedirectResponse
     {
         try {
-            $userId = $empleado->user_id;
             $empleado->delete();
-
-            if ($userId) {
-                User::whereKey($userId)->delete();
-            }
         } catch (QueryException $exception) {
             return back()->with('error', 'No se puede eliminar el empleado porque tiene registros relacionados.');
         }
@@ -725,7 +671,7 @@ class HomeController extends Controller
 
         $currentEmployee = null;
         if ($currentUser->hasRole('Empleado')) {
-            $currentEmployee = Empleado::where('user_id', auth()->id())
+            $currentEmployee = Empleado::whereKey(auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
         }
@@ -1111,22 +1057,35 @@ class HomeController extends Controller
         ]);
 
         $currentUser = auth()->user();
-        $cliente = Cliente::where('email', $currentUser->email)->first();
+        $cliente = Cliente::whereKey($currentUser->id)->first();
 
         if (!$cliente) {
-            $cliente = Cliente::create([
-                'nombres' => $currentUser->name,
-                'apellidos' => '',
-                'email' => $currentUser->email,
-                'activo' => true,
-            ]);
+            $existingUser = User::find($currentUser->id);
+            if ($existingUser) {
+                if (!$existingUser->hasAnyRole(['Usuario', 'Cliente'])) {
+                    $existingUser->assignRole('Usuario');
+                }
+                if (empty($existingUser->nombres)) {
+                    $existingUser->nombres = $existingUser->name;
+                }
+                if ($existingUser->activo === null) {
+                    $existingUser->activo = true;
+                }
+                $existingUser->save();
+
+                $cliente = Cliente::whereKey($existingUser->id)->first();
+            }
+        }
+
+        if (!$cliente) {
+            return back()->with('error', 'No se pudo identificar al usuario para crear el ticket.');
         }
 
         $validated['cliente_id'] = $cliente->id;
         $validated['empleado_id'] = null;
 
         if ($currentUser->hasRole('Empleado')) {
-            $empleado = Empleado::where('user_id', $currentUser->id)
+            $empleado = Empleado::whereKey($currentUser->id)
                 ->orWhere('email', $currentUser->email)
                 ->first();
 
@@ -1177,7 +1136,7 @@ class HomeController extends Controller
         $currentUser = auth()->user();
 
         if ($currentUser->hasRole('Administrador')) {
-            $adminEmployee = Empleado::where('user_id', $currentUser->id)
+            $adminEmployee = Empleado::whereKey($currentUser->id)
                 ->orWhere('email', $currentUser->email)
                 ->first();
 
@@ -1197,7 +1156,7 @@ class HomeController extends Controller
             return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
         }
 
-        $employee = Empleado::with('departamentos')->where('user_id', $currentUser->id)
+        $employee = Empleado::with('departamentos')->whereKey($currentUser->id)
             ->orWhere('email', $currentUser->email)
             ->first();
 
@@ -1308,8 +1267,8 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
-            'cliente_id' => ['required', Rule::exists('clientes', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'empleado_id' => ['nullable', Rule::exists('empleados', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'cliente_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'empleado_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
             'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
@@ -1421,12 +1380,13 @@ class HomeController extends Controller
 
         if (auth()->check() && auth()->user()->hasRole('Usuario')) {
             $query->whereHas('cliente', function ($q): void {
-                $q->where('email', auth()->user()->email);
+                $q->whereKey(auth()->id())
+                    ->orWhere('email', auth()->user()->email);
             });
         }
 
         if (auth()->check() && auth()->user()->hasRole('Empleado')) {
-            $employee = Empleado::with('departamentos')->where('user_id', auth()->id())
+            $employee = Empleado::with('departamentos')->whereKey(auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
 
@@ -1498,7 +1458,7 @@ class HomeController extends Controller
         }
 
         if (auth()->user()->hasRole('Empleado')) {
-            $employee = Empleado::where('user_id', auth()->id())
+            $employee = Empleado::whereKey(auth()->id())
                 ->orWhere('email', auth()->user()->email)
                 ->first();
 
@@ -1510,7 +1470,12 @@ class HomeController extends Controller
         }
 
         if (auth()->user()->hasRole('Usuario')) {
-            return $ticket->cliente && $ticket->cliente->email === auth()->user()->email;
+            if (!$ticket->cliente) {
+                return false;
+            }
+
+            return (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
+                || $ticket->cliente->email === auth()->user()->email;
         }
 
         return false;
@@ -1526,7 +1491,7 @@ class HomeController extends Controller
             return false;
         }
 
-        $employee = Empleado::where('user_id', auth()->id())
+        $employee = Empleado::whereKey(auth()->id())
             ->orWhere('email', auth()->user()->email)
             ->first();
 
@@ -1559,7 +1524,7 @@ class HomeController extends Controller
             return false;
         }
 
-        $employee = Empleado::where('user_id', auth()->id())
+        $employee = Empleado::whereKey(auth()->id())
             ->orWhere('email', auth()->user()->email)
             ->first();
 
@@ -1576,7 +1541,12 @@ class HomeController extends Controller
             return false;
         }
 
-        return ($ticket->cliente->email ?? null) === auth()->user()->email;
+        if (!$ticket->cliente) {
+            return false;
+        }
+
+        return (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
+            || ($ticket->cliente->email ?? null) === auth()->user()->email;
     }
 
     private function hasActiveRemoteSessionForEmployee(int $employeeId, ?int $exceptSessionId = null): bool
@@ -1863,7 +1833,7 @@ POWERSHELL;
             return;
         }
 
-        $employee = Empleado::where('user_id', auth()->id())
+        $employee = Empleado::whereKey(auth()->id())
             ->orWhere('email', auth()->user()->email)
             ->first();
 

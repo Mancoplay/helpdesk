@@ -108,7 +108,7 @@ class LoginController extends Controller
             return false;
         }
 
-        $empleado = Empleado::where('user_id', $user->id)
+        $empleado = Empleado::whereKey($user->id)
             ->orWhere('email', $user->email)
             ->first();
 
@@ -121,7 +121,9 @@ class LoginController extends Controller
             return false;
         }
 
-        $cliente = Cliente::where('email', $user->email)->first();
+        $cliente = Cliente::whereKey($user->id)
+            ->orWhere('email', $user->email)
+            ->first();
 
         return $cliente ? !$cliente->activo : false;
     }

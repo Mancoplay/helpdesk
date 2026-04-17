@@ -70,9 +70,8 @@
                             @method('PUT')
                             <div class="modal-header"><h5 class="modal-title">Editar usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                             <div class="modal-body"><div class="row g-2">
-                                <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" value="{{ $cliente->nombres }}" required></div>
-                                <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control" value="{{ $cliente->segundo_nombre }}"></div>
-                                <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" value="{{ $cliente->apellidos }}" required></div>
+                                <div class="col-md-6"><label class="form-label">Nombre(s)</label><input type="text" name="nombres" class="form-control" value="{{ $cliente->nombres }}" required></div>
+                                <div class="col-md-6"><label class="form-label">Apellidos</label><input type="text" name="apellidos" class="form-control" value="{{ $cliente->apellidos }}" required></div>
                                 <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" value="{{ $cliente->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
                                 <div class="col-md-6">
                                     <label class="form-label">Contrasena (opcional)</label>
@@ -115,9 +114,8 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Nuevo usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body"><div class="row g-2">
-                <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombres" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">Segundo nombre</label><input type="text" name="segundo_nombre" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">Apellido</label><input type="text" name="apellidos" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Nombre(s)</label><input type="text" name="nombres" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Apellidos</label><input type="text" name="apellidos" class="form-control" required></div>
                 <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
                 <div class="col-md-6">
                     <label class="form-label">Contrasena</label>

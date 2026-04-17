@@ -94,11 +94,9 @@
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold">Informacion Personal</h6>
-                                                <label class="form-label">Nombre</label>
+                                                <label class="form-label">Nombre(s)</label>
                                                 <input type="text" name="nombres" class="form-control" value="{{ $empleado->nombres }}" required>
-                                                <label class="form-label mt-2">Segundo Nombre</label>
-                                                <input type="text" name="segundo_nombre" class="form-control" value="{{ $empleado->segundo_nombre }}">
-                                                <label class="form-label mt-2">Apellido</label>
+                                                <label class="form-label mt-2">Apellidos</label>
                                                 <input type="text" name="apellidos" class="form-control" value="{{ $empleado->apellidos }}" required>
                                                 <label class="form-label mt-2">Contacto</label>
                                                 <input type="text" name="telefono" class="form-control" value="{{ $empleado->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
@@ -194,11 +192,9 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <h6 class="fw-bold">Informacion Personal</h6>
-                            <label class="form-label">Nombre</label>
+                            <label class="form-label">Nombre(s)</label>
                             <input type="text" name="nombres" class="form-control" required>
-                            <label class="form-label mt-2">Segundo Nombre</label>
-                            <input type="text" name="segundo_nombre" class="form-control">
-                            <label class="form-label mt-2">Apellido</label>
+                            <label class="form-label mt-2">Apellidos</label>
                             <input type="text" name="apellidos" class="form-control" required>
                             <label class="form-label mt-2">Contacto</label>
                             <input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');">

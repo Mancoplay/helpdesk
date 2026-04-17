@@ -29,11 +29,12 @@ new class extends Component {
     {
         $user = Auth::user();
         $linkedEmpleado = Empleado::query()
-            ->where('user_id', $user->id)
+            ->whereKey($user->id)
             ->orWhere('email', $user->email)
             ->first();
         $linkedCliente = Cliente::query()
-            ->where('email', $user->email)
+            ->whereKey($user->id)
+            ->orWhere('email', $user->email)
             ->first();
 
         $validated = $this->validate([
@@ -63,9 +64,6 @@ new class extends Component {
             if ($oldEmail !== $validated['email']) {
                 if ($linkedEmpleado) {
                     $linkedEmpleado->email = $validated['email'];
-                    if (empty($linkedEmpleado->user_id)) {
-                        $linkedEmpleado->user_id = $user->id;
-                    }
                     $linkedEmpleado->save();
                 }
 

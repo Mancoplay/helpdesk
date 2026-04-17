@@ -2,36 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Cliente extends Model
+class Cliente extends User
 {
-    use HasFactory;
+    protected $table = 'users';
 
-    protected $fillable = [
-        'nombres',
-        'segundo_nombre',
-        'apellidos',
-        'email',
-        'telefono',
-        'direccion',
-        'empresa',
-        'activo',
-    ];
-
-    protected $casts = [
-        'activo' => 'boolean',
-    ];
+    protected static function booted(): void
+    {
+        static::addGlobalScope('cliente_role', function (Builder $query): void {
+            $query->whereHas('roles', function (Builder $roleQuery): void {
+                $roleQuery->whereIn('name', ['Usuario', 'Cliente']);
+            });
+        });
+    }
 
     public function tickets(): HasMany
     {
-        return $this->hasMany(Ticket::class);
-    }
-
-    public function getNombreCompletoAttribute(): string
-    {
-        return trim(collect([$this->nombres, $this->segundo_nombre, $this->apellidos])->filter()->implode(' '));
+        return $this->hasMany(Ticket::class, 'cliente_id');
     }
 }
+

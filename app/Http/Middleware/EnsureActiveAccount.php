@@ -19,7 +19,7 @@ class EnsureActiveAccount
         $user = $request->user();
 
         if ($user->hasRole('Empleado')) {
-            $empleado = Empleado::where('user_id', $user->id)
+            $empleado = Empleado::whereKey($user->id)
                 ->orWhere('email', $user->email)
                 ->first();
 
@@ -29,7 +29,9 @@ class EnsureActiveAccount
         }
 
         if ($user->hasAnyRole(['Usuario', 'Cliente'])) {
-            $cliente = Cliente::where('email', $user->email)->first();
+            $cliente = Cliente::whereKey($user->id)
+                ->orWhere('email', $user->email)
+                ->first();
 
             if ($cliente && !$cliente->activo) {
                 return $this->logoutDisabledUser($request, $user->email);
@@ -51,4 +53,3 @@ class EnsureActiveAccount
             ->withInput(['email' => $email]);
     }
 }
-
