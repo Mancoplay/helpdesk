@@ -54,11 +54,19 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::get('/tickets', [HomeController::class, 'tickets'])->name('tickets.index');
     Route::get('/tickets/{ticket}', [HomeController::class, 'showTicket'])->name('tickets.show');
-    Route::get('/tickets/{ticket}/live', [HomeController::class, 'ticketLiveData'])->name('tickets.live');
+    Route::get('/tickets/{ticket}/live', [HomeController::class, 'ticketLiveData'])
+        ->middleware('throttle:tickets-live')
+        ->name('tickets.live');
     Route::get('/tickets/{ticket}/adjuntos/{mensaje}', [HomeController::class, 'showTicketAttachment'])->name('tickets.attachments.show');
-    Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])->name('tickets.messages.store');
-    Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])->name('tickets.remote.request');
-    Route::patch('/tickets/{ticket}/remote/{remoteSession}', [HomeController::class, 'updateRemoteSession'])->name('tickets.remote.update');
+    Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])
+        ->middleware('throttle:tickets-message')
+        ->name('tickets.messages.store');
+    Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])
+        ->middleware('throttle:tickets-remote')
+        ->name('tickets.remote.request');
+    Route::patch('/tickets/{ticket}/remote/{remoteSession}', [HomeController::class, 'updateRemoteSession'])
+        ->middleware('throttle:tickets-remote')
+        ->name('tickets.remote.update');
     Route::delete('/tickets/{ticket}', [HomeController::class, 'destroyTicket'])->name('tickets.destroy');
 });
 
@@ -80,7 +88,9 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('/notificaciones/resumen', [NotificationController::class, 'unreadSummary'])->name('notifications.summary');
+    Route::get('/notificaciones/resumen', [NotificationController::class, 'unreadSummary'])
+        ->middleware('throttle:notifications-summary')
+        ->name('notifications.summary');
     Route::get('/notificaciones/{notificationId}/abrir', [NotificationController::class, 'open'])->name('notifications.open');
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 

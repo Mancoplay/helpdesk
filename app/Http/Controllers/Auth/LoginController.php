@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
@@ -61,6 +62,21 @@ class LoginController extends Controller
         $this->incrementLoginAttempts($request);
 
         return $this->sendFailedLoginResponse($request);
+    }
+
+    protected function maxAttempts(): int
+    {
+        return 5;
+    }
+
+    protected function decayMinutes(): int
+    {
+        return 2;
+    }
+
+    protected function throttleKey(Request $request): string
+    {
+        return Str::lower((string) $request->input('email')) . '|' . $request->ip();
     }
 
     protected function authenticated(Request $request, User $user): ?RedirectResponse

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
+        $middleware->appendToGroup('web', \App\Http\Middleware\SecurityHeaders::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureActiveAccount::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\PreventBackHistory::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\RunPendingTicketReminderFallback::class);

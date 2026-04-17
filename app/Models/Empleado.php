@@ -11,6 +11,11 @@ class Empleado extends User
 {
     protected $table = 'users';
 
+    public function getMorphClass()
+    {
+        return User::class;
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope('empleado_role', function (Builder $query): void {
@@ -36,4 +41,3 @@ class Empleado extends User
         return $this->hasMany(Ticket::class, 'empleado_id');
     }
 }
-

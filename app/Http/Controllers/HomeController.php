@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\Process\Process;
 use Throwable;
@@ -1212,6 +1213,19 @@ class HomeController extends Controller
         }
         $files = $files->filter()->take(5)->values();
 
+        $allowedExtensions = [
+            'jpg', 'jpeg', 'png', 'webp', 'pdf',
+            'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'txt', 'zip', 'rar', '7z', 'csv',
+        ];
+        $blockedMimePrefixes = [
+            'text/x-php',
+            'application/x-httpd-php',
+            'application/x-php',
+            'application/x-sh',
+            'application/x-msdownload',
+        ];
+
         if (empty($validated['mensaje']) && $files->isEmpty()) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Debes escribir un mensaje o subir un archivo.'], 422);
@@ -1242,15 +1256,41 @@ class HomeController extends Controller
         }
 
         foreach ($files as $index => $file) {
+            $extension = mb_strtolower((string) $file->getClientOriginalExtension());
+            if (!in_array($extension, $allowedExtensions, true)) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'El tipo de archivo no esta permitido.'], 422);
+                }
+
+                return back()->with('error', 'Uno de los archivos tiene una extension no permitida.');
+            }
+
+            $detectedMime = (string) ($file->getMimeType() ?? '');
+            if (in_array($detectedMime, $blockedMimePrefixes, true)) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Se bloqueo un archivo potencialmente peligroso.'], 422);
+                }
+
+                return back()->with('error', 'Se detecto un archivo potencialmente peligroso.');
+            }
+
             $path = $file->store($this->ticketAttachmentDirectory($ticket), $this->ticketAttachmentDisk());
+            $safeOriginalName = Str::of((string) $file->getClientOriginalName())
+                ->replaceMatches('/[^\pL\pN\.\-\_\s]/u', '')
+                ->limit(180, '')
+                ->trim()
+                ->toString();
+            if ($safeOriginalName === '') {
+                $safeOriginalName = 'adjunto.' . $extension;
+            }
 
             $createdMessage = $ticket->mensajes()->create([
                 'user_id' => auth()->id(),
                 'mensaje' => $index === 0 ? ($validated['mensaje'] ?? '') : '',
                 'tipo' => 'comentario',
                 'imagen_path' => $path,
-                'imagen_nombre' => $file->getClientOriginalName(),
-                'imagen_mime' => $file->getClientMimeType(),
+                'imagen_nombre' => $safeOriginalName,
+                'imagen_mime' => $detectedMime !== '' ? $detectedMime : $file->getClientMimeType(),
                 'imagen_size' => $file->getSize(),
             ]);
 
