@@ -243,6 +243,39 @@ class HomeController extends Controller
         $summaryBase = User::query()->where('activo', true);
         $this->applyUsersDirectoryFilters($summaryBase, $search, $roleFilter, $departamentoId, $areaTrabajoId, '', $fechaDesde, $fechaHasta);
 
+        $detalleTicketsUsuario = collect();
+        $usuarioDetalle = null;
+
+        if ($usuarios->count() === 1) {
+            $usuarioDetalle = $usuarios->first();
+
+            $detalleTicketsUsuario = Ticket::with(['cliente', 'empleado', 'departamento'])
+                ->where(function ($ticketQuery) use ($usuarioDetalle): void {
+                    $ticketQuery->where('cliente_id', $usuarioDetalle->id)
+                        ->orWhere('empleado_id', $usuarioDetalle->id);
+                })
+                ->when($fechaDesde !== '', fn ($ticketQuery) => $ticketQuery->whereDate('created_at', '>=', $fechaDesde))
+                ->when($fechaHasta !== '', fn ($ticketQuery) => $ticketQuery->whereDate('created_at', '<=', $fechaHasta))
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(function (Ticket $ticket) use ($usuarioDetalle) {
+                    $isCreator = (int) $ticket->cliente_id === (int) $usuarioDetalle->id;
+                    $isAttender = (int) $ticket->empleado_id === (int) $usuarioDetalle->id;
+                    $participacion = $isCreator && $isAttender
+                        ? 'Creado y atendido'
+                        : ($isCreator ? 'Creado' : 'Atendido');
+
+                    return [
+                        'codigo' => $ticket->codigo,
+                        'asunto' => $ticket->asunto,
+                        'departamento' => $ticket->departamento->nombre ?? '-',
+                        'estado' => $ticket->estado,
+                        'participacion' => $participacion,
+                        'fecha' => optional($ticket->created_at)->format('Y-m-d H:i'),
+                    ];
+                });
+        }
+
         return view('reportes.usuarios', [
             'usuarios' => $usuarios,
             'searchQuery' => $search,
@@ -259,6 +292,8 @@ class HomeController extends Controller
                 'total' => (clone $summaryBase)->count(),
                 'tickets_total' => (int) $usuarios->sum('tickets_total_count'),
             ],
+            'usuarioDetalle' => $usuarioDetalle,
+            'detalleTicketsUsuario' => $detalleTicketsUsuario,
             'generatedAt' => now(),
             'menuBadges' => $this->menuBadges(),
         ]);
