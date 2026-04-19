@@ -246,7 +246,7 @@ class HomeController extends Controller
         $detalleTicketsUsuario = collect();
         $usuarioDetalle = null;
 
-        if ($usuarios->count() === 1) {
+        if ($search !== '' && $usuarios->count() === 1) {
             $usuarioDetalle = $usuarios->first();
 
             $detalleTicketsUsuario = Ticket::with(['cliente', 'empleado', 'departamento'])

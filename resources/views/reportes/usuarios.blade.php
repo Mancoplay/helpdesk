@@ -123,7 +123,7 @@
 </div>
 
 @if(($detalleTicketsUsuario ?? collect())->isNotEmpty() && !empty($usuarioDetalle))
-<div class="card mb-3 js-table-results">
+<div class="card mb-3 js-table-results js-user-ticket-detail">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
         <h3 class="card-title mb-0">Detalle de tickets del usuario</h3>
         <div class="small text-muted">
@@ -198,8 +198,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form.js-table-filters').forEach((form) => {
+        const searchInput = form.querySelector('input[name="q"]');
         const periodoSelect = form.querySelector('.js-periodo-select');
         const customFields = form.querySelectorAll('.js-periodo-custom');
+        const detailCard = document.querySelector('.js-user-ticket-detail');
 
         if (!periodoSelect || customFields.length === 0) {
             return;
@@ -217,6 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         periodoSelect.addEventListener('change', toggleCustomRange);
+        if (searchInput && detailCard) {
+            const syncDetailVisibility = () => {
+                detailCard.classList.toggle('d-none', searchInput.value.trim() === '');
+            };
+
+            searchInput.addEventListener('input', syncDetailVisibility);
+            searchInput.addEventListener('change', syncDetailVisibility);
+            syncDetailVisibility();
+        }
+
         toggleCustomRange();
     });
 });
