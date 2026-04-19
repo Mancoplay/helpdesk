@@ -317,7 +317,14 @@
                             </form>
                         @else
                             <div class="input-group">
-                                <input type="text" id="remoteSupportCode" class="form-control" value="{{ $remoteSession->support_code }}" readonly>
+                                <input
+                                    type="text"
+                                    id="remoteSupportCode"
+                                    class="form-control"
+                                    value="{{ $remoteSession->support_code }}"
+                                    maxlength="40"
+                                    placeholder="Ej: 123 456 789"
+                                >
                             </div>
                         @endif
                     </div>
@@ -326,7 +333,7 @@
                             type="button"
                             id="openCopyAnyDeskBtn"
                             class="btn btn-outline-dark w-100"
-                            {{ blank($remoteSession->support_code) && !$canManageRemoteAsClient ? 'disabled' : '' }}
+                            {{ blank($remoteSession->support_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
                         >
                             Abrir y copiar codigo de AnyDesk
                         </button>
@@ -374,6 +381,7 @@
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
+        const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
         const shouldSyncSupportCode = false;
 
         const openAnyDesk = function (code) {
@@ -703,6 +711,7 @@ closeAnyDeskBtn.disabled = true;
         const remoteCodeInput = document.getElementById('remoteSupportCode');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
+        const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
 
         let lastMessageId = Number(chatScroll.dataset.lastMessageId || 0);
         let currentState = @json((string) $ticket->estado);
@@ -806,14 +815,15 @@ closeAnyDeskBtn.disabled = true;
                 const newCode = String(remoteData.support_code || '').trim();
                 const currentInputValue = String(remoteCodeInput.value || '').trim();
                 const isEditingRemoteCode = document.activeElement === remoteCodeInput;
-                const hasPendingLocalCode = canManageRemoteAsClient && currentInputValue !== newCode;
+                const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
+                const hasPendingLocalCode = canEditRemoteCode && currentInputValue !== newCode;
 
                 if (!isEditingRemoteCode && !hasPendingLocalCode) {
                     remoteCodeInput.value = newCode;
                 }
 
                 if (openCopyAnyDeskBtn) {
-                    openCopyAnyDeskBtn.disabled = newCode === '' && !canManageRemoteAsClient;
+                    openCopyAnyDeskBtn.disabled = newCode === '' && !canEditRemoteCode;
                 }
             }
 
