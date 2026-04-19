@@ -83,6 +83,30 @@
     </div>
 </div>
 
+<section class="report-print-header">
+    <h1>REPORTE DE USUARIOS</h1>
+    <table class="report-print-meta">
+        <tbody>
+            <tr>
+                <th>Fecha y hora</th>
+                <td>{{ $generatedAt->format('d/m/Y H:i') }}</td>
+            </tr>
+            <tr>
+                <th>Periodo</th>
+                <td>{{ ($selectedFechaDesde ?? '') !== '' ? $selectedFechaDesde : 'Inicio' }} a {{ ($selectedFechaHasta ?? '') !== '' ? $selectedFechaHasta : 'Hoy' }}</td>
+            </tr>
+            <tr>
+                <th>Total de usuarios</th>
+                <td>{{ $summary['total'] ?? 0 }}</td>
+            </tr>
+            <tr>
+                <th>Total de tickets</th>
+                <td>{{ $summary['tickets_total'] ?? 0 }}</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
 <div class="card mb-3 js-table-results">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
         <h3 class="card-title mb-0">Resultado del reporte</h3>
@@ -160,39 +184,6 @@
 @endif
 
 @endsection
-
-@push('styles')
-<style>
-@media print {
-    .app-header,
-    .app-sidebar,
-    .app-content-header,
-    .app-footer,
-    .report-hide-print,
-    .pagination {
-        display: none !important;
-    }
-
-    .app-main,
-    .app-content,
-    .container-fluid,
-    .card,
-    .card-body,
-    .card-header,
-    .card-footer {
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        box-shadow: none !important;
-        background: #fff !important;
-    }
-
-    .report-summary {
-        display: block !important;
-    }
-}
-</style>
-@endpush
 
 @push('scripts')
 <script>
