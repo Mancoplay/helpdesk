@@ -266,17 +266,18 @@ textarea:focus {
 .checkpoint-switch {
     border: 2px solid #74c276;
     border-radius: 999px;
-    width: 108px;
-    height: 50px;
+    width: 60px;
+    height: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
+    vertical-align: middle;
     position: relative;
-    padding: 0 14px;
+    padding: 0 7px;
     background: linear-gradient(180deg, #8be088 0%, #68ca69 100%);
     color: #1c7f27;
     font-weight: 800;
-    font-size: 1.9rem;
+    font-size: 1.10rem;
     letter-spacing: 0;
     cursor: pointer;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42), 0 3px 8px rgba(33, 66, 34, 0.28);
@@ -309,8 +310,17 @@ textarea:focus {
 .checkpoint-switch__label {
     z-index: 1;
     line-height: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 4px;
     font-size: 0;
     user-select: none;
+}
+
+.checkpoint-switch.is-off .checkpoint-switch__label {
+    justify-content: flex-end;
 }
 
 .checkpoint-switch__label::before {
@@ -320,30 +330,30 @@ textarea:focus {
 
 .checkpoint-switch.is-on .checkpoint-switch__label::before {
     content: "\2713";
-    font-size: 2rem;
+    font-size: 1.10rem;
     font-weight: 800;
 }
 
 .checkpoint-switch.is-off .checkpoint-switch__label::before {
     content: "\2715";
-    font-size: 2rem;
+    font-size: 1.10rem;
     font-weight: 800;
 }
 
 .checkpoint-switch__knob {
-    width: 42px;
-    height: 42px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: linear-gradient(180deg, #ffffff 0%, #f3f3f3 100%);
     border: 1px solid #bebebe;
     position: absolute;
-    top: 2px;
+    top: 1px;
     box-shadow: 0 2px 5px rgba(40, 40, 40, 0.28);
     transition: left 0.2s ease;
 }
 
 .checkpoint-switch.is-on .checkpoint-switch__knob {
-    left: 62px;
+    left: 34px;
 }
 
 .checkpoint-switch.is-off .checkpoint-switch__knob {
