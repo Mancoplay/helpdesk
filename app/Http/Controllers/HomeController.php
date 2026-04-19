@@ -17,6 +17,7 @@ use App\Models\Ticket;
 use App\Models\TicketMensaje;
 use App\Models\TicketRemoteSession;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -169,29 +170,7 @@ class HomeController extends Controller
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $roleFilter = trim((string) $request->get('rol', ''));
         $perPage = $this->resolvePerPage($request);
-
-        if ($search !== '') {
-            $terms = preg_split('/\s+/', mb_strtolower($search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-
-            $query->where(function ($groupedQuery) use ($terms): void {
-                foreach ($terms as $term) {
-                    $like = '%' . $term . '%';
-                    $groupedQuery->where(function ($searchQuery) use ($like): void {
-                        $searchQuery->whereRaw('LOWER(nombres) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(apellidos) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(name) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(email) LIKE ?', [$like])
-                            ->orWhereRaw('LOWER(telefono) LIKE ?', [$like]);
-                    });
-                }
-            });
-        }
-
-        if ($roleFilter !== '') {
-            $query->whereHas('roles', function ($rolesQuery) use ($roleFilter): void {
-                $rolesQuery->where('name', $roleFilter);
-            });
-        }
+        $this->applyUsersDirectoryFilters($query, $search, $roleFilter);
 
         $usuarios = $query->paginate($perPage)->withQueryString();
 
@@ -203,6 +182,84 @@ class HomeController extends Controller
             'selectedRole' => $roleFilter,
             'searchQuery' => $search,
             'perPage' => $perPage,
+            'menuBadges' => $this->menuBadges(),
+        ]);
+    }
+
+    public function reportesUsuarios(Request $request)
+    {
+        $this->ensureBoliviaDepartments();
+        $this->ensureDefaultWorkAreas();
+
+        $validated = $request->validate([
+            'periodo' => ['nullable', Rule::in(['mes_actual', 'mes_anterior', 'personalizado'])],
+            'fecha_desde' => ['nullable', 'date'],
+            'fecha_hasta' => ['nullable', 'date', 'after_or_equal:fecha_desde'],
+        ]);
+
+        $search = trim((string) $request->get('q', $request->get('search', '')));
+        $roleFilter = trim((string) $request->get('rol', ''));
+        $departamentoId = (int) $request->get('departamento_id', 0);
+        $areaTrabajoId = (int) $request->get('area_trabajo_id', 0);
+        $periodo = $validated['periodo'] ?? 'mes_actual';
+
+        $fechaDesde = '';
+        $fechaHasta = '';
+
+        if ($periodo === 'mes_actual') {
+            $fechaDesde = now()->startOfMonth()->toDateString();
+            $fechaHasta = now()->endOfMonth()->toDateString();
+        } elseif ($periodo === 'mes_anterior') {
+            $lastMonth = now()->subMonthNoOverflow();
+            $fechaDesde = $lastMonth->copy()->startOfMonth()->toDateString();
+            $fechaHasta = $lastMonth->copy()->endOfMonth()->toDateString();
+        } else {
+            $fechaDesde = $validated['fecha_desde'] ?? '';
+            $fechaHasta = $validated['fecha_hasta'] ?? '';
+        }
+
+        $query = User::with(['roles', 'departamento', 'areaTrabajo'])
+            ->where('activo', true)
+            ->select('users.*')
+            ->selectSub(function ($subQuery) use ($fechaDesde, $fechaHasta): void {
+                $subQuery->from('tickets')
+                    ->selectRaw('COUNT(DISTINCT tickets.id)')
+                    ->where(function ($ticketFilter) use ($fechaDesde, $fechaHasta): void {
+                        $ticketFilter->whereColumn('tickets.cliente_id', 'users.id')
+                            ->orWhereColumn('tickets.empleado_id', 'users.id');
+                    });
+
+                if ($fechaDesde !== '') {
+                    $subQuery->whereDate('tickets.created_at', '>=', $fechaDesde);
+                }
+                if ($fechaHasta !== '') {
+                    $subQuery->whereDate('tickets.created_at', '<=', $fechaHasta);
+                }
+            }, 'tickets_total_count')
+            ->latest();
+        $this->applyUsersDirectoryFilters($query, $search, $roleFilter, $departamentoId, $areaTrabajoId, '', $fechaDesde, $fechaHasta);
+
+        $usuarios = $query->get();
+        $summaryBase = User::query()->where('activo', true);
+        $this->applyUsersDirectoryFilters($summaryBase, $search, $roleFilter, $departamentoId, $areaTrabajoId, '', $fechaDesde, $fechaHasta);
+
+        return view('reportes.usuarios', [
+            'usuarios' => $usuarios,
+            'searchQuery' => $search,
+            'selectedRole' => $roleFilter,
+            'selectedPeriodo' => $periodo,
+            'selectedDepartamentoId' => $departamentoId > 0 ? $departamentoId : '',
+            'selectedAreaTrabajoId' => $areaTrabajoId > 0 ? $areaTrabajoId : '',
+            'selectedFechaDesde' => $fechaDesde,
+            'selectedFechaHasta' => $fechaHasta,
+            'rolesDisponibles' => ['Administrador', 'Usuario', 'Empleado'],
+            'departamentosBolivia' => $this->orderedBoliviaDepartments(),
+            'areasTrabajoActivas' => $this->orderedFunctionalWorkAreas(),
+            'summary' => [
+                'total' => (clone $summaryBase)->count(),
+                'tickets_total' => (int) $usuarios->sum('tickets_total_count'),
+            ],
+            'generatedAt' => now(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -1897,6 +1954,61 @@ POWERSHELL;
         $perPage = (int) $request->get('per_page', 10);
 
         return in_array($perPage, [10, 15], true) ? $perPage : 10;
+    }
+
+    private function applyUsersDirectoryFilters(
+        Builder $query,
+        string $search = '',
+        string $roleFilter = '',
+        int $departamentoId = 0,
+        int $areaTrabajoId = 0,
+        string $estadoFilter = '',
+        string $fechaDesde = '',
+        string $fechaHasta = ''
+    ): void {
+        if ($search !== '') {
+            $terms = preg_split('/\s+/', mb_strtolower($search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $query->where(function ($groupedQuery) use ($terms): void {
+                foreach ($terms as $term) {
+                    $like = '%' . $term . '%';
+                    $groupedQuery->where(function ($searchQuery) use ($like): void {
+                        $searchQuery->whereRaw('LOWER(nombres) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(apellidos) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(email) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(telefono) LIKE ?', [$like]);
+                    });
+                }
+            });
+        }
+
+        if ($roleFilter !== '') {
+            $query->whereHas('roles', function ($rolesQuery) use ($roleFilter): void {
+                $rolesQuery->where('name', $roleFilter);
+            });
+        }
+
+        if ($departamentoId > 0) {
+            $query->where('departamento_id', $departamentoId);
+        }
+
+        if ($areaTrabajoId > 0) {
+            $query->where('area_trabajo_id', $areaTrabajoId);
+        }
+
+        if ($estadoFilter === 'activos') {
+            $query->where('activo', true);
+        } elseif ($estadoFilter === 'inactivos') {
+            $query->where('activo', false);
+        }
+
+        if ($fechaDesde !== '') {
+            $query->whereDate('created_at', '>=', $fechaDesde);
+        }
+
+        if ($fechaHasta !== '') {
+            $query->whereDate('created_at', '<=', $fechaHasta);
+        }
     }
 
     private function orderedBoliviaDepartments()

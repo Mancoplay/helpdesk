@@ -391,6 +391,7 @@
             document.querySelectorAll('form.js-table-filters').forEach(function (form) {
                 const searchInput = form.querySelector('input[name="q"]');
                 const filterSelects = form.querySelectorAll('select');
+                const dateInputs = form.querySelectorAll('input[type="date"]');
                 let resultsCard = document.querySelector('.js-table-results');
                 let searchTimer = null;
                 let activeController = null;
@@ -467,6 +468,12 @@
 
                 filterSelects.forEach(function (select) {
                     select.addEventListener('change', function () {
+                        loadFilteredTable();
+                    });
+                });
+
+                dateInputs.forEach(function (dateInput) {
+                    dateInput.addEventListener('change', function () {
                         loadFilteredTable();
                     });
                 });

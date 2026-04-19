@@ -26,6 +26,7 @@ Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::get('/usuarios', [HomeController::class, 'clientes'])->name('usuarios.index');
+    Route::get('/reportes/usuarios', [HomeController::class, 'reportesUsuarios'])->name('reportes.usuarios');
     Route::get('/usuarios/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('usuarios.review');
     Route::post('/usuarios', [HomeController::class, 'storeCliente'])->name('usuarios.store');
     Route::put('/usuarios/{user}', [HomeController::class, 'updateCliente'])->name('usuarios.update');

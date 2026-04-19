@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -66,5 +67,15 @@ class User extends Authenticatable
     public function areaTrabajo(): BelongsTo
     {
         return $this->belongsTo(AreaTrabajo::class, 'area_trabajo_id');
+    }
+
+    public function ticketsComoCliente(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'cliente_id');
+    }
+
+    public function ticketsComoEmpleado(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'empleado_id');
     }
 }

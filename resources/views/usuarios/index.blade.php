@@ -11,9 +11,14 @@
 @section('content')
 <div class="card mb-3">
     <div class="card-body">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUsuarioModal">
-            <i class="fas fa-plus me-1"></i> Agregar nuevo usuario
-        </button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUsuarioModal">
+                <i class="fas fa-plus me-1"></i> Agregar nuevo usuario
+            </button>
+            <a href="{{ route('reportes.usuarios') }}" class="btn btn-outline-primary">
+                <i class="fas fa-file-lines me-1"></i> Generar reporte
+            </a>
+        </div>
     </div>
 </div>
 
