@@ -31,7 +31,7 @@
 
 <div class="card mb-3 report-hide-print">
     <div class="card-body">
-        <form method="GET" action="{{ route('reportes.usuarios') }}" class="row g-2 align-items-end js-table-filters">
+        <form method="GET" action="{{ route('reportes.usuarios') }}" class="row g-2 align-items-end js-report-filters">
             <div class="col-md-3">
                 <label class="form-label mb-1">Buscar</label>
                 <input type="text" name="q" class="form-control" value="{{ $searchQuery ?? '' }}" placeholder="Nombre, correo o telefono">
@@ -107,6 +107,7 @@
     </table>
 </section>
 
+<div class="js-report-results">
 <div class="card mb-3 js-table-results">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
         <h3 class="card-title mb-0">Resultado del reporte</h3>
@@ -182,6 +183,7 @@
     </div>
 </div>
 @endif
+</div>
 
 @endsection
 
@@ -328,11 +330,13 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('form.js-table-filters').forEach((form) => {
+    document.querySelectorAll('form.js-report-filters').forEach((form) => {
         const searchInput = form.querySelector('input[name="q"]');
         const periodoSelect = form.querySelector('.js-periodo-select');
         const customFields = form.querySelectorAll('.js-periodo-custom');
-        const detailCard = document.querySelector('.js-user-ticket-detail');
+        let resultsWrapper = document.querySelector('.js-report-results');
+        let searchTimer = null;
+        let activeController = null;
 
         if (!periodoSelect || customFields.length === 0) {
             return;
@@ -349,15 +353,126 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        periodoSelect.addEventListener('change', toggleCustomRange);
-        if (searchInput && detailCard) {
-            const syncDetailVisibility = () => {
-                detailCard.classList.toggle('d-none', searchInput.value.trim() === '');
-            };
+        const loadReportResults = (targetUrl = null) => {
+            if (!resultsWrapper) {
+                form.submit();
+                return;
+            }
 
-            searchInput.addEventListener('input', syncDetailVisibility);
-            searchInput.addEventListener('change', syncDetailVisibility);
-            syncDetailVisibility();
+            const params = new URLSearchParams(new FormData(form));
+            params.delete('page');
+
+            if (targetUrl) {
+                const parsedTargetUrl = new URL(targetUrl, window.location.origin);
+                const page = parsedTargetUrl.searchParams.get('page');
+                if (page) {
+                    params.set('page', page);
+                }
+            }
+
+            const requestUrl = `${form.action}?${params.toString()}`;
+
+            if (activeController) {
+                activeController.abort();
+            }
+
+            activeController = new AbortController();
+
+            fetch(requestUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: activeController.signal,
+            })
+                .then((response) => response.text())
+                .then((html) => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newResultsWrapper = doc.querySelector('.js-report-results');
+
+                    if (!newResultsWrapper || !resultsWrapper) {
+                        window.location.href = requestUrl;
+                        return;
+                    }
+
+                    resultsWrapper.replaceWith(newResultsWrapper);
+                    resultsWrapper = newResultsWrapper;
+                    history.replaceState({}, '', requestUrl);
+                })
+                .catch((error) => {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    window.location.href = requestUrl;
+                });
+        };
+
+        const scheduleResultsLoad = (delayMs = 700) => {
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+
+            searchTimer = setTimeout(() => loadReportResults(), delayMs);
+        };
+
+        periodoSelect.addEventListener('change', toggleCustomRange);
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const value = searchInput.value.trim();
+                const currentDetail = document.querySelector('.js-user-ticket-detail');
+
+                if (currentDetail && value === '') {
+                    currentDetail.classList.add('d-none');
+                }
+
+                if (value.length === 1) {
+                    return;
+                }
+
+                scheduleResultsLoad(700);
+            });
+
+            searchInput.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                if (searchTimer) {
+                    clearTimeout(searchTimer);
+                }
+                loadReportResults();
+            });
+        }
+
+        form.querySelectorAll('select[name], input[type="date"][name]').forEach((field) => {
+            field.addEventListener('change', () => {
+                if (searchTimer) {
+                    clearTimeout(searchTimer);
+                }
+                loadReportResults();
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            const paginationLink = event.target.closest('.js-report-results .pagination a[href]');
+            if (!paginationLink) {
+                return;
+            }
+
+            event.preventDefault();
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+            loadReportResults(paginationLink.href);
+        });
+
+        if (searchInput && searchInput.value.trim() === '') {
+            const currentDetail = document.querySelector('.js-user-ticket-detail');
+            if (currentDetail) {
+                currentDetail.classList.add('d-none');
+            }
         }
 
         toggleCustomRange();
