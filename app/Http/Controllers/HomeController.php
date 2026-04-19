@@ -72,7 +72,7 @@ class HomeController extends Controller
             'total_usuarios' => User::count(),
             'total_clientes' => Cliente::count(),
             'total_empleados' => Empleado::count(),
-            'total_departamentos' => Departamento::count(),
+            'total_areas_trabajo' => AreaTrabajo::count(),
             'total_tickets' => (clone $ticketsBase)->count(),
             'pendientes' => (int) ($statusCounts['pendiente'] ?? 0),
             'en_proceso' => (int) ($statusCounts['en_proceso'] ?? 0),
@@ -598,13 +598,15 @@ class HomeController extends Controller
     public function departamentos(Request $request)
     {
         $this->ensureDefaultWorkAreas();
-        $query = AreaTrabajo::latest();
+        $query = AreaTrabajo::query()->orderBy('nombre');
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
 
         if ($search !== '') {
-            $query->where('nombre', 'like', '%' . $search . '%')
-                ->orWhere('descripcion', 'like', '%' . $search . '%');
+            $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery->where('nombre', 'like', '%' . $search . '%')
+                    ->orWhere('descripcion', 'like', '%' . $search . '%');
+            });
         }
 
         $areasTrabajo = $query->paginate($perPage)->withQueryString();
@@ -2135,15 +2137,10 @@ POWERSHELL;
     private function ensureDefaultWorkAreas(): void
     {
         foreach ($this->defaultWorkAreaNames() as $name) {
-            $area = AreaTrabajo::query()->firstOrCreate(
+            AreaTrabajo::query()->firstOrCreate(
                 ['nombre' => $name],
                 ['descripcion' => 'Area de trabajo', 'activo' => true],
             );
-
-            if (!$area->activo) {
-                $area->activo = true;
-                $area->save();
-            }
         }
     }
 

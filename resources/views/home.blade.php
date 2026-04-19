@@ -42,8 +42,8 @@
                 <div class="card-body d-flex align-items-center">
                     <div class="icon bg-primary"><i class="fas fa-building"></i></div>
                     <div>
-                        <div class="label">Total Departamentos</div>
-                        <p class="value">{{ $stats['total_departamentos'] }}</p>
+                        <div class="label">Total Areas de trabajo</div>
+                        <p class="value">{{ $stats['total_areas_trabajo'] }}</p>
                     </div>
                 </div>
             </div>
@@ -101,7 +101,7 @@
             <div class="card-body d-flex align-items-center">
                 <div class="icon bg-danger"><i class="fas fa-times-circle"></i></div>
                 <div>
-                    <div class="label">Tickets cerrados</div>
+                    <div class="label">Tickets Eliminados</div>
                     <p class="value">{{ $stats['cerrado'] }}</p>
                 </div>
             </div>

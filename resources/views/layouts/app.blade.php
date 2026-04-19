@@ -490,6 +490,56 @@
                 });
             });
 
+            document.querySelectorAll('form').forEach(function (form) {
+                const checkpointButton = form.querySelector('.checkpoint-switch');
+
+                if (!checkpointButton) {
+                    return;
+                }
+
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.checkpointSubmitting === '1') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    form.dataset.checkpointSubmitting = '1';
+
+                    const nextIsOn = checkpointButton.classList.contains('is-off');
+                    checkpointButton.classList.toggle('is-on', nextIsOn);
+                    checkpointButton.classList.toggle('is-off', !nextIsOn);
+                    checkpointButton.title = nextIsOn ? 'Habilitado' : 'Deshabilitado';
+
+                    const labelElement = checkpointButton.querySelector('.checkpoint-switch__label');
+                    if (labelElement) {
+                        labelElement.textContent = nextIsOn ? 'ON' : 'OFF';
+                    }
+
+                    const syncTarget = form.getAttribute('data-sync-active-target');
+                    if (syncTarget) {
+                        const activeRow = document.querySelector(`[data-active-row="${syncTarget}"]`);
+                        const activeBadge = activeRow ? activeRow.querySelector('[data-active-badge]') : null;
+                        const activeSelect = document.querySelector(`[data-edit-active-select="${syncTarget}"]`);
+
+                        if (activeBadge) {
+                            activeBadge.textContent = nextIsOn ? 'Si' : 'No';
+                            activeBadge.classList.toggle('text-bg-success', nextIsOn);
+                            activeBadge.classList.toggle('text-bg-secondary', !nextIsOn);
+                        }
+
+                        if (activeSelect) {
+                            activeSelect.value = nextIsOn ? '1' : '0';
+                        }
+                    }
+
+                    checkpointButton.disabled = true;
+
+                    window.setTimeout(function () {
+                        form.submit();
+                    }, 180);
+                });
+            });
+
             refreshNotificationSummary();
             window.setInterval(refreshNotificationSummary, 20000);
 
