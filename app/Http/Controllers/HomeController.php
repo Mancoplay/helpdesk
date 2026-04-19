@@ -245,9 +245,19 @@ class HomeController extends Controller
 
         $detalleTicketsUsuario = collect();
         $usuarioDetalle = null;
+        $detalleRelacionLabel = 'Participacion';
 
         if ($search !== '' && $usuarios->count() === 1) {
             $usuarioDetalle = $usuarios->first();
+            $detalleRole = $roleFilter !== ''
+                ? $roleFilter
+                : (string) ($usuarioDetalle->getRoleNames()->first() ?? '');
+
+            $detalleRelacionLabel = match ($detalleRole) {
+                'Empleado' => 'Usuario',
+                'Usuario', 'Cliente', 'Administrador' => 'Soporte',
+                default => 'Participacion',
+            };
 
             $detalleTicketsUsuario = Ticket::with(['cliente', 'empleado', 'departamento'])
                 ->where(function ($ticketQuery) use ($usuarioDetalle): void {
@@ -258,19 +268,22 @@ class HomeController extends Controller
                 ->when($fechaHasta !== '', fn ($ticketQuery) => $ticketQuery->whereDate('created_at', '<=', $fechaHasta))
                 ->orderByDesc('created_at')
                 ->get()
-                ->map(function (Ticket $ticket) use ($usuarioDetalle) {
-                    $isCreator = (int) $ticket->cliente_id === (int) $usuarioDetalle->id;
-                    $isAttender = (int) $ticket->empleado_id === (int) $usuarioDetalle->id;
-                    $participacion = $isCreator && $isAttender
-                        ? 'Creado y atendido'
-                        : ($isCreator ? 'Creado' : 'Atendido');
+                ->map(function (Ticket $ticket) use ($detalleRole) {
+                    $clienteNombre = trim((string) ($ticket->cliente->nombre_completo ?? ''));
+                    $empleadoNombre = trim((string) ($ticket->empleado->nombre_completo ?? ''));
+
+                    $detalleRelacionValor = match ($detalleRole) {
+                        'Empleado' => $clienteNombre !== '' ? $clienteNombre : 'Sin usuario asignado',
+                        'Usuario', 'Cliente', 'Administrador' => $empleadoNombre !== '' ? $empleadoNombre : 'Sin soporte asignado',
+                        default => '-',
+                    };
 
                     return [
                         'codigo' => $ticket->codigo,
                         'asunto' => $ticket->asunto,
                         'departamento' => $ticket->departamento->nombre ?? '-',
                         'estado' => $ticket->estado,
-                        'participacion' => $participacion,
+                        'relacion' => $detalleRelacionValor,
                         'fecha' => optional($ticket->created_at)->format('Y-m-d H:i'),
                     ];
                 });
@@ -294,6 +307,7 @@ class HomeController extends Controller
             ],
             'usuarioDetalle' => $usuarioDetalle,
             'detalleTicketsUsuario' => $detalleTicketsUsuario,
+            'detalleRelacionLabel' => $detalleRelacionLabel,
             'generatedAt' => now(),
             'menuBadges' => $this->menuBadges(),
         ]);

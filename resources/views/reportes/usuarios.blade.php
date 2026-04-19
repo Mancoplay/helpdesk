@@ -163,7 +163,7 @@
                     <th>Asunto</th>
                     <th>Departamento</th>
                     <th>Estado</th>
-                    <th>Participacion</th>
+                    <th>{{ $detalleRelacionLabel ?? 'Participacion' }}</th>
                     <th>Fecha</th>
                 </tr>
             </thead>
@@ -174,7 +174,7 @@
                         <td>{{ $ticketDetalle['asunto'] }}</td>
                         <td>{{ $ticketDetalle['departamento'] }}</td>
                         <td>{{ ucfirst(str_replace('_', ' ', $ticketDetalle['estado'])) }}</td>
-                        <td>{{ $ticketDetalle['participacion'] }}</td>
+                        <td>{{ $ticketDetalle['relacion'] }}</td>
                         <td>{{ $ticketDetalle['fecha'] }}</td>
                     </tr>
                 @endforeach
