@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreClienteRequest extends FormRequest
 {
@@ -31,6 +32,9 @@ class StoreClienteRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
             'direccion' => ['nullable', 'string'],
             'empresa' => ['nullable', 'string', 'max:120'],
+            'rol' => ['required', Rule::in(['Administrador', 'Usuario', 'Empleado'])],
+            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'area_trabajo_id' => ['required', Rule::exists('areas_trabajo', 'id')->where(fn ($query) => $query->where('activo', true))],
         ];
     }
 }

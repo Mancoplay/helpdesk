@@ -28,15 +28,15 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::get('/usuarios', [HomeController::class, 'clientes'])->name('usuarios.index');
     Route::get('/usuarios/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('usuarios.review');
     Route::post('/usuarios', [HomeController::class, 'storeCliente'])->name('usuarios.store');
-    Route::put('/usuarios/{cliente}', [HomeController::class, 'updateCliente'])->name('usuarios.update');
-    Route::patch('/usuarios/{cliente}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('usuarios.checkpoint');
+    Route::put('/usuarios/{user}', [HomeController::class, 'updateCliente'])->name('usuarios.update');
+    Route::patch('/usuarios/{user}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('usuarios.checkpoint');
 
     // Legacy aliases to avoid breaking existing links/bookmarks.
     Route::get('/clientes', [HomeController::class, 'clientes'])->name('clientes.index');
     Route::get('/clientes/{cliente}/revisar', [HomeController::class, 'reviewCliente'])->name('clientes.review');
     Route::post('/clientes', [HomeController::class, 'storeCliente'])->name('clientes.store');
-    Route::put('/clientes/{cliente}', [HomeController::class, 'updateCliente'])->name('clientes.update');
-    Route::patch('/clientes/{cliente}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('clientes.checkpoint');
+    Route::put('/clientes/{user}', [HomeController::class, 'updateCliente'])->name('clientes.update');
+    Route::patch('/clientes/{user}/checkpoint', [HomeController::class, 'toggleClienteCheckpoint'])->name('clientes.checkpoint');
 
     Route::get('/empleados', [HomeController::class, 'empleados'])->name('empleados.index');
     Route::get('/empleados/{empleado}/revisar', [HomeController::class, 'reviewEmpleado'])->name('empleados.review');

@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Departamentos')
-@section('header', 'Lista de departamentos')
+@section('title', 'Area de trabajo')
+@section('header', 'Lista de areas de trabajo')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
-    <li class="breadcrumb-item active">Departamentos</li>
+    <li class="breadcrumb-item active">Area de trabajo</li>
 @endsection
 
 @section('content')
@@ -14,7 +14,7 @@
         <div class="row g-2 align-items-end">
             <div class="col-lg-auto">
                 <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#createDepartamentoModal">
-                    <i class="fas fa-plus me-1"></i> Agregar nuevo departamento
+                    <i class="fas fa-plus me-1"></i> Agregar nueva area de trabajo
                 </button>
             </div>
             <div class="col-lg">
@@ -65,7 +65,7 @@
     </div>
 </div>
 <div class="card js-table-results">
-    <div class="card-header"><h3 class="card-title mb-0">Tabla de Departamentos</h3></div>
+    <div class="card-header"><h3 class="card-title mb-0">Tabla de areas de trabajo</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
             <thead><tr><th>Nombre</th><th>Descripcion</th><th>Activo</th><th style="width:220px;">Accion</th></tr></thead>
@@ -88,7 +88,7 @@
                     </td>
                 </tr>
 
-                <div class="modal fade" id="editDepartamentoModal{{ $departamento->id }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.update', $departamento) }}">@csrf @method('PUT')<div class="modal-header"><h5 class="modal-title">Editar departamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" value="{{ $departamento->nombre }}" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control" value="{{ $departamento->descripcion }}"></div><div class="col-md-6"><label class="form-label">Activo</label><select name="activo" class="form-select"><option value="1" @selected($departamento->activo)>Si</option><option value="0" @selected(!$departamento->activo)>No</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
+                <div class="modal fade" id="editDepartamentoModal{{ $departamento->id }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.update', $departamento) }}">@csrf @method('PUT')<div class="modal-header"><h5 class="modal-title">Editar area de trabajo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" value="{{ $departamento->nombre }}" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control" value="{{ $departamento->descripcion }}"></div><div class="col-md-6"><label class="form-label">Activo</label><select name="activo" class="form-select"><option value="1" @selected($departamento->activo)>Si</option><option value="0" @selected(!$departamento->activo)>No</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
             @empty
                 <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
             @endforelse
@@ -100,7 +100,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nuevo departamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
+<div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nueva area de trabajo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
 @endsection
 
 

@@ -20,13 +20,7 @@ return [
             'roles' => ['Administrador'],
         ],
         [
-            'label' => 'Empleados',
-            'route' => 'empleados.index',
-            'icon' => 'fas fa-user-tie',
-            'roles' => ['Administrador'],
-        ],
-        [
-            'label' => 'Departamentos',
+            'label' => 'Area de trabajo',
             'route' => 'departamentos.index',
             'icon' => 'fas fa-building',
             'roles' => ['Administrador'],

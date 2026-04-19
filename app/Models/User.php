@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -23,6 +25,7 @@ class User extends Authenticatable
         'cargo',
         'activo',
         'departamento_id',
+        'area_trabajo_id',
     ];
 
     protected $hidden = [
@@ -47,5 +50,21 @@ class User extends Authenticatable
         }
 
         return $this->name;
+    }
+
+    public function departamento(): BelongsTo
+    {
+        return $this->belongsTo(Departamento::class, 'departamento_id');
+    }
+
+    public function departamentos(): BelongsToMany
+    {
+        return $this->belongsToMany(Departamento::class, 'departamento_empleado', 'user_id', 'departamento_id')
+            ->withTimestamps();
+    }
+
+    public function areaTrabajo(): BelongsTo
+    {
+        return $this->belongsTo(AreaTrabajo::class, 'area_trabajo_id');
     }
 }

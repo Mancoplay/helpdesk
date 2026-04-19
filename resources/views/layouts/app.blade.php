@@ -390,7 +390,7 @@
 
             document.querySelectorAll('form.js-table-filters').forEach(function (form) {
                 const searchInput = form.querySelector('input[name="q"]');
-                const perPageSelect = form.querySelector('select[name="per_page"]');
+                const filterSelects = form.querySelectorAll('select');
                 let resultsCard = document.querySelector('.js-table-results');
                 let searchTimer = null;
                 let activeController = null;
@@ -465,11 +465,11 @@
                     });
                 }
 
-                if (perPageSelect) {
-                    perPageSelect.addEventListener('change', function () {
+                filterSelects.forEach(function (select) {
+                    select.addEventListener('change', function () {
                         loadFilteredTable();
                     });
-                }
+                });
 
                 document.addEventListener('click', function (event) {
                     const paginationLink = event.target.closest('.js-table-results .pagination a[href]');

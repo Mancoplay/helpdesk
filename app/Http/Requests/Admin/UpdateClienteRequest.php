@@ -25,8 +25,8 @@ class UpdateClienteRequest extends FormRequest
 
     public function rules(): array
     {
-        $cliente = $this->route('cliente');
-        $linkedUser = $cliente ? User::find($cliente->id) : null;
+        $targetUser = $this->route('user') ?? $this->route('cliente');
+        $linkedUser = $targetUser ? User::find($targetUser->id) : null;
 
         return [
             'nombres' => ['required', 'string', 'max:100'],
@@ -41,6 +41,9 @@ class UpdateClienteRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'regex:/^(?:[67]\d{7}|[234]\d{6})$/'],
             'direccion' => ['nullable', 'string'],
             'empresa' => ['nullable', 'string', 'max:120'],
+            'rol' => ['required', Rule::in(['Administrador', 'Usuario', 'Empleado'])],
+            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
+            'area_trabajo_id' => ['required', Rule::exists('areas_trabajo', 'id')->where(fn ($query) => $query->where('activo', true))],
         ];
     }
 }

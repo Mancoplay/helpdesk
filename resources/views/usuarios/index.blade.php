@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Usuarios')
-@section('header', 'Lista de usuarios')
+@section('header', 'Gestion de usuarios')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Inicio</a></li>
@@ -11,22 +11,33 @@
 @section('content')
 <div class="card mb-3">
     <div class="card-body">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClienteModal"><i class="fas fa-plus me-1"></i> Agregar nuevo usuario</button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUsuarioModal">
+            <i class="fas fa-plus me-1"></i> Agregar nuevo usuario
+        </button>
     </div>
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
         <form method="GET" action="{{ route('usuarios.index') }}" class="row g-2 align-items-end js-table-filters">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <label class="form-label mb-1">Buscar</label>
-                <input type="text" name="q" class="form-control" value="{{ $searchQuery ?? '' }}" placeholder="Ejemplo: red, empresa, telefono...">
+                <input type="text" name="q" class="form-control" value="{{ $searchQuery ?? '' }}" placeholder="Ejemplo: nombre, correo o telefono...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1">Rol</label>
+                <select name="rol" class="form-select">
+                    <option value="">Todos</option>
+                    @foreach($rolesDisponibles as $rol)
+                        <option value="{{ $rol }}" @selected(($selectedRole ?? '') === $rol)>{{ $rol }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label mb-1">Registros</label>
                 <select name="per_page" class="form-select">
                     @foreach([10, 15] as $size)
-                        <option value="{{ $size }}" @selected(($perPage ?? 5) == $size)>{{ $size }}</option>
+                        <option value="{{ $size }}" @selected(($perPage ?? 10) == $size)>{{ $size }}</option>
                     @endforeach
                 </select>
             </div>
@@ -36,110 +47,223 @@
         </form>
     </div>
 </div>
+
 <div class="card js-table-results">
-    <div class="card-header"><h3 class="card-title mb-0">Tabla de Usuarios</h3></div>
+    <div class="card-header">
+        <h3 class="card-title mb-0">Tabla de usuarios</h3>
+    </div>
     <div class="card-body table-responsive p-0">
         <table class="table table-striped table-hover mb-0">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Telefono</th><th style="width:300px;">Accion</th></tr></thead>
-            <tbody>
-            @forelse($clientes as $cliente)
+            <thead>
                 <tr>
-                    <td>{{ $cliente->nombre_completo }}</td>
-                    <td>{{ $cliente->email }}</td>
-                    <td>{{ $cliente->telefono ?? '-' }}</td>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Departamento</th>
+                    <th>Area de trabajo</th>
+                    <th>Rol</th>
+                    <th style="width:220px;">Accion</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($usuarios as $usuario)
+                @php
+                    $rolActual = $usuario->getRoleNames()->first() ?? '-';
+                @endphp
+                <tr>
+                    <td>{{ $usuario->nombre_completo }}</td>
+                    <td>{{ $usuario->email }}</td>
+                    <td>{{ $usuario->departamento->nombre ?? '-' }}</td>
+                    <td>{{ $usuario->areaTrabajo->nombre ?? '-' }}</td>
+                    <td>
+                        <span class="badge text-bg-{{ $rolActual === 'Administrador' ? 'danger' : ($rolActual === 'Empleado' ? 'primary' : 'secondary') }}">
+                            {{ $rolActual }}
+                        </span>
+                    </td>
                     <td class="text-nowrap">
-                        <div class="d-flex flex-nowrap align-items-center gap-2">
-                            <a href="{{ route('usuarios.review', ['cliente' => $cliente, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
-                            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editClienteModal{{ $cliente->id }}">Editar</button>
-                            <form class="d-inline mb-0" method="POST" action="{{ route('usuarios.checkpoint', $cliente) }}">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="checkpoint-switch {{ $cliente->activo ? 'is-on' : 'is-off' }}" title="{{ $cliente->activo ? 'Habilitado' : 'Deshabilitado' }}">
-                                    <span class="checkpoint-switch__label">{{ $cliente->activo ? 'ON' : 'OFF' }}</span>
-                                    <span class="checkpoint-switch__knob"></span>
-                                </button>
-                            </form>
-                        </div>
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ $usuario->id }}">Editar</button>
+                        <form class="d-inline mb-0" method="POST" action="{{ route('usuarios.checkpoint', $usuario) }}">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="checkpoint-switch {{ $usuario->activo ? 'is-on' : 'is-off' }}" title="{{ $usuario->activo ? 'Habilitado' : 'Deshabilitado' }}">
+                                <span class="checkpoint-switch__label">{{ $usuario->activo ? 'ON' : 'OFF' }}</span>
+                                <span class="checkpoint-switch__knob"></span>
+                            </button>
+                        </form>
                     </td>
                 </tr>
 
-                <div class="modal fade" id="editClienteModal{{ $cliente->id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
-                        <form method="POST" action="{{ route('usuarios.update', $cliente) }}">
-                            @csrf
-                            @method('PUT')
-                            <div class="modal-header"><h5 class="modal-title">Editar usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                            <div class="modal-body"><div class="row g-2">
-                                <div class="col-md-6"><label class="form-label">Nombre(s)</label><input type="text" name="nombres" class="form-control" value="{{ $cliente->nombres }}" required></div>
-                                <div class="col-md-6"><label class="form-label">Apellidos</label><input type="text" name="apellidos" class="form-control" value="{{ $cliente->apellidos }}" required></div>
-                                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" value="{{ $cliente->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Contrasena (opcional)</label>
-                                    <div class="input-group">
-                                        <input type="password" name="password" class="form-control js-password-input" autocomplete="new-password" placeholder="Escribe una nueva contrasena para cambiarla">
-                                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                <div class="modal fade" id="editUsuarioModal{{ $usuario->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ route('usuarios.update', $usuario) }}">
+                                @csrf
+                                @method('PUT')
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Editar usuario</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Nombre(s)</label>
+                                            <input type="text" name="nombres" class="form-control" value="{{ $usuario->nombres }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Apellidos</label>
+                                            <input type="text" name="apellidos" class="form-control" value="{{ $usuario->apellidos }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Correo</label>
+                                            <input type="email" name="email" class="form-control" value="{{ $usuario->email }}" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Contacto</label>
+                                            <input type="text" name="telefono" class="form-control" value="{{ $usuario->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Departamento</label>
+                                            <select name="departamento_id" class="form-select" required>
+                                                @foreach($departamentosBolivia as $departamento)
+                                                    <option value="{{ $departamento->id }}" @selected((int) $usuario->departamento_id === (int) $departamento->id)>{{ $departamento->nombre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Area de trabajo</label>
+                                            <select name="area_trabajo_id" class="form-select" required>
+                                                @foreach($areasTrabajoActivas as $area)
+                                                    <option value="{{ $area->id }}" @selected((int) $usuario->area_trabajo_id === (int) $area->id)>{{ $area->nombre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Rol</label>
+                                            <select name="rol" class="form-select" required>
+                                                @foreach($rolesDisponibles as $rol)
+                                                    <option value="{{ $rol }}" @selected($rolActual === $rol)>{{ $rol }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Contrasena (opcional)</label>
+                                            <div class="input-group">
+                                                <input type="password" name="password" class="form-control js-password-input" autocomplete="new-password">
+                                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Confirmar contrasena</label>
+                                            <div class="input-group">
+                                                <input type="password" name="password_confirmation" class="form-control js-password-input" autocomplete="new-password">
+                                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Confirmar contrasena</label>
-                                    <div class="input-group">
-                                        <input type="password" name="password_confirmation" class="form-control js-password-input" autocomplete="new-password" placeholder="Repite la nueva contrasena">
-                                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary">Guardar</button>
                                 </div>
-                                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" value="{{ $cliente->telefono }}" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
-                            </div></div>
-                            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
-                        </form>
-                    </div></div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             @empty
-                <tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">Sin datos</td></tr>
             @endforelse
             </tbody>
         </table>
     </div>
     <div class="card-footer compact-pagination">
-        {{ $clientes->links() }}
+        {{ $usuarios->links() }}
     </div>
 </div>
 
-<div class="modal fade" id="createClienteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
-        <form method="POST" action="{{ route('usuarios.store') }}">
-            @csrf
-            <div class="modal-header"><h5 class="modal-title">Nuevo usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body"><div class="row g-2">
-                <div class="col-md-6"><label class="form-label">Nombre(s)</label><input type="text" name="nombres" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">Apellidos</label><input type="text" name="apellidos" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com"></div>
-                <div class="col-md-6">
-                    <label class="form-label">Contrasena</label>
-                    <div class="input-group">
-                        <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
-                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
-                            <i class="fas fa-eye"></i>
-                        </button>
+<div class="modal fade" id="createUsuarioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('usuarios.store') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre(s)</label>
+                            <input type="text" name="nombres" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Apellidos</label>
+                            <input type="text" name="apellidos" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contacto</label>
+                            <input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Departamento</label>
+                            <select name="departamento_id" class="form-select" required>
+                                <option value="" selected disabled>Selecciona un departamento</option>
+                                @foreach($departamentosBolivia as $departamento)
+                                    <option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Area de trabajo</label>
+                            <select name="area_trabajo_id" class="form-select" required>
+                                <option value="" selected disabled>Selecciona un area de trabajo</option>
+                                @foreach($areasTrabajoActivas as $area)
+                                    <option value="{{ $area->id }}">{{ $area->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Rol</label>
+                            <select name="rol" class="form-select" required>
+                                <option value="" selected disabled>Selecciona un rol</option>
+                                @foreach($rolesDisponibles as $rol)
+                                    <option value="{{ $rol }}">{{ $rol }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contrasena</label>
+                            <div class="input-group">
+                                <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirmar contrasena</label>
+                            <div class="input-group">
+                                <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Confirmar contrasena</label>
-                    <div class="input-group">
-                        <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
-                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
-                <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" title="Ingresa un numero boliviano valido: celular de 8 digitos (6 o 7) o fijo de 7 digitos (2, 3 o 4)." placeholder="Ej: 71234567 o 2345678" oninput="this.value=this.value.replace(/[^0-9]/g,'');"></div>
-            </div></div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
-        </form>
-    </div></div>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection
 

@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateEmpleadoRequest;
 use App\Services\TicketNotificationService;
 use App\Services\ReviewRangeService;
 use App\Models\Cliente;
+use App\Models\AreaTrabajo;
 use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\SystemSetting;
@@ -161,22 +162,45 @@ class HomeController extends Controller
 
     public function clientes(Request $request)
     {
-        $query = Cliente::latest();
+        $this->ensureBoliviaDepartments();
+        $this->ensureDefaultWorkAreas();
+
+        $query = User::with(['roles', 'departamento', 'areaTrabajo'])->latest();
         $search = trim((string) $request->get('q', $request->get('search', '')));
+        $roleFilter = trim((string) $request->get('rol', ''));
         $perPage = $this->resolvePerPage($request);
 
         if ($search !== '') {
-            $query->where('nombres', 'like', '%' . $search . '%')
-                ->orWhere('apellidos', 'like', '%' . $search . '%')
-                ->orWhere('email', 'like', '%' . $search . '%')
-                ->orWhere('telefono', 'like', '%' . $search . '%')
-                ->orWhere('empresa', 'like', '%' . $search . '%');
+            $terms = preg_split('/\s+/', mb_strtolower($search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            $query->where(function ($groupedQuery) use ($terms): void {
+                foreach ($terms as $term) {
+                    $like = '%' . $term . '%';
+                    $groupedQuery->where(function ($searchQuery) use ($like): void {
+                        $searchQuery->whereRaw('LOWER(nombres) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(apellidos) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(email) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(telefono) LIKE ?', [$like]);
+                    });
+                }
+            });
         }
 
-        $clientes = $query->paginate($perPage)->withQueryString();
+        if ($roleFilter !== '') {
+            $query->whereHas('roles', function ($rolesQuery) use ($roleFilter): void {
+                $rolesQuery->where('name', $roleFilter);
+            });
+        }
+
+        $usuarios = $query->paginate($perPage)->withQueryString();
 
         return view('usuarios.index', [
-            'clientes' => $clientes,
+            'usuarios' => $usuarios,
+            'departamentosBolivia' => $this->orderedBoliviaDepartments(),
+            'areasTrabajoActivas' => $this->orderedFunctionalWorkAreas(),
+            'rolesDisponibles' => ['Administrador', 'Usuario', 'Empleado'],
+            'selectedRole' => $roleFilter,
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
@@ -233,29 +257,35 @@ class HomeController extends Controller
             'direccion' => $validated['direccion'] ?? null,
             'empresa' => $validated['empresa'] ?? null,
             'activo' => true,
+            'departamento_id' => (int) $validated['departamento_id'],
+            'area_trabajo_id' => (int) $validated['area_trabajo_id'],
         ]);
-        $usuario->syncRoles(['Usuario']);
+        $usuario->syncRoles([$validated['rol']]);
+        $this->syncEmployeeDepartmentMapping($usuario, $validated['rol'], (int) $validated['departamento_id']);
 
         return back()->with('success', 'Usuario agregado correctamente.');
     }
 
-    public function updateCliente(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
+    public function updateCliente(UpdateClienteRequest $request, User $user): RedirectResponse
     {
         $validated = $request->validated();
-        $cliente->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
-        $cliente->nombres = $validated['nombres'];
-        $cliente->apellidos = $validated['apellidos'];
-        $cliente->email = $validated['email'];
-        $cliente->telefono = $validated['telefono'] ?? null;
-        $cliente->direccion = $validated['direccion'] ?? null;
-        $cliente->empresa = $validated['empresa'] ?? null;
+        $user->name = trim($validated['nombres'] . ' ' . ($validated['apellidos'] ?? ''));
+        $user->nombres = $validated['nombres'];
+        $user->apellidos = $validated['apellidos'];
+        $user->email = $validated['email'];
+        $user->telefono = $validated['telefono'] ?? null;
+        $user->direccion = $validated['direccion'] ?? null;
+        $user->empresa = $validated['empresa'] ?? null;
+        $user->departamento_id = (int) $validated['departamento_id'];
+        $user->area_trabajo_id = (int) $validated['area_trabajo_id'];
 
         if (!empty($validated['password'])) {
-            $cliente->password = Hash::make($validated['password']);
+            $user->password = Hash::make($validated['password']);
         }
 
-        $cliente->save();
-        $cliente->syncRoles(['Usuario']);
+        $user->save();
+        $user->syncRoles([$validated['rol']]);
+        $this->syncEmployeeDepartmentMapping($user, $validated['rol'], (int) $validated['departamento_id']);
 
         return back()->with('success', 'Usuario actualizado correctamente.');
     }
@@ -271,16 +301,16 @@ class HomeController extends Controller
         return back()->with('success', 'Usuario eliminado correctamente.');
     }
 
-    public function toggleClienteCheckpoint(Cliente $cliente): RedirectResponse
+    public function toggleClienteCheckpoint(User $user): RedirectResponse
     {
         if (!auth()->user()->hasRole('Administrador')) {
             abort(403);
         }
 
-        $cliente->activo = !$cliente->activo;
-        $cliente->save();
+        $user->activo = !$user->activo;
+        $user->save();
 
-        return back()->with('success', $cliente->activo
+        return back()->with('success', $user->activo
             ? 'Usuario habilitado correctamente.'
             : 'Usuario deshabilitado correctamente.');
     }
@@ -461,7 +491,8 @@ class HomeController extends Controller
 
     public function departamentos(Request $request)
     {
-        $query = Departamento::latest();
+        $this->ensureDefaultWorkAreas();
+        $query = AreaTrabajo::latest();
         $search = trim((string) $request->get('q', $request->get('search', '')));
         $perPage = $this->resolvePerPage($request);
 
@@ -470,10 +501,10 @@ class HomeController extends Controller
                 ->orWhere('descripcion', 'like', '%' . $search . '%');
         }
 
-        $departamentos = $query->paginate($perPage)->withQueryString();
+        $areasTrabajo = $query->paginate($perPage)->withQueryString();
 
         return view('departamentos.index', [
-            'departamentos' => $departamentos,
+            'departamentos' => $areasTrabajo,
             'notificationEmail' => $this->notificationRecipientEmail(),
             'searchQuery' => $search,
             'perPage' => $perPage,
@@ -506,24 +537,24 @@ class HomeController extends Controller
     public function storeDepartamento(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:120', 'unique:departamentos,nombre'],
+            'nombre' => ['required', 'string', 'max:120', 'unique:areas_trabajo,nombre'],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'activo' => ['nullable', 'boolean'],
         ]);
 
-        Departamento::create([
+        AreaTrabajo::create([
             'nombre' => $validated['nombre'],
             'descripcion' => $validated['descripcion'] ?? null,
             'activo' => (bool) ($validated['activo'] ?? true),
         ]);
 
-        return back()->with('success', 'Departamento agregado correctamente.');
+        return back()->with('success', 'Area de trabajo agregada correctamente.');
     }
 
-    public function updateDepartamento(Request $request, Departamento $departamento): RedirectResponse
+    public function updateDepartamento(Request $request, AreaTrabajo $departamento): RedirectResponse
     {
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:120', Rule::unique('departamentos', 'nombre')->ignore($departamento->id)],
+            'nombre' => ['required', 'string', 'max:120', Rule::unique('areas_trabajo', 'nombre')->ignore($departamento->id)],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'activo' => ['nullable', 'boolean'],
         ]);
@@ -534,21 +565,21 @@ class HomeController extends Controller
             'activo' => (bool) ($validated['activo'] ?? false),
         ]);
 
-        return back()->with('success', 'Departamento actualizado correctamente.');
+        return back()->with('success', 'Area de trabajo actualizada correctamente.');
     }
 
-    public function destroyDepartamento(Departamento $departamento): RedirectResponse
+    public function destroyDepartamento(AreaTrabajo $departamento): RedirectResponse
     {
         try {
             $departamento->delete();
         } catch (QueryException $exception) {
-            return back()->with('error', 'No se puede eliminar el departamento porque tiene registros relacionados.');
+            return back()->with('error', 'No se puede eliminar el area de trabajo porque tiene registros relacionados.');
         }
 
-        return back()->with('success', 'Departamento eliminado correctamente.');
+        return back()->with('success', 'Area de trabajo eliminada correctamente.');
     }
 
-    public function toggleDepartamentoCheckpoint(Departamento $departamento): RedirectResponse
+    public function toggleDepartamentoCheckpoint(AreaTrabajo $departamento): RedirectResponse
     {
         if (!auth()->user()->hasRole('Administrador')) {
             abort(403);
@@ -558,8 +589,8 @@ class HomeController extends Controller
         $departamento->save();
 
         return back()->with('success', $departamento->activo
-            ? 'Departamento habilitado correctamente.'
-            : 'Departamento deshabilitado correctamente.');
+            ? 'Area de trabajo habilitada correctamente.'
+            : 'Area de trabajo deshabilitada correctamente.');
     }
 
     private function notificationRecipientEmail(): ?string
@@ -1866,6 +1897,96 @@ POWERSHELL;
         $perPage = (int) $request->get('per_page', 10);
 
         return in_array($perPage, [10, 15], true) ? $perPage : 10;
+    }
+
+    private function orderedBoliviaDepartments()
+    {
+        $departmentNames = $this->boliviaDepartmentNames();
+        $departments = Departamento::query()
+            ->whereIn('nombre', $departmentNames)
+            ->where('activo', true)
+            ->get();
+
+        return $departments
+            ->sortBy(fn (Departamento $departamento): int => (int) array_search($departamento->nombre, $departmentNames, true))
+            ->values();
+    }
+
+    private function ensureBoliviaDepartments(): void
+    {
+        foreach ($this->boliviaDepartmentNames() as $name) {
+            $workArea = Departamento::query()->firstOrCreate(
+                ['nombre' => $name],
+                ['descripcion' => 'Departamento de Bolivia', 'activo' => true],
+            );
+
+            if (!$workArea->activo) {
+                $workArea->activo = true;
+                $workArea->save();
+            }
+        }
+    }
+
+    private function boliviaDepartmentNames(): array
+    {
+        return [
+            'La Paz',
+            'Cochabamba',
+            'Santa Cruz',
+            'Oruro',
+            'Potosi',
+            'Chuquisaca',
+            'Tarija',
+            'Beni',
+            'Pando',
+        ];
+    }
+
+    private function orderedFunctionalWorkAreas()
+    {
+        return AreaTrabajo::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    private function ensureDefaultWorkAreas(): void
+    {
+        foreach ($this->defaultWorkAreaNames() as $name) {
+            $area = AreaTrabajo::query()->firstOrCreate(
+                ['nombre' => $name],
+                ['descripcion' => 'Area de trabajo', 'activo' => true],
+            );
+
+            if (!$area->activo) {
+                $area->activo = true;
+                $area->save();
+            }
+        }
+    }
+
+    private function defaultWorkAreaNames(): array
+    {
+        return [
+            'Area Legal',
+            'Contabilidad',
+            'Reclamos',
+            'RRHH',
+            'Soporte Tecnico',
+            'Sistemas',
+            'Redes',
+            'Atencion al Cliente',
+        ];
+    }
+
+    private function syncEmployeeDepartmentMapping(User $user, string $role, int $departmentId): void
+    {
+        if ($role === 'Empleado') {
+            $user->departamentos()->sync([$departmentId]);
+            return;
+        }
+
+        $user->departamentos()->detach();
     }
 
     private function resolveReviewRange(Request $request): array
