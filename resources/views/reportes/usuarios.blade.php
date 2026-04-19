@@ -185,6 +185,146 @@
 
 @endsection
 
+@push('styles')
+<style>
+.report-print-header {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 8mm 6mm 10mm 6mm;
+    }
+
+    .app-header,
+    .app-sidebar,
+    .app-content-header,
+    .app-footer,
+    .report-hide-print,
+    .pagination {
+        display: none !important;
+    }
+
+    html,
+    body {
+        font-size: 13px !important;
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .app-main,
+    .app-content,
+    .container-fluid {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    .card,
+    .card-body,
+    .card-header,
+    .card-footer {
+        margin: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+
+    .report-print-header {
+        display: block !important;
+        margin: 0 0 6mm 0 !important;
+    }
+
+    .report-print-header h1 {
+        margin: 0 0 4mm 0 !important;
+        text-align: center !important;
+        color: #2f5fa7 !important;
+        font-size: 30px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.6px !important;
+    }
+
+    .report-print-meta {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 0 auto !important;
+        font-size: 13px !important;
+    }
+
+    .report-print-meta th,
+    .report-print-meta td {
+        border: 1px solid #bfc8d4 !important;
+        padding: 7px 9px !important;
+        text-align: left !important;
+    }
+
+    .report-print-meta th {
+        width: 34% !important;
+        background: #2f5fa7 !important;
+        color: #fff !important;
+        text-transform: uppercase !important;
+        font-size: 11px !important;
+        letter-spacing: 0.3px !important;
+    }
+
+    .js-table-results {
+        margin: 0 0 6mm 0 !important;
+        border: 1px solid #c6cfdb !important;
+    }
+
+    .js-table-results .card-header {
+        padding: 8px 10px !important;
+        border-bottom: 1px solid #c6cfdb !important;
+        background: #eef3fb !important;
+    }
+
+    .js-table-results .card-title {
+        font-size: 19px !important;
+        font-weight: 700 !important;
+    }
+
+    .js-table-results .card-body {
+        padding: 0 !important;
+    }
+
+    .js-table-results table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 14px !important;
+    }
+
+    .js-table-results thead th {
+        background: #2f5fa7 !important;
+        color: #fff !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.2px !important;
+        padding: 8px 10px !important;
+        border: 1px solid #bfc8d4 !important;
+    }
+
+    .js-table-results tbody td {
+        padding: 8px 10px !important;
+        border: 1px solid #d4dbe4 !important;
+        vertical-align: middle !important;
+    }
+
+    .js-table-results tbody tr:nth-child(even) td {
+        background: #f7f9fc !important;
+    }
+
+    .report-summary {
+        display: block !important;
+        font-size: 12px !important;
+        color: #333 !important;
+    }
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
