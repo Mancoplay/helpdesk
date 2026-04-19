@@ -311,7 +311,6 @@
                                         value="{{ old('support_code', $remoteSession->support_code) }}"
                                         maxlength="40"
                                         placeholder="Ej: 123 456 789"
-                                        required
                                     >
                                     <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar codigo</button>
                                 </div>
@@ -350,6 +349,11 @@
                     <li>Comparte o pega el codigo para iniciar la conexion remota.</li>
                     <li>Usa "Finalizar conexion" para cortar la sesion remota del ticket.</li>
                 </ol>
+                <p class="mt-3 mb-0">
+                    <a href="https://anydesk.com/es/downloads/windows" target="_blank" rel="noopener noreferrer">
+                        Descarga AnyDesk aqui
+                    </a>
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -369,6 +373,7 @@
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
+        const canManageRemoteAsClient = @json($canManageRemoteAsClient);
         const shouldSyncSupportCode = false;
 
         const openAnyDesk = function (code) {
@@ -404,7 +409,14 @@
         };
 
         if (openCopyAnyDeskBtn && codeElement) {
-            openCopyAnyDeskBtn.addEventListener('click', function () {
+            openCopyAnyDeskBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (typeof codeElement.setCustomValidity === 'function') {
+                    codeElement.setCustomValidity('');
+                }
+
                 const code = codeElement.value.trim();
 
                 if (!code) {
@@ -418,8 +430,32 @@
             });
         }
 
-        if (shareCodeForm && sendSupportCodeBtn) {
-            shareCodeForm.addEventListener('submit', function () {
+        if (shareCodeForm && sendSupportCodeBtn && codeElement) {
+            codeElement.addEventListener('input', function () {
+                if (typeof codeElement.setCustomValidity === 'function') {
+                    codeElement.setCustomValidity('');
+                }
+            });
+
+            shareCodeForm.addEventListener('submit', function (event) {
+                const code = codeElement.value.trim();
+
+                if (!code) {
+                    event.preventDefault();
+                    if (typeof codeElement.setCustomValidity === 'function') {
+                        codeElement.setCustomValidity('Rellena este campo.');
+                    }
+                    if (typeof codeElement.reportValidity === 'function') {
+                        codeElement.reportValidity();
+                    }
+                    codeElement.focus();
+                    return;
+                }
+
+                if (typeof codeElement.setCustomValidity === 'function') {
+                    codeElement.setCustomValidity('');
+                }
+
                 sendSupportCodeBtn.disabled = true;
                 sendSupportCodeBtn.textContent = 'Enviando...';
             });
@@ -666,6 +702,7 @@ closeAnyDeskBtn.disabled = true;
         const assignedEmployee = document.getElementById('ticketAssignedEmployee');
         const remoteCodeInput = document.getElementById('remoteSupportCode');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
+        const canManageRemoteAsClient = @json($canManageRemoteAsClient);
 
         let lastMessageId = Number(chatScroll.dataset.lastMessageId || 0);
         let currentState = @json((string) $ticket->estado);
@@ -767,9 +804,16 @@ closeAnyDeskBtn.disabled = true;
 
             if (remoteCodeInput) {
                 const newCode = String(remoteData.support_code || '').trim();
-                remoteCodeInput.value = newCode;
+                const currentInputValue = String(remoteCodeInput.value || '').trim();
+                const isEditingRemoteCode = document.activeElement === remoteCodeInput;
+                const hasPendingLocalCode = canManageRemoteAsClient && currentInputValue !== newCode;
+
+                if (!isEditingRemoteCode && !hasPendingLocalCode) {
+                    remoteCodeInput.value = newCode;
+                }
+
                 if (openCopyAnyDeskBtn) {
-                    openCopyAnyDeskBtn.disabled = newCode === '';
+                    openCopyAnyDeskBtn.disabled = newCode === '' && !canManageRemoteAsClient;
                 }
             }
 
