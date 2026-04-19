@@ -1179,12 +1179,37 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
-            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
             'asunto' => ['required', 'string', 'max:180'],
             'descripcion' => ['required', 'string'],
         ]);
 
         $currentUser = auth()->user();
+        $departmentId = (int) ($currentUser->departamento_id ?? 0);
+
+        if ($departmentId <= 0 && $currentUser->hasRole('Empleado')) {
+            $empleadoActual = Empleado::with('departamentos')
+                ->whereKey($currentUser->id)
+                ->orWhere('email', $currentUser->email)
+                ->first();
+
+            if ($empleadoActual) {
+                $departmentId = (int) ($empleadoActual->departamentos->first()->id ?? $empleadoActual->departamento_id ?? 0);
+            }
+        }
+
+        if ($departmentId <= 0) {
+            return back()->with('error', 'No tienes un departamento asignado para crear tickets.');
+        }
+
+        $activeDepartmentExists = Departamento::query()
+            ->whereKey($departmentId)
+            ->where('activo', true)
+            ->exists();
+
+        if (!$activeDepartmentExists) {
+            return back()->with('error', 'Tu departamento asignado no esta activo. Contacta al administrador.');
+        }
+
         $cliente = Cliente::whereKey($currentUser->id)->first();
 
         if (!$cliente) {
@@ -1210,6 +1235,7 @@ class HomeController extends Controller
         }
 
         $validated['cliente_id'] = $cliente->id;
+        $validated['departamento_id'] = $departmentId;
         $validated['empleado_id'] = null;
 
         if ($currentUser->hasRole('Empleado')) {
@@ -1288,8 +1314,8 @@ class HomeController extends Controller
             ->orWhere('email', $currentUser->email)
             ->first();
 
-        if (!$employee || !$this->employeeBelongsToDepartment($employee, (int) $ticket->departamento_id)) {
-            abort(403, 'No tienes acceso a este departamento.');
+        if (!$employee) {
+            abort(403, 'No se pudo identificar al empleado.');
         }
 
         $ticket->empleado_id = $employee->id;
@@ -1558,15 +1584,10 @@ class HomeController extends Controller
                 ->first();
 
             if ($employee) {
-                $departmentIds = $employee->departamentos->pluck('id')->toArray();
-                if (empty($departmentIds) && !empty($employee->departamento_id)) {
-                    $departmentIds = [(int) $employee->departamento_id];
-                }
-                $query->where(function ($q) use ($employee, $departmentIds): void {
+                $query->where(function ($q) use ($employee): void {
                     $q->where('empleado_id', $employee->id)
-                      ->orWhere(function ($q2) use ($departmentIds): void {
+                      ->orWhere(function ($q2): void {
                           $q2->whereNull('empleado_id')
-                              ->whereIn('departamento_id', $departmentIds)
                               ->where('estado', 'pendiente');
                       });
                 });

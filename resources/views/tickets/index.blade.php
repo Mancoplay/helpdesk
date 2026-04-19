@@ -158,20 +158,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">Codigo</label>
                             <input type="text" name="codigo" id="codigoTicket" class="form-control" value="{{ old('codigo', $nextTicketCode) }}" readonly>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Departamento</label>
-                            <select name="departamento_id" class="form-select" required>
-                                <option value="">Departamento</option>
-                                @foreach($departamentosActivos as $departamento)
-                                    <option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <label class="form-label">Asunto</label>
                             <input type="text" name="asunto" class="form-control" required>
                         </div>
@@ -183,7 +174,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" @disabled($departamentosActivos->isEmpty())>Guardar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         </div>

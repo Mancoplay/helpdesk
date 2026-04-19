@@ -64,29 +64,14 @@
                         </form>
                     </div>
                 @endif
-
-                @if(
-                    (
-                        auth()->user()->hasRole('Administrador')
-                        && in_array($ticket->estado, ['pendiente', 'en_proceso'], true)
-                    )
-                    || (
-                        auth()->user()->hasRole('Empleado')
-                        && in_array($ticket->estado, ['pendiente', 'en_proceso'], true)
-                        && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0)
-                    )
-                )
-                    <div class="card-footer">
-                        <form method="POST" action="{{ route('tickets.finalize', $ticket) }}">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-success fs-5">Finalizar ticket</button>
-                        </form>
-                    </div>
-                @endif
             @endcan
 
             @php
+                $currentEmployee = \App\Models\Empleado::query()
+                    ->whereKey(auth()->id())
+                    ->orWhere('email', auth()->user()->email)
+                    ->first();
+                $currentEmployeeId = (int) ($currentEmployee->id ?? 0);
                 $isAdmin = auth()->user()->hasRole('Administrador');
                 $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
                     && (
@@ -94,9 +79,17 @@
                         || (($ticket->cliente->email ?? null) === auth()->user()->email)
                     );
                 $isAssignedEmployee = auth()->user()->hasRole('Empleado')
-                    && (int) ($ticket->empleado_id ?? 0) === (int) (optional(auth()->user()->empleado)->id ?? 0);
+                    && (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId;
                 $canManageRemoteAsClient = $isClientOwner || $isAdmin;
                 $canManageRemoteAsEmployee = $isAssignedEmployee || $isAdmin;
+                $canFinalizeTicketHere = (
+                    $isAdmin
+                    && in_array($ticket->estado, ['pendiente', 'en_proceso'], true)
+                ) || (
+                    auth()->user()->hasRole('Empleado')
+                    && in_array($ticket->estado, ['pendiente', 'en_proceso'], true)
+                    && (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId
+                );
             @endphp
 
             @if($isClientOwner || $isAssignedEmployee || $isAdmin)
@@ -168,6 +161,18 @@
                     @endif
                 </div>
             @endif
+
+            @can('atender tickets')
+                @if($canFinalizeTicketHere)
+                    <div class="card-footer border-top">
+                        <form method="POST" action="{{ route('tickets.finalize', $ticket) }}">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="btn btn-success fs-5 w-100">Finalizar ticket</button>
+                        </form>
+                    </div>
+                @endif
+            @endcan
         </div>
     </div>
 
