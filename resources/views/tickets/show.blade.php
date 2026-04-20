@@ -324,6 +324,7 @@
                                     id="remoteSupportCode"
                                     class="form-control"
                                     value="{{ $remoteSession->support_code }}"
+                                    readonly
                                     maxlength="40"
                                     placeholder="Ej: 123456789"
                                     inputmode="numeric"
@@ -721,6 +722,7 @@ closeAnyDeskBtn.disabled = true;
         const stateBadge = document.getElementById('ticketStateBadge');
         const assignedEmployee = document.getElementById('ticketAssignedEmployee');
         const remoteCodeInput = document.getElementById('remoteSupportCode');
+        const shareCodeForm = document.getElementById('remoteShareCodeForm');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
         const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
@@ -828,7 +830,8 @@ closeAnyDeskBtn.disabled = true;
                 const currentInputValue = String(remoteCodeInput.value || '').trim();
                 const isEditingRemoteCode = document.activeElement === remoteCodeInput;
                 const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
-                const hasPendingLocalCode = canEditRemoteCode && currentInputValue !== newCode;
+                const hasLocalEditableForm = Boolean(shareCodeForm && canManageRemoteAsClient);
+                const hasPendingLocalCode = hasLocalEditableForm && currentInputValue !== newCode;
 
                 if (!isEditingRemoteCode && !hasPendingLocalCode) {
                     remoteCodeInput.value = newCode;
@@ -894,7 +897,8 @@ closeAnyDeskBtn.disabled = true;
 
         window.__ticketLivePollByTicket = window.__ticketLivePollByTicket || {};
         window.__ticketLivePollByTicket[ticketId] = runLivePoll;
-        setInterval(runLivePoll, 3500);
+        runLivePoll();
+        setInterval(runLivePoll, 1000);
     });
 </script>
 @endpush

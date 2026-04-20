@@ -1837,6 +1837,36 @@ class HomeController extends Controller
         if (PHP_OS_FAMILY === 'Windows') {
             try {
                 $script = <<<'POWERSHELL'
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public static class AnyDeskWindowHelper
+{
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetClassName(IntPtr hWnd, StringBuilder className, int maxCount);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+}
+"@
+
+$wmClose = 0x0010
 $found = @(
     Get-Process -ErrorAction SilentlyContinue |
     Where-Object {
@@ -1844,7 +1874,56 @@ $found = @(
     }
 )
 $foundCount = $found.Count
+$gracefulClosedCount = 0
 $stoppedCount = 0
+$targetProcessIds = @($found | ForEach-Object { [uint32] $_.Id })
+
+if ($targetProcessIds.Count -gt 0) {
+    $windowHandles = New-Object System.Collections.Generic.List[IntPtr]
+
+    $null = [AnyDeskWindowHelper]::EnumWindows({
+        param($hWnd, $lParam)
+
+        if (-not [AnyDeskWindowHelper]::IsWindowVisible($hWnd)) {
+            return $true
+        }
+
+        [uint32] $windowProcessId = 0
+        $null = [AnyDeskWindowHelper]::GetWindowThreadProcessId($hWnd, [ref] $windowProcessId)
+
+        if ($targetProcessIds -contains $windowProcessId) {
+            $windowHandles.Add($hWnd) | Out-Null
+            return $true
+        }
+
+        $titleBuilder = New-Object System.Text.StringBuilder 512
+        $classBuilder = New-Object System.Text.StringBuilder 256
+        $null = [AnyDeskWindowHelper]::GetWindowText($hWnd, $titleBuilder, $titleBuilder.Capacity)
+        $null = [AnyDeskWindowHelper]::GetClassName($hWnd, $classBuilder, $classBuilder.Capacity)
+
+        $title = $titleBuilder.ToString()
+        $className = $classBuilder.ToString()
+
+        if ($title -match '(?i)AnyDesk' -or $className -match '(?i)AnyDesk') {
+            $windowHandles.Add($hWnd) | Out-Null
+        }
+
+        return $true
+    }, [IntPtr]::Zero)
+
+    foreach ($hWnd in $windowHandles) {
+        try {
+            if ([AnyDeskWindowHelper]::PostMessage($hWnd, $wmClose, [IntPtr]::Zero, [IntPtr]::Zero)) {
+                $gracefulClosedCount++
+            }
+        } catch {
+        }
+    }
+
+    if ($gracefulClosedCount -gt 0) {
+        Start-Sleep -Milliseconds 700
+    }
+}
 
 foreach ($proc in $found) {
     try {
@@ -1876,7 +1955,7 @@ if ($remainingCount -gt 0) {
     ).Count
 }
 
-Write-Output "$foundCount|$stoppedCount|$remainingCount"
+Write-Output "$foundCount|$gracefulClosedCount|$stoppedCount|$remainingCount"
 POWERSHELL;
 
                 $process = new Process(['powershell', '-NoProfile', '-Command', $script]);
@@ -1889,19 +1968,20 @@ POWERSHELL;
 
                 $result = trim((string) $process->getOutput());
                 $parts = explode('|', $result);
-                if (count($parts) !== 3) {
+                if (count($parts) !== 4) {
                     return false;
                 }
 
                 $foundCount = (int) $parts[0];
-                $stoppedCount = (int) $parts[1];
-                $remainingCount = (int) $parts[2];
+                $gracefulClosedCount = (int) $parts[1];
+                $stoppedCount = (int) $parts[2];
+                $remainingCount = (int) $parts[3];
 
                 if ($foundCount === 0) {
                     return true;
                 }
 
-                return $stoppedCount > 0 && $remainingCount === 0;
+                return ($gracefulClosedCount > 0 || $stoppedCount > 0) && $remainingCount === 0;
             } catch (\Throwable $exception) {
                 return false;
             }
