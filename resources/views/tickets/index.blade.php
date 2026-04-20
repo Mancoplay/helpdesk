@@ -164,11 +164,28 @@
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Asunto</label>
-                            <input type="text" name="asunto" class="form-control" required>
+                            <input
+                                type="text"
+                                name="asunto"
+                                class="form-control"
+                                value="{{ old('asunto') }}"
+                                minlength="3"
+                                required
+                                oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                                oninput="this.setCustomValidity('')"
+                            >
                         </div>
                         <div class="col-12">
                             <label class="form-label">Descripcion</label>
-                            <textarea name="descripcion" class="form-control" rows="3" required></textarea>
+                            <textarea
+                                name="descripcion"
+                                class="form-control"
+                                rows="3"
+                                minlength="3"
+                                required
+                                oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                                oninput="this.setCustomValidity('')"
+                            >{{ old('descripcion') }}</textarea>
                         </div>
                     </div>
                 </div>

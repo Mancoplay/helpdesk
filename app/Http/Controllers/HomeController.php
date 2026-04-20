@@ -1036,7 +1036,9 @@ class HomeController extends Controller
 
         $validated = $request->validate([
             'action' => ['required', Rule::in(['accept', 'reject', 'share_code', 'end', 'signal_closed'])],
-            'support_code' => ['nullable', 'string', 'max:40'],
+            'support_code' => ['nullable', 'string', 'max:40', 'regex:/^[0-9]+$/'],
+        ], [
+            'support_code.regex' => 'El codigo de AnyDesk solo debe contener numeros.',
         ]);
 
         $action = $validated['action'];
@@ -1092,7 +1094,7 @@ class HomeController extends Controller
                 return back()->with('error', 'Debes aceptar la solicitud antes de compartir el codigo.');
             }
 
-            $supportCode = trim((string) ($validated['support_code'] ?? ''));
+            $supportCode = preg_replace('/\D+/', '', trim((string) ($validated['support_code'] ?? ''))) ?? '';
             if ($supportCode === '') {
                 return back()->with('error', 'Debes ingresar el codigo de AnyDesk.');
             }
@@ -1195,8 +1197,11 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
-            'asunto' => ['required', 'string', 'max:180'],
-            'descripcion' => ['required', 'string'],
+            'asunto' => ['required', 'string', 'min:3', 'max:180'],
+            'descripcion' => ['required', 'string', 'min:3'],
+        ], [
+            'asunto.min' => 'Debe ingresar minimo 3 caracteres en el asunto.',
+            'descripcion.min' => 'Debe ingresar minimo 3 caracteres en la descripcion.',
         ]);
 
         $currentUser = auth()->user();
@@ -1479,9 +1484,12 @@ class HomeController extends Controller
             'cliente_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
             'empleado_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
             'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'asunto' => ['required', 'string', 'max:180'],
-            'descripcion' => ['required', 'string'],
+            'asunto' => ['required', 'string', 'min:3', 'max:180'],
+            'descripcion' => ['required', 'string', 'min:3'],
             'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
+        ], [
+            'asunto.min' => 'Debe ingresar minimo 3 caracteres en el asunto.',
+            'descripcion.min' => 'Debe ingresar minimo 3 caracteres en la descripcion.',
         ]);
 
         if (!empty($validated['empleado_id'])) {

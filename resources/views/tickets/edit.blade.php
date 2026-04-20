@@ -47,11 +47,29 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Asunto</label>
-                <input type="text" name="asunto" class="form-control" value="{{ old('asunto', $ticket->asunto) }}" required>
+                <input
+                    type="text"
+                    name="asunto"
+                    class="form-control"
+                    value="{{ old('asunto', $ticket->asunto) }}"
+                    minlength="3"
+                    required
+                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                    oninput="this.setCustomValidity('')"
+                >
             </div>
             <div class="col-md-4">
                 <label class="form-label">Descripcion</label>
-                <input type="text" name="descripcion" class="form-control" value="{{ old('descripcion', $ticket->descripcion) }}" required>
+                <input
+                    type="text"
+                    name="descripcion"
+                    class="form-control"
+                    value="{{ old('descripcion', $ticket->descripcion) }}"
+                    minlength="3"
+                    required
+                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                    oninput="this.setCustomValidity('')"
+                >
             </div>
             <div class="col-md-2">
                 <label class="form-label">Estado</label>

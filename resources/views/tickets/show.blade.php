@@ -310,7 +310,9 @@
                                         class="form-control"
                                         value="{{ old('support_code', $remoteSession->support_code) }}"
                                         maxlength="40"
-                                        placeholder="Ej: 123 456 789"
+                                        placeholder="Ej: 123456789"
+                                        inputmode="numeric"
+                                        pattern="[0-9]+"
                                     >
                                     <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar codigo</button>
                                 </div>
@@ -323,7 +325,9 @@
                                     class="form-control"
                                     value="{{ $remoteSession->support_code }}"
                                     maxlength="40"
-                                    placeholder="Ej: 123 456 789"
+                                    placeholder="Ej: 123456789"
+                                    inputmode="numeric"
+                                    pattern="[0-9]+"
                                 >
                             </div>
                         @endif
@@ -417,6 +421,13 @@
         };
 
         if (openCopyAnyDeskBtn && codeElement) {
+            codeElement.addEventListener('input', function () {
+                const digitsOnly = String(codeElement.value || '').replace(/\D+/g, '');
+                if (codeElement.value !== digitsOnly) {
+                    codeElement.value = digitsOnly;
+                }
+            });
+
             openCopyAnyDeskBtn.addEventListener('click', function (event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -446,7 +457,8 @@
             });
 
             shareCodeForm.addEventListener('submit', function (event) {
-                const code = codeElement.value.trim();
+                const code = codeElement.value.replace(/\D+/g, '').trim();
+                codeElement.value = code;
 
                 if (!code) {
                     event.preventDefault();
