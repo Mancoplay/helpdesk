@@ -2155,14 +2155,7 @@ POWERSHELL;
     private function defaultWorkAreaNames(): array
     {
         return [
-            'Area Legal',
-            'Contabilidad',
-            'Reclamos',
-            'RRHH',
-            'Soporte Tecnico',
             'Sistemas',
-            'Redes',
-            'Atencion al Cliente',
         ];
     }
 

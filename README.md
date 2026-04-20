@@ -1,36 +1,52 @@
-﻿## Stack tecnologico
+﻿## Tecnologias
 
+- PHP 8.2+
 - Laravel 12
-- Livewire 4 (v4.2.1)
-- Livewire Volt
-- Livewire Flux
+- Livewire
 - PostgreSQL
+- Node.js 20+
 
 ## Requisitos
 
-- PHP 8.2+
-- Composer 2+
-- Node.js 20+ y npm
-- PostgreSQL 14+ (recomendado)
-- Extensiones PHP: `pdo_pgsql`, `openssl`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`, `fileinfo`
+Antes de levantar el proyecto necesitas tener instalado:
 
-## 1) Clonar proyecto
+- PHP 8.2 o superior
+- Composer
+- Node.js y npm
+- PostgreSQL
+- Git
+
+Extensiones PHP recomendadas:
+
+- `pdo_pgsql`
+- `openssl`
+- `mbstring`
+- `tokenizer`
+- `xml`
+- `ctype`
+- `json`
+- `bcmath`
+- `fileinfo`
+
+## Levantar el proyecto en otra PC
+
+### 1. Clonar el proyecto
 
 ```bash
 git clone <URL_DEL_REPOSITORIO>
 cd helpdesk
 ```
 
-## 2) Instalar dependencias
+### 2. Instalar dependencias
 
 ```bash
 composer install
 npm install
 ```
 
-## 3) Configurar entorno
+### 3. Crear el archivo `.env`
 
-Crear `.env` desde el ejemplo:
+En Linux o Git Bash:
 
 ```bash
 cp .env.example .env
@@ -42,18 +58,12 @@ En PowerShell:
 Copy-Item .env.example .env
 ```
 
-Generar clave de Laravel:
+### 4. Configurar la base de datos en `.env`
 
-```bash
-php artisan key:generate
-```
-
-## 4) Configurar PostgreSQL en `.env`
-
-Ajusta estos valores:
+Editar estas variables:
 
 ```env
-APP_NAME=Helpdesk
+APP_NAME=HelpDesk
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://127.0.0.1:8000
@@ -65,82 +75,70 @@ DB_DATABASE=helpdesk
 DB_USERNAME=postgres
 DB_PASSWORD=tu_password
 
-# Adjuntos del chat
 HELPDESK_CHAT_ATTACHMENTS_DISK=public
 HELPDESK_CHAT_ATTACHMENTS_DIR=ticket-mensajes
 ```
 
-## 5) Crear base de datos PostgreSQL
+### 5. Crear la base de datos
 
-Con `psql`:
+En PostgreSQL:
 
 ```sql
-CREATE DATABASE helpdesk;
+CREATE DATABASE help-desk;
 ```
 
-## 6) Migraciones y datos iniciales
+### 6. Generar la clave y correr migraciones
 
 ```bash
+php artisan key:generate
 php artisan migrate
-# opcional:
-# php artisan db:seed
 ```
 
-## 7) Habilitar archivos públicos (adjuntos)
+Si quieres cargar datos iniciales:
+
+```bash
+php artisan db:seed
+```
+
+### 7. Crear el enlace de storage
 
 ```bash
 php artisan storage:link
 ```
 
-Esto crea el enlace simbólico `public/storage` hacia `storage/app/public`.
+### 8. Levantar el proyecto
 
-## 8) Limpiar cachés y levantar proyecto
+Abre 2 terminales.
+
+Terminal 1:
 
 ```bash
-php artisan optimize:clear
-npm run dev
 php artisan serve
 ```
 
-Opcional (si usas colas):
+Terminal 2:
+
+```bash
+npm run dev
+```
+
+Si el proyecto usa colas, en una tercera terminal:
 
 ```bash
 php artisan queue:work
 ```
 
-## Comando único de desarrollo (opcional)
+Tambien puedes usar este comando para desarrollo:
 
 ```bash
 composer run dev
 ```
 
-Ejecuta servidor Laravel + queue listener + Vite en paralelo.
+## Acceso local
 
-## Despliegue básico en servidor
+Cuando todo este levantado, abre:
 
-```bash
-composer install --no-dev --optimize-autoloader
-npm ci
-npm run build
-php artisan migrate --force
-php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+```text
+http://127.0.0.1:8000
 ```
-
-## Solución rápida de problemas
-
-- Si no cargan estilos/scripts: ejecutar `npm run dev` (local) o `npm run build` (producción).
-- Si no se ven adjuntos: ejecutar `php artisan storage:link`.
-- Si falla conexión a BD: revisar credenciales PostgreSQL en `.env`.
-- Si cambiaste `.env`: ejecutar `php artisan config:clear`.
-
-## Notas de adjuntos
-
-- Los archivos se guardan en disco (filesystem), no dentro de la base de datos.
-- PostgreSQL solo guarda metadatos: ruta, nombre, mime y tamaño.
-- Carpeta base configurable por:
-  - `HELPDESK_CHAT_ATTACHMENTS_DISK`
-  - `HELPDESK_CHAT_ATTACHMENTS_DIR`
 

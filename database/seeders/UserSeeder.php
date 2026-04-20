@@ -12,49 +12,15 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $departamentosBolivia = [
-            'La Paz',
-            'Cochabamba',
-            'Santa Cruz',
-            'Oruro',
-            'Potosi',
-            'Chuquisaca',
-            'Tarija',
-            'Beni',
-            'Pando',
-        ];
+        $laPaz = Departamento::firstOrCreate(
+            ['nombre' => 'La Paz'],
+            ['descripcion' => 'Departamento de Bolivia', 'activo' => true]
+        );
 
-        foreach ($departamentosBolivia as $departamento) {
-            Departamento::firstOrCreate(
-                ['nombre' => $departamento],
-                ['descripcion' => 'Departamento de Bolivia', 'activo' => true]
-            );
-        }
-
-        $areasTrabajo = [
-            'Area Legal',
-            'Contabilidad',
-            'Reclamos',
-            'RRHH',
-            'Soporte Tecnico',
-            'Sistemas',
-            'Redes',
-            'Atencion al Cliente',
-        ];
-
-        foreach ($areasTrabajo as $area) {
-            AreaTrabajo::firstOrCreate(
-                ['nombre' => $area],
-                ['descripcion' => 'Area de trabajo', 'activo' => true]
-            );
-        }
-
-        $laPaz = Departamento::where('nombre', 'La Paz')->firstOrFail();
-        $cochabamba = Departamento::where('nombre', 'Cochabamba')->firstOrFail();
-        $santaCruz = Departamento::where('nombre', 'Santa Cruz')->firstOrFail();
-        $soporte = AreaTrabajo::where('nombre', 'Soporte Tecnico')->firstOrFail();
-        $rrhh = AreaTrabajo::where('nombre', 'RRHH')->firstOrFail();
-        $reclamos = AreaTrabajo::where('nombre', 'Reclamos')->firstOrFail();
+        $sistemas = AreaTrabajo::firstOrCreate(
+            ['nombre' => 'Sistemas'],
+            ['descripcion' => 'Area de trabajo', 'activo' => true]
+        );
 
         $admin = User::updateOrCreate([
             'email' => 'admin@helpdesk.com',
@@ -66,7 +32,7 @@ class UserSeeder extends Seeder
             'telefono' => '71234567',
             'activo' => true,
             'departamento_id' => $laPaz->id,
-            'area_trabajo_id' => $rrhh->id,
+            'area_trabajo_id' => $sistemas->id,
         ]);
         $admin->syncRoles(['Administrador']);
         $admin->departamentos()->detach();
@@ -81,11 +47,11 @@ class UserSeeder extends Seeder
             'telefono' => '72345678',
             'cargo' => 'Tecnico de Soporte',
             'activo' => true,
-            'departamento_id' => $cochabamba->id,
-            'area_trabajo_id' => $soporte->id,
+            'departamento_id' => $laPaz->id,
+            'area_trabajo_id' => $sistemas->id,
         ]);
         $empleado->syncRoles(['Empleado']);
-        $empleado->departamentos()->sync([$cochabamba->id]);
+        $empleado->departamentos()->sync([$laPaz->id]);
 
         $usuario = User::updateOrCreate([
             'email' => 'usuario@helpdesk.com',
@@ -96,8 +62,8 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'telefono' => '73456789',
             'activo' => true,
-            'departamento_id' => $santaCruz->id,
-            'area_trabajo_id' => $reclamos->id,
+            'departamento_id' => $laPaz->id,
+            'area_trabajo_id' => $sistemas->id,
         ]);
         $usuario->syncRoles(['Usuario']);
         $usuario->departamentos()->detach();
