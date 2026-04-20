@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\TicketStreamUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,10 @@ class TicketMensaje extends Model
             if (blank($mensaje->event_type)) {
                 $mensaje->event_type = 'mensaje';
             }
+        });
+
+        static::created(function (TicketMensaje $mensaje): void {
+            event(new TicketStreamUpdated((int) $mensaje->ticket_id));
         });
     }
 

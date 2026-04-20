@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\TicketStreamUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +42,10 @@ class TicketRemoteSession extends Model
             if (blank($session->event_type)) {
                 $session->event_type = 'remote';
             }
+        });
+
+        static::saved(function (TicketRemoteSession $session): void {
+            event(new TicketStreamUpdated((int) $session->ticket_id));
         });
     }
 

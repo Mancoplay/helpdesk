@@ -297,7 +297,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-12">
                         <label class="form-label mb-1">Codigo de AnyDesk</label>
-                        @if($canManageRemoteAsClient)
+                        @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
@@ -830,7 +830,7 @@ closeAnyDeskBtn.disabled = true;
                 const currentInputValue = String(remoteCodeInput.value || '').trim();
                 const isEditingRemoteCode = document.activeElement === remoteCodeInput;
                 const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
-                const hasLocalEditableForm = Boolean(shareCodeForm && canManageRemoteAsClient);
+                const hasLocalEditableForm = Boolean(shareCodeForm && (canManageRemoteAsClient || canManageRemoteAsEmployee));
                 const hasPendingLocalCode = hasLocalEditableForm && currentInputValue !== newCode;
 
                 if (!isEditingRemoteCode && !hasPendingLocalCode) {
@@ -897,8 +897,18 @@ closeAnyDeskBtn.disabled = true;
 
         window.__ticketLivePollByTicket = window.__ticketLivePollByTicket || {};
         window.__ticketLivePollByTicket[ticketId] = runLivePoll;
+        const hasTicketSocket = Boolean(window.Echo && typeof window.Echo.private === 'function');
+
+        if (hasTicketSocket) {
+            window.Echo.private(`tickets.${ticketId}`)
+                .listen('.ticket.stream.updated', function () {
+                    runLivePoll();
+                });
+        }
+
         runLivePoll();
-        setInterval(runLivePoll, 1000);
+
+        setInterval(runLivePoll, hasTicketSocket ? 30000 : 5000);
     });
 </script>
 @endpush

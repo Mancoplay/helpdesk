@@ -1087,7 +1087,11 @@ class HomeController extends Controller
         }
 
         if ($action === 'share_code') {
-            if (!auth()->user()->hasRole('Administrador') && !$this->isTicketClientOwner($ticket)) {
+            if (
+                !auth()->user()->hasRole('Administrador')
+                && !$this->isTicketClientOwner($ticket)
+                && !$this->isAssignedEmployeeForTicket($ticket)
+            ) {
                 abort(403);
             }
             if ($remoteSession->status !== 'accepted') {

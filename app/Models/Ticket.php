@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\TicketStreamUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,15 @@ class Ticket extends Model
         'fecha_cierre' => 'datetime',
         'last_notified_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::updated(function (Ticket $ticket): void {
+            if ($ticket->wasChanged(['estado', 'empleado_id', 'departamento_id', 'asunto', 'descripcion'])) {
+                event(new TicketStreamUpdated((int) $ticket->id));
+            }
+        });
+    }
 
     public function cliente(): BelongsTo
     {

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\UserNotificationsUpdated;
 use App\Mail\PendingTicketAlertMail;
 use App\Models\Empleado;
 use App\Models\SystemSetting;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
@@ -154,6 +156,11 @@ class TicketNotificationService
         }
 
         Notification::send($recipientUsers, new PendingTicketDatabaseNotification($ticket, $isReminder));
+
+        $recipientUsers->each(function (User $user): void {
+            Cache::forget('notifications:summary:' . (int) $user->id);
+            event(new UserNotificationsUpdated((int) $user->id));
+        });
 
         return $recipientUsers->count();
     }

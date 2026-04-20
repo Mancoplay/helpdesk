@@ -230,6 +230,7 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const authUserId = @json((int) auth()->id());
             const notificationsState = {
                 lastCount: parseInt(document.getElementById('notificationsUnreadBadge')?.textContent || '0', 10) || 0,
             };
@@ -541,7 +542,16 @@
             });
 
             refreshNotificationSummary();
-            window.setInterval(refreshNotificationSummary, 20000);
+            const hasNotificationSocket = Boolean(window.Echo && typeof window.Echo.private === 'function');
+
+            if (hasNotificationSocket && authUserId > 0) {
+                window.Echo.private(`users.${authUserId}.notifications`)
+                    .listen('.notifications.updated', function () {
+                        refreshNotificationSummary();
+                    });
+            }
+
+            window.setInterval(refreshNotificationSummary, hasNotificationSocket ? 120000 : 20000);
 
             const bellButton = document.getElementById('notificationsBellButton');
             if (bellButton && 'Notification' in window) {

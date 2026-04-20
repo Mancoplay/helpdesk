@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UserNotificationsUpdated;
+use App\Services\NotificationSummaryService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
@@ -37,7 +38,8 @@ class NotificationController extends Controller
 
         if ($notification->read_at === null) {
             $notification->markAsRead();
-            Cache::forget('notifications:summary:' . (int) $request->user()->id);
+            app(NotificationSummaryService::class)->forgetForUser($request->user());
+            event(new UserNotificationsUpdated((int) $request->user()->id));
         }
 
         $url = (string) ($notification->data['url'] ?? route('dashboard'));
@@ -51,38 +53,15 @@ class NotificationController extends Controller
         $request->user()
             ->unreadNotifications()
             ->update(['read_at' => now()]);
-        Cache::forget('notifications:summary:' . (int) $request->user()->id);
+        app(NotificationSummaryService::class)->forgetForUser($request->user());
+        event(new UserNotificationsUpdated((int) $request->user()->id));
 
         return back()->with('success', 'Notificaciones marcadas como leidas.');
     }
 
-    public function unreadSummary(Request $request): JsonResponse
+    public function unreadSummary(Request $request, NotificationSummaryService $notificationSummaryService): JsonResponse
     {
-        $userId = (int) $request->user()->id;
-        $cacheKey = 'notifications:summary:' . $userId;
-
-        $payload = Cache::remember($cacheKey, now()->addSeconds(10), function () use ($request): array {
-            $latestUnread = $request->user()
-                ->unreadNotifications()
-                ->latest()
-                ->limit(6)
-                ->get()
-                ->map(function (DatabaseNotification $notification): array {
-                    return [
-                        'id' => $notification->id,
-                        'title' => (string) ($notification->data['title'] ?? 'Notificacion'),
-                        'message' => (string) ($notification->data['message'] ?? ''),
-                        'created_human' => (string) optional($notification->created_at)->diffForHumans(),
-                        'open_url' => route('notifications.open', $notification->id),
-                    ];
-                })
-                ->values();
-
-            return [
-                'count' => (int) $request->user()->unreadNotifications()->count(),
-                'items' => $latestUnread,
-            ];
-        });
+        $payload = $notificationSummaryService->forUser($request->user());
 
         return response()->json($payload);
     }
