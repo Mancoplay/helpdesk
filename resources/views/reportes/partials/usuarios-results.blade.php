@@ -1,4 +1,10 @@
-<div class="js-report-results">
+<div
+    class="js-report-results"
+    data-print-tickets-label="{{ $printSummary['tickets_label'] ?? 'Total de tickets' }}"
+    data-print-tickets-total="{{ $printSummary['tickets_total'] ?? 0 }}"
+    data-print-period-from="{{ $selectedFechaDesde ?? '' }}"
+    data-print-period-to="{{ $selectedFechaHasta ?? '' }}"
+>
 <div class="card mb-3 js-table-results">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
         <h3 class="card-title mb-0">Resultado del reporte</h3>

@@ -258,6 +258,7 @@ class HomeController extends Controller
         $detalleTicketsUsuario = collect();
         $usuarioDetalle = null;
         $detalleRelacionLabel = 'Participacion';
+        $isSingleUserReport = $usuarios->count() === 1;
 
         if ($search !== '' && $usuarios->count() === 1) {
             $usuarioDetalle = $usuarios->first();
@@ -301,6 +302,14 @@ class HomeController extends Controller
                 });
         }
 
+        $printTicketsTotal = $isSingleUserReport
+            ? (int) ($usuarios->first()->tickets_total_count ?? 0)
+            : (int) $usuarios->sum('tickets_total_count');
+
+        $printTicketsLabel = $isSingleUserReport
+            ? 'Total de tickets del usuario'
+            : 'Total de tickets';
+
         $viewData = [
             'usuarios' => $usuarios,
             'searchQuery' => $search,
@@ -316,6 +325,11 @@ class HomeController extends Controller
             'summary' => [
                 'total' => (clone $summaryBase)->count(),
                 'tickets_total' => (int) $usuarios->sum('tickets_total_count'),
+            ],
+            'printSummary' => [
+                'is_single_user' => $isSingleUserReport,
+                'tickets_total' => $printTicketsTotal,
+                'tickets_label' => $printTicketsLabel,
             ],
             'usuarioDetalle' => $usuarioDetalle,
             'detalleTicketsUsuario' => $detalleTicketsUsuario,

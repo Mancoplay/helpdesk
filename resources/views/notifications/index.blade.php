@@ -2,6 +2,8 @@
 
 @section('title', 'Notificaciones')
 @section('header', 'Notificaciones')
+@section('show_back_button', '1')
+@section('back_url', route('dashboard'))
 
 @section('content')
     <div class="card shadow-sm">

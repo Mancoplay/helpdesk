@@ -92,16 +92,12 @@
                 <td>{{ $generatedAt->format('d/m/Y H:i') }}</td>
             </tr>
             <tr>
-                <th>Periodo</th>
-                <td>{{ ($selectedFechaDesde ?? '') !== '' ? $selectedFechaDesde : 'Inicio' }} a {{ ($selectedFechaHasta ?? '') !== '' ? $selectedFechaHasta : 'Hoy' }}</td>
+                <th id="reportPrintPeriodLabel">Periodo</th>
+                <td id="reportPrintPeriodValue">{{ ($selectedFechaDesde ?? '') !== '' ? $selectedFechaDesde : 'Inicio' }} a {{ ($selectedFechaHasta ?? '') !== '' ? $selectedFechaHasta : 'Hoy' }}</td>
             </tr>
             <tr>
-                <th>Total de usuarios</th>
-                <td>{{ $summary['total'] ?? 0 }}</td>
-            </tr>
-            <tr>
-                <th>Total de tickets</th>
-                <td>{{ $summary['tickets_total'] ?? 0 }}</td>
+                <th id="reportPrintTicketsLabel">{{ $printSummary['tickets_label'] ?? 'Total de tickets' }}</th>
+                <td id="reportPrintTicketsTotal">{{ $printSummary['tickets_total'] ?? 0 }}</td>
             </tr>
         </tbody>
     </table>
@@ -139,6 +135,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     input.value = '';
                 }
             });
+        };
+
+        const syncPrintHeader = () => {
+            const periodCell = document.getElementById('reportPrintPeriodValue');
+            const ticketsLabel = document.getElementById('reportPrintTicketsLabel');
+            const ticketsTotal = document.getElementById('reportPrintTicketsTotal');
+            const metadataSource = document.querySelector('.js-report-results');
+            const fromDate = metadataSource?.getAttribute('data-print-period-from') || '';
+            const toDate = metadataSource?.getAttribute('data-print-period-to') || '';
+
+            if (periodCell) {
+                periodCell.textContent = `${fromDate !== '' ? fromDate : 'Inicio'} a ${toDate !== '' ? toDate : 'Hoy'}`;
+            }
+
+            if (metadataSource && ticketsLabel && ticketsTotal) {
+                ticketsLabel.textContent = metadataSource.getAttribute('data-print-tickets-label') || 'Total de tickets';
+                ticketsTotal.textContent = metadataSource.getAttribute('data-print-tickets-total') || '0';
+            }
         };
 
         const loadReportResults = (targetUrl = null) => {
@@ -185,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     resultsWrapper.replaceWith(newResultsWrapper);
                     resultsWrapper = newResultsWrapper;
+                    syncPrintHeader();
                     history.replaceState({}, '', requestUrl);
                 })
                 .catch((error) => {
@@ -264,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         toggleCustomRange();
+        syncPrintHeader();
     });
 });
 </script>
