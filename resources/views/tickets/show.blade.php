@@ -318,9 +318,7 @@
                                         <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar código</button>
                                     @endif
                                 </div>
-                                <small id="remoteSupportCodeStatus" class="text-muted d-block mt-2">
-                                    {{ (!$canManageRemoteAsEmployee || $canManageRemoteAsClient) ? 'Puedes enviar el código manualmente.' : 'El código se guarda automáticamente.' }}
-                                </small>
+                                <small id="remoteSupportCodeStatus" class="d-block mt-2" style="min-height: 1.25rem;"></small>
                             </form>
                         @else
                             <div class="input-group">
@@ -464,7 +462,28 @@
 
             supportCodeStatus.textContent = message;
             supportCodeStatus.classList.remove('text-muted', 'text-success', 'text-danger');
-            supportCodeStatus.classList.add(tone || 'text-muted');
+            if (message) {
+                supportCodeStatus.classList.add(tone || 'text-muted');
+            }
+        };
+
+        const getFriendlySupportCodeError = function (error) {
+            const rawMessage = String(error?.message || '').trim();
+            const normalizedMessage = rawMessage.toLowerCase();
+
+            if (
+                normalizedMessage.includes('htmlinputelement')
+                || normalizedMessage.includes('could not be found')
+                || normalizedMessage.includes('route ')
+            ) {
+                return '';
+            }
+
+            if (rawMessage !== '') {
+                return rawMessage;
+            }
+
+            return '';
         };
 
         const saveSupportCode = function () {
@@ -524,7 +543,7 @@
                         return;
                     }
 
-                    setSupportCodeStatus(error.message || 'No se pudo guardar el código.', 'text-danger');
+                    setSupportCodeStatus(getFriendlySupportCodeError(error), 'text-danger');
                 })
                 .finally(function () {
                     saveRequestController = null;
