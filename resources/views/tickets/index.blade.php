@@ -9,6 +9,12 @@
 @endsection
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->hasRole('Administrador');
+    $activeRemoteIds = collect($activeRemoteTicketIds ?? []);
+    $pendingRemoteIds = collect($pendingRemoteTicketIds ?? []);
+@endphp
+
 @if(auth()->user()->can('crear tickets'))
 <div class="card mb-3">
     <div class="card-body">
@@ -59,9 +65,6 @@
                 @forelse($tickets as $ticket)
                     @php
                         $stateMap = config('adminlte.ticket_states');
-                        $isAdmin = auth()->user()->hasRole('Administrador');
-                        $activeRemoteIds = collect($activeRemoteTicketIds ?? []);
-                        $pendingRemoteIds = collect($pendingRemoteTicketIds ?? []);
                         $isDisabled = $ticket->trashed();
                         $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
                         $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
@@ -267,14 +270,8 @@
                 if (!document.hidden) {
                     refreshTableResults();
                 }
-            }, 15000);
+            }, 45000);
         }
-
-        document.addEventListener('visibilitychange', function () {
-            if (!document.hidden) {
-                refreshTableResults();
-            }
-        });
 
         document.addEventListener('hidden.bs.modal', function () {
             if (!document.hidden) {

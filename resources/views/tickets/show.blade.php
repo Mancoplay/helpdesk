@@ -1035,7 +1035,7 @@ closeAnyDeskBtn.disabled = true;
 
         runLivePoll();
 
-        setInterval(runLivePoll, hasTicketSocket ? 30000 : 5000);
+        setInterval(runLivePoll, hasTicketSocket ? 60000 : 15000);
     });
 </script>
 @endpush

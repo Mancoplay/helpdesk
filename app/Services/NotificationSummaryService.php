@@ -16,7 +16,7 @@ class NotificationSummaryService
             Cache::forget($cacheKey);
         }
 
-        return Cache::remember($cacheKey, now()->addSeconds(10), function () use ($user): array {
+        return Cache::remember($cacheKey, now()->addSeconds(30), function () use ($user): array {
             $latestUnread = $user->unreadNotifications()
                 ->latest()
                 ->limit(6)

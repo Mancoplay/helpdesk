@@ -168,20 +168,22 @@ class TicketNotificationService
 
     private function configuredNotificationEmail(): ?string
     {
-        if (!Schema::hasTable('system_settings')) {
-            return null;
-        }
+        return Cache::remember('settings:pending_ticket_notification_email', now()->addMinutes(5), function (): ?string {
+            if (!Schema::hasTable('system_settings')) {
+                return null;
+            }
 
-        $email = SystemSetting::query()
-            ->where('key', 'pending_ticket_notification_email')
-            ->value('value');
+            $email = SystemSetting::query()
+                ->where('key', 'pending_ticket_notification_email')
+                ->value('value');
 
-        if (!is_string($email)) {
-            return null;
-        }
+            if (!is_string($email)) {
+                return null;
+            }
 
-        $email = mb_strtolower(trim($email));
+            $email = mb_strtolower(trim($email));
 
-        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+            return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+        });
     }
 }

@@ -19,6 +19,11 @@
     @endphp
 
     @auth
+        @php
+            $notificationSummary = app(\App\Services\NotificationSummaryService::class)->forUser(Auth::user());
+            $unreadNotifications = collect($notificationSummary['items'] ?? []);
+            $unreadNotificationsCount = (int) ($notificationSummary['count'] ?? 0);
+        @endphp
         <div class="app-wrapper">
             <nav class="app-header navbar navbar-expand bg-dark navbar-dark py-1">
                 <div class="container-fluid">
@@ -31,11 +36,6 @@
                     </ul>
 
                     <ul class="navbar-nav ms-auto">
-                        @php
-                            $unreadQuery = Auth::user()->unreadNotifications()->latest();
-                            $unreadNotifications = (clone $unreadQuery)->limit(6)->get();
-                            $unreadNotificationsCount = (clone $unreadQuery)->count();
-                        @endphp
                         <li class="nav-item dropdown">
                             <a
                                 class="nav-link position-relative"
@@ -59,21 +59,18 @@
                                     <a href="{{ route('notifications.index') }}" class="small text-decoration-none">Ver todas</a>
                                 </div>
 
-                                <div id="notificationsUnreadList">
-                                    @if($unreadNotifications->isEmpty())
-                                        <div id="notificationsEmptyState" class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>
-                                    @else
-                                        @foreach($unreadNotifications as $notification)
-                                            @php
-                                                $data = $notification->data;
-                                            @endphp
-                                            <a href="{{ route('notifications.open', $notification->id) }}" class="dropdown-item py-2 js-notification-item">
-                                                <div class="fw-semibold">{{ $data['title'] ?? 'Notificacion' }}</div>
-                                                <div class="small text-muted">{{ $data['message'] ?? '' }}</div>
-                                                <div class="small text-muted">
-                                                    {{ optional($notification->created_at)->diffForHumans() }}
-                                                </div>
-                                            </a>
+                                        <div id="notificationsUnreadList">
+                                            @if($unreadNotifications->isEmpty())
+                                                <div id="notificationsEmptyState" class="px-3 py-3 text-muted small">No tienes notificaciones nuevas.</div>
+                                            @else
+                                                @foreach($unreadNotifications as $notification)
+                                                    <a href="{{ $notification['open_url'] ?? '#' }}" class="dropdown-item py-2 js-notification-item">
+                                                        <div class="fw-semibold">{{ $notification['title'] ?? 'Notificacion' }}</div>
+                                                        <div class="small text-muted">{{ $notification['message'] ?? '' }}</div>
+                                                        <div class="small text-muted">
+                                                            {{ $notification['created_human'] ?? '' }}
+                                                        </div>
+                                                    </a>
                                         @endforeach
                                     @endif
                                 </div>
@@ -343,6 +340,10 @@
             };
 
             const refreshNotificationSummary = function () {
+                if (document.hidden) {
+                    return;
+                }
+
                 fetch('{{ route('notifications.summary') }}', {
                     credentials: 'same-origin',
                     cache: 'no-store',
@@ -362,12 +363,6 @@
                         // Ignore transient network errors silently.
                     });
             };
-
-            window.addEventListener('pageshow', function (event) {
-                if (event.persisted) {
-                    window.location.reload();
-                }
-            });
 
             document.querySelectorAll('.js-auto-dismiss-alert').forEach(function (alertElement) {
                 const timeoutValue = parseInt(alertElement.getAttribute('data-auto-dismiss') || '5000', 10);
@@ -551,7 +546,7 @@
                     });
             }
 
-            window.setInterval(refreshNotificationSummary, hasNotificationSocket ? 120000 : 20000);
+            window.setInterval(refreshNotificationSummary, hasNotificationSocket ? 180000 : 60000);
 
             const bellButton = document.getElementById('notificationsBellButton');
             if (bellButton && 'Notification' in window) {

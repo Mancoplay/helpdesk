@@ -22,6 +22,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -33,6 +34,11 @@ use Throwable;
 
 class HomeController extends Controller
 {
+    private ?User $authenticatedUser = null;
+    private bool $authenticatedUserResolved = false;
+    private ?Empleado $authenticatedEmployee = null;
+    private bool $authenticatedEmployeeResolved = false;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -638,6 +644,7 @@ class HomeController extends Controller
             ['key' => 'pending_ticket_notification_email'],
             ['value' => mb_strtolower(trim((string) $validated['notification_email']))],
         );
+        Cache::forget('settings:pending_ticket_notification_email');
 
         return back()->with('success', 'Correo de notificaciones actualizado correctamente.');
     }
@@ -655,6 +662,8 @@ class HomeController extends Controller
             'descripcion' => $validated['descripcion'] ?? null,
             'activo' => (bool) ($validated['activo'] ?? true),
         ]);
+        Cache::forget('catalog:functional_work_areas:active');
+        Cache::forget('catalog:functional_work_areas:seeded');
 
         return back()->with('success', 'Area de trabajo agregada correctamente.');
     }
@@ -672,6 +681,8 @@ class HomeController extends Controller
             'descripcion' => $validated['descripcion'] ?? null,
             'activo' => (bool) ($validated['activo'] ?? false),
         ]);
+        Cache::forget('catalog:functional_work_areas:active');
+        Cache::forget('catalog:functional_work_areas:seeded');
 
         return back()->with('success', 'Area de trabajo actualizada correctamente.');
     }
@@ -680,6 +691,8 @@ class HomeController extends Controller
     {
         try {
             $departamento->delete();
+            Cache::forget('catalog:functional_work_areas:active');
+            Cache::forget('catalog:functional_work_areas:seeded');
         } catch (QueryException $exception) {
             return back()->with('error', 'No se puede eliminar el area de trabajo porque tiene registros relacionados.');
         }
@@ -695,6 +708,8 @@ class HomeController extends Controller
 
         $departamento->activo = !$departamento->activo;
         $departamento->save();
+        Cache::forget('catalog:functional_work_areas:active');
+        Cache::forget('catalog:functional_work_areas:seeded');
 
         return back()->with('success', $departamento->activo
             ? 'Area de trabajo habilitada correctamente.'
@@ -703,26 +718,28 @@ class HomeController extends Controller
 
     private function notificationRecipientEmail(): ?string
     {
-        if (!Schema::hasTable('system_settings')) {
-            return null;
-        }
+        return Cache::remember('settings:pending_ticket_notification_email', now()->addMinutes(5), function (): ?string {
+            if (!Schema::hasTable('system_settings')) {
+                return null;
+            }
 
-        $email = SystemSetting::query()
-            ->where('key', 'pending_ticket_notification_email')
-            ->value('value');
+            $email = SystemSetting::query()
+                ->where('key', 'pending_ticket_notification_email')
+                ->value('value');
 
-        if (!is_string($email)) {
-            return null;
-        }
+            if (!is_string($email)) {
+                return null;
+            }
 
-        $email = mb_strtolower(trim($email));
+            $email = mb_strtolower(trim($email));
 
-        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+            return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+        });
     }
 
     public function tickets(Request $request)
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->currentUser() ?? auth()->user();
         $isAdmin = $currentUser->hasRole('Administrador');
         $canCreateTickets = $currentUser->can('crear tickets');
 
@@ -815,9 +832,7 @@ class HomeController extends Controller
 
         $currentEmployee = null;
         if ($currentUser->hasRole('Empleado')) {
-            $currentEmployee = Empleado::whereKey(auth()->id())
-                ->orWhere('email', auth()->user()->email)
-                ->first();
+            $currentEmployee = $this->currentEmployee();
         }
 
         $viewData = [
@@ -1658,23 +1673,26 @@ class HomeController extends Controller
     private function ticketsQueryForCurrentUser(bool $includeDeleted = false)
     {
         $query = Ticket::query();
+        $currentUser = $this->currentUser();
 
-        if ($includeDeleted || (auth()->check() && auth()->user()->hasRole('Administrador'))) {
+        if ($includeDeleted || ($currentUser && $currentUser->hasRole('Administrador'))) {
             $query->withTrashed();
         }
 
-        if (auth()->check() && auth()->user()->hasRole('Usuario')) {
-            $query->whereHas('cliente', function ($q): void {
-                $q->whereKey(auth()->id())
-                    ->orWhere('email', auth()->user()->email);
+        if ($currentUser && $currentUser->hasRole('Usuario')) {
+            $query->where(function ($ticketQuery) use ($currentUser): void {
+                $ticketQuery->where('cliente_id', $currentUser->id);
+
+                if (filled($currentUser->email)) {
+                    $ticketQuery->orWhereHas('cliente', function ($clientQuery) use ($currentUser): void {
+                        $clientQuery->where('email', $currentUser->email);
+                    });
+                }
             });
         }
 
-        if (auth()->check() && auth()->user()->hasRole('Empleado')) {
-            $employee = Empleado::with('departamentos')->whereKey(auth()->id())
-                ->orWhere('email', auth()->user()->email)
-                ->first();
-
+        if ($currentUser && $currentUser->hasRole('Empleado')) {
+            $employee = $this->currentEmployee();
             if ($employee) {
                 $query->where(function ($q) use ($employee): void {
                     $q->where('empleado_id', $employee->id)
@@ -1693,7 +1711,7 @@ class HomeController extends Controller
 
     private function ticketStatusCounts()
     {
-        return Ticket::query()
+        return $this->ticketsQueryForCurrentUser()
             ->selectRaw('estado, COUNT(*) as total')
             ->groupBy('estado')
             ->pluck('total', 'estado');
@@ -1701,7 +1719,20 @@ class HomeController extends Controller
 
     private function menuBadges($statusCounts = null): array
     {
-        $counts = $statusCounts ?? $this->ticketStatusCounts();
+        if ($statusCounts !== null) {
+            $counts = $statusCounts;
+        } else {
+            $userId = (int) ($this->currentUser()?->id ?? 0);
+            if ($userId <= 0) {
+                return ['pendientes' => 0];
+            }
+
+            $counts = Cache::remember(
+                'menu_badges:ticket_status_counts:user:' . $userId,
+                now()->addSeconds(20),
+                fn () => $this->ticketStatusCounts()
+            );
+        }
 
         return [
             'pendientes' => (int) ($counts['pendiente'] ?? 0),
@@ -1738,10 +1769,7 @@ class HomeController extends Controller
         }
 
         if (auth()->user()->hasRole('Empleado')) {
-            $employee = Empleado::whereKey(auth()->id())
-                ->orWhere('email', auth()->user()->email)
-                ->first();
-
+            $employee = $this->currentEmployee();
             if (!$employee) {
                 return false;
             }
@@ -1771,10 +1799,7 @@ class HomeController extends Controller
             return false;
         }
 
-        $employee = Empleado::whereKey(auth()->id())
-            ->orWhere('email', auth()->user()->email)
-            ->first();
-
+        $employee = $this->currentEmployee();
         if (!$employee) {
             return false;
         }
@@ -1804,10 +1829,7 @@ class HomeController extends Controller
             return false;
         }
 
-        $employee = Empleado::whereKey(auth()->id())
-            ->orWhere('email', auth()->user()->email)
-            ->first();
-
+        $employee = $this->currentEmployee();
         if (!$employee) {
             return false;
         }
@@ -2241,30 +2263,50 @@ POWERSHELL;
 
     private function orderedBoliviaDepartments()
     {
-        $departmentNames = $this->boliviaDepartmentNames();
-        $departments = Departamento::query()
-            ->whereIn('nombre', $departmentNames)
-            ->where('activo', true)
-            ->get();
+        return Cache::remember('catalog:bolivia_departments:active', now()->addMinutes(10), function () {
+            $departmentNames = $this->boliviaDepartmentNames();
+            $departments = Departamento::query()
+                ->whereIn('nombre', $departmentNames)
+                ->where('activo', true)
+                ->get();
 
-        return $departments
-            ->sortBy(fn (Departamento $departamento): int => (int) array_search($departamento->nombre, $departmentNames, true))
-            ->values();
+            return $departments
+                ->sortBy(fn (Departamento $departamento): int => (int) array_search($departamento->nombre, $departmentNames, true))
+                ->values();
+        });
     }
 
     private function ensureBoliviaDepartments(): void
     {
-        foreach ($this->boliviaDepartmentNames() as $name) {
-            $workArea = Departamento::query()->firstOrCreate(
+        $cacheKey = 'catalog:bolivia_departments:seeded';
+        if (Cache::get($cacheKey)) {
+            return;
+        }
+
+        $names = $this->boliviaDepartmentNames();
+        $existingNames = Departamento::query()
+            ->whereIn('nombre', $names)
+            ->pluck('nombre')
+            ->all();
+
+        if (count($existingNames) === count($names)) {
+            Cache::put($cacheKey, true, now()->addHours(12));
+            return;
+        }
+
+        foreach ($names as $name) {
+            $department = Departamento::query()->firstOrCreate(
                 ['nombre' => $name],
                 ['descripcion' => 'Departamento de Bolivia', 'activo' => true],
             );
 
-            if (!$workArea->activo) {
-                $workArea->activo = true;
-                $workArea->save();
+            if (!$department->activo) {
+                $department->forceFill(['activo' => true])->save();
             }
         }
+
+        Cache::put($cacheKey, true, now()->addHours(12));
+        Cache::forget('catalog:bolivia_departments:active');
     }
 
     private function boliviaDepartmentNames(): array
@@ -2284,20 +2326,39 @@ POWERSHELL;
 
     private function orderedFunctionalWorkAreas()
     {
-        return AreaTrabajo::query()
+        return Cache::remember('catalog:functional_work_areas:active', now()->addMinutes(10), fn () => AreaTrabajo::query()
             ->where('activo', true)
             ->orderBy('nombre')
-            ->get();
+            ->get());
     }
 
     private function ensureDefaultWorkAreas(): void
     {
-        foreach ($this->defaultWorkAreaNames() as $name) {
+        $cacheKey = 'catalog:functional_work_areas:seeded';
+        if (Cache::get($cacheKey)) {
+            return;
+        }
+
+        $names = $this->defaultWorkAreaNames();
+        $existingNames = AreaTrabajo::query()
+            ->whereIn('nombre', $names)
+            ->pluck('nombre')
+            ->all();
+
+        if (count($existingNames) === count($names)) {
+            Cache::put($cacheKey, true, now()->addHours(12));
+            return;
+        }
+
+        foreach ($names as $name) {
             AreaTrabajo::query()->firstOrCreate(
                 ['nombre' => $name],
                 ['descripcion' => 'Area de trabajo', 'activo' => true],
             );
         }
+
+        Cache::put($cacheKey, true, now()->addHours(12));
+        Cache::forget('catalog:functional_work_areas:active');
     }
 
     private function defaultWorkAreaNames(): array
@@ -2328,10 +2389,7 @@ POWERSHELL;
             return;
         }
 
-        $employee = Empleado::whereKey(auth()->id())
-            ->orWhere('email', auth()->user()->email)
-            ->first();
-
+        $employee = $this->currentEmployee();
         if (!$employee) {
             return;
         }
@@ -2351,5 +2409,45 @@ POWERSHELL;
             'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
             'tipo' => 'atencion',
         ]);
+    }
+
+    private function currentUser(): ?User
+    {
+        if ($this->authenticatedUserResolved) {
+            return $this->authenticatedUser;
+        }
+
+        $this->authenticatedUserResolved = true;
+        $user = auth()->user();
+        $this->authenticatedUser = $user instanceof User ? $user : null;
+
+        return $this->authenticatedUser;
+    }
+
+    private function currentEmployee(): ?Empleado
+    {
+        if ($this->authenticatedEmployeeResolved) {
+            return $this->authenticatedEmployee;
+        }
+
+        $this->authenticatedEmployeeResolved = true;
+        $currentUser = $this->currentUser();
+        if (!$currentUser || !$currentUser->hasRole('Empleado')) {
+            $this->authenticatedEmployee = null;
+
+            return null;
+        }
+
+        $this->authenticatedEmployee = Empleado::with('departamentos')
+            ->where(function ($query) use ($currentUser): void {
+                $query->whereKey($currentUser->id);
+
+                if (filled($currentUser->email)) {
+                    $query->orWhere('email', $currentUser->email);
+                }
+            })
+            ->first();
+
+        return $this->authenticatedEmployee;
     }
 }
