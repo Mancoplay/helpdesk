@@ -69,7 +69,7 @@ class NotificationController extends Controller
 
     private function notificationHistoryQuery(Request $request)
     {
-        $retentionDays = max(1, (int) config('helpdesk.notifications.retention_days', 30));
+        $retentionDays = max(1, (int) config('helpdesk.notifications.retention_days', 7));
         $cutoff = now()->subDays($retentionDays);
 
         return $request->user()

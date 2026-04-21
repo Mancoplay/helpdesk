@@ -20,6 +20,6 @@ return [
     ],
 
     'notifications' => [
-        'retention_days' => (int) env('HELPDESK_NOTIFICATIONS_RETENTION_DAYS', 30),
+        'retention_days' => (int) env('HELPDESK_NOTIFICATIONS_RETENTION_DAYS', 7),
     ],
 ];
