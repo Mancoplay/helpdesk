@@ -34,22 +34,22 @@
                     <label class="form-label">Correo</label>
                     <input type="email" name="email" class="form-control" value="{{ old('email', $cliente->email) }}" required>
 
-                    <label class="form-label mt-2">Contrasena (opcional)</label>
+                    <label class="form-label mt-2">Contraseña (opcional)</label>
                     <div class="input-group">
-                        <input type="password" name="password" class="form-control" placeholder="Nueva contrasena" autocomplete="new-password">
-                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                        <input type="password" name="password" class="form-control" placeholder="Nueva contraseña" autocomplete="new-password">
+                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contraseña">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
 
-                    <label class="form-label mt-2">Confirmar Contrasena</label>
+                    <label class="form-label mt-2">Confirmar contraseña</label>
                     <div class="input-group">
-                        <input type="password" name="password_confirmation" class="form-control" placeholder="Repite la nueva contrasena" autocomplete="new-password">
-                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                        <input type="password" name="password_confirmation" class="form-control" placeholder="Repite la nueva contraseña" autocomplete="new-password">
+                        <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contraseña">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
-                    <small class="text-muted">Si dejas los campos en blanco, se mantiene la contrasena actual.</small>
+                    <small class="text-muted">Si dejas los campos en blanco, se mantiene la contraseña actual.</small>
                 </div>
             </div>
 
@@ -86,7 +86,7 @@
 
                 const showPassword = input.type === 'password';
                 input.type = showPassword ? 'text' : 'password';
-                button.setAttribute('aria-label', showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena');
+                button.setAttribute('aria-label', showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
 
                 if (icon) {
                     icon.classList.toggle('fa-eye', !showPassword);

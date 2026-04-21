@@ -13,6 +13,6 @@ return [
 
     'attributes' => [
         'email' => 'correo',
-        'password' => 'contrasena',
+        'password' => 'contraseña',
     ],
 ];

@@ -5,7 +5,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm">
-                <div class="card-header fw-bold">Recuperar contrasena</div>
+                <div class="card-header fw-bold">Recuperar contraseña</div>
 
                 <div class="card-body">
                     @php
@@ -20,7 +20,7 @@
                     @endif
 
                     @if ($step === 1)
-                        <p class="text-muted mb-3">Paso 1 de 3: ingresa tu correo para enviar el codigo de verificacion.</p>
+                        <p class="text-muted mb-3">Paso 1 de 3: ingresa tu correo para enviar el código de verificación.</p>
 
                         <form method="POST" action="{{ route('password.email') }}">
                             @csrf
@@ -51,12 +51,12 @@
 
                             <div class="row mb-0">
                                 <div class="col-md-6 offset-md-4">
-                                    <button type="submit" class="btn btn-primary">Enviar codigo</button>
+                                    <button type="submit" class="btn btn-primary">Enviar código</button>
                                 </div>
                             </div>
                         </form>
                     @elseif ($step === 2)
-                        <p class="text-muted mb-3">Paso 2 de 3: ingresa el codigo de verificacion enviado a tu correo.</p>
+                        <p class="text-muted mb-3">Paso 2 de 3: ingresa el código de verificación enviado a tu correo.</p>
 
                         <form method="POST" action="{{ route('password.verify-code') }}" class="mb-3">
                             @csrf
@@ -84,7 +84,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                <label for="code" class="col-md-4 col-form-label text-md-end">Codigo de verificacion</label>
+                                <label for="code" class="col-md-4 col-form-label text-md-end">Código de verificación</label>
 
                                 <div class="col-md-6">
                                     <input
@@ -109,7 +109,7 @@
 
                             <div class="row mb-0">
                                 <div class="col-md-6 offset-md-4 d-flex gap-2">
-                                    <button type="submit" class="btn btn-success">Verificar codigo</button>
+                                    <button type="submit" class="btn btn-success">Verificar código</button>
                                 </div>
                             </div>
                         </form>
@@ -119,12 +119,12 @@
                             <input type="hidden" name="email" value="{{ $savedEmail }}">
                             <div class="row mb-0">
                                 <div class="col-md-6 offset-md-4">
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm">Reenviar codigo</button>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">Reenviar código</button>
                                 </div>
                             </div>
                         </form>
                     @else
-                        <p class="text-muted mb-3">Paso 3 de 3: ahora cambia tu contrasena.</p>
+                        <p class="text-muted mb-3">Paso 3 de 3: ahora cambia tu contraseña.</p>
 
                         <form method="POST" action="{{ route('password.update') }}">
                             @csrf
@@ -153,7 +153,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                <label for="password" class="col-md-4 col-form-label text-md-end">Nueva contrasena</label>
+                                <label for="password" class="col-md-4 col-form-label text-md-end">Nueva contraseña</label>
 
                                 <div class="col-md-6">
                                     <input
@@ -174,7 +174,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                <label for="password-confirm" class="col-md-4 col-form-label text-md-end">Confirmar contrasena</label>
+                                <label for="password-confirm" class="col-md-4 col-form-label text-md-end">Confirmar contraseña</label>
 
                                 <div class="col-md-6">
                                     <input
@@ -190,7 +190,7 @@
 
                             <div class="row mb-0">
                                 <div class="col-md-6 offset-md-4">
-                                    <button type="submit" class="btn btn-primary">Cambiar contrasena</button>
+                                    <button type="submit" class="btn btn-primary">Cambiar contraseña</button>
                                 </div>
                             </div>
                         </form>

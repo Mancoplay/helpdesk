@@ -25,7 +25,7 @@ class PasswordVerificationCodeMail extends Mailable
 
         return new Envelope(
             from: new Address($fromAddress, $fromName),
-            subject: 'Codigo de verificacion para recuperar tu contrasena',
+            subject: 'Código de verificación para recuperar tu contraseña',
         );
     }
 

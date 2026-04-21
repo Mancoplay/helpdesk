@@ -58,6 +58,6 @@ class ForgotPasswordController extends Controller
             'password_reset_email' => $email,
         ]);
 
-        return back()->with('status', 'Si el correo existe en el sistema, te enviamos un codigo de verificacion.');
+        return back()->with('status', 'Si el correo existe en el sistema, te enviamos un código de verificación.');
     }
 }

@@ -34,7 +34,7 @@ class NotificationController extends Controller
             ->first();
 
         if (!$notification) {
-            return back()->with('error', 'La notificacion no existe o no te pertenece.');
+            return back()->with('error', 'La notificación no existe o no te pertenece.');
         }
 
         if ($notification->read_at === null) {
@@ -57,7 +57,7 @@ class NotificationController extends Controller
         app(NotificationSummaryService::class)->forgetForUser($request->user());
         SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $request->user()->id));
 
-        return back()->with('success', 'Notificaciones marcadas como leidas.');
+        return back()->with('success', 'Notificaciones marcadas como leídas.');
     }
 
     public function unreadSummary(Request $request, NotificationSummaryService $notificationSummaryService): JsonResponse

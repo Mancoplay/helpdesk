@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Iniciar sesion')
+@section('title', 'Iniciar sesión')
 
 @section('content')
 <div class="login-box" style="width: 420px;">
@@ -9,7 +9,7 @@
             <a href="{{ url('/') }}" class="h4 text-decoration-none"><b>Help</b>Desk</a>
         </div>
         <div class="card-body">
-            <p class="login-box-msg">Inicia sesion para continuar</p>
+            <p class="login-box-msg">Inicia sesión para continuar</p>
 
             <form id="loginForm" method="POST" action="{{ route('login') }}">
                 @csrf
@@ -41,7 +41,7 @@
                         type="password"
                         class="form-control @error('password') is-invalid @enderror"
                         name="password"
-                        placeholder="Contrasena"
+                        placeholder="Contraseña"
                         required
                         autocomplete="current-password"
                     >
@@ -65,7 +65,7 @@
 
                 @if (Route::has('password.request'))
                     <p class="mb-1 mt-2">
-                        <a href="{{ route('password.request') }}">Olvidaste tu contrasena?</a>
+                        <a href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a>
                     </p>
                 @endif
             </form>

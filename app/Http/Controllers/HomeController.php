@@ -981,15 +981,15 @@ class HomeController extends Controller
         }
 
         if (!Schema::hasTable('ticket_eventos')) {
-            return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
+            return back()->with('error', 'La funcionalidad de soporte remoto aún no está disponible.');
         }
 
         if (!auth()->user()->hasRole('Administrador') && !$this->isAssignedEmployeeForTicket($ticket)) {
-            abort(403, 'Solo el empleado asignado o un administrador puede iniciar la conexion remota.');
+            abort(403, 'Solo el empleado asignado o un administrador puede iniciar la conexión remota.');
         }
 
         if ($ticket->estado !== 'en_proceso') {
-            return back()->with('error', 'La conexion remota solo se puede solicitar cuando el ticket esta en proceso.');
+            return back()->with('error', 'La conexión remota solo se puede solicitar cuando el ticket está en proceso.');
         }
 
         $hasActive = $ticket->remoteSessions()
@@ -1020,14 +1020,14 @@ class HomeController extends Controller
         return back()->with('success', 'Solicitud remota enviada al usuario.');
     }
 
-    public function updateRemoteSession(Request $request, Ticket $ticket, TicketRemoteSession $remoteSession): RedirectResponse
+    public function updateRemoteSession(Request $request, Ticket $ticket, TicketRemoteSession $remoteSession): RedirectResponse|JsonResponse
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
         }
 
         if (!Schema::hasTable('ticket_eventos')) {
-            return back()->with('error', 'La funcionalidad de soporte remoto aun no esta disponible.');
+            return back()->with('error', 'La funcionalidad de soporte remoto aún no está disponible.');
         }
 
         if ((int) $remoteSession->ticket_id !== (int) $ticket->id) {
@@ -1038,7 +1038,7 @@ class HomeController extends Controller
             'action' => ['required', Rule::in(['accept', 'reject', 'share_code', 'end', 'signal_closed'])],
             'support_code' => ['nullable', 'string', 'max:40', 'regex:/^[0-9]+$/'],
         ], [
-            'support_code.regex' => 'El codigo de AnyDesk solo debe contener numeros.',
+            'support_code.regex' => 'El código de AnyDesk solo debe contener números.',
         ]);
 
         $action = $validated['action'];
@@ -1058,13 +1058,25 @@ class HomeController extends Controller
 
             $clientId = (int) ($ticket->cliente_id ?? 0);
             if ($clientId > 0 && $this->hasActiveRemoteSessionForClient($clientId, (int) $remoteSession->id)) {
-                return back()->with('error', 'Ya tienes otra conexion remota activa. Finalizala antes de aceptar una nueva.');
+                return back()->with('error', 'Ya tienes otra conexión remota activa. Finalízala antes de aceptar una nueva.');
             }
 
             $remoteSession->update([
                 'status' => 'accepted',
                 'responded_at' => now(),
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Solicitud remota aceptada correctamente.',
+                    'remote' => [
+                        'id' => (int) $remoteSession->id,
+                        'status' => (string) $remoteSession->status,
+                        'support_code' => (string) ($remoteSession->support_code ?? ''),
+                    ],
+                ]);
+            }
 
             return back()->with('success', 'Solicitud remota aceptada correctamente.');
         }
@@ -1083,6 +1095,18 @@ class HomeController extends Controller
                 'cancelled_by_user_id' => auth()->id(),
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Solicitud remota rechazada.',
+                    'remote' => [
+                        'id' => (int) $remoteSession->id,
+                        'status' => (string) $remoteSession->status,
+                        'support_code' => (string) ($remoteSession->support_code ?? ''),
+                    ],
+                ]);
+            }
+
             return back()->with('success', 'Solicitud remota rechazada.');
         }
 
@@ -1095,19 +1119,31 @@ class HomeController extends Controller
                 abort(403);
             }
             if ($remoteSession->status !== 'accepted') {
-                return back()->with('error', 'Debes aceptar la solicitud antes de compartir el codigo.');
+                return back()->with('error', 'Debes aceptar la solicitud antes de compartir el código.');
             }
 
             $supportCode = preg_replace('/\D+/', '', trim((string) ($validated['support_code'] ?? ''))) ?? '';
             if ($supportCode === '') {
-                return back()->with('error', 'Debes ingresar el codigo de AnyDesk.');
+                return back()->with('error', 'Debes ingresar el código de AnyDesk.');
             }
 
             $remoteSession->update([
                 'support_code' => $supportCode,
             ]);
 
-            return back()->with('success', 'Codigo de AnyDesk compartido.');
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Código de AnyDesk compartido.',
+                    'remote' => [
+                        'id' => (int) $remoteSession->id,
+                        'status' => (string) $remoteSession->status,
+                        'support_code' => (string) ($remoteSession->support_code ?? ''),
+                    ],
+                ]);
+            }
+
+            return back()->with('success', 'Código de AnyDesk compartido.');
         }
 
         if ($action === 'end') {
@@ -1115,7 +1151,7 @@ class HomeController extends Controller
                 abort(403);
             }
             if (!in_array($remoteSession->status, ['accepted', 'pending'], true)) {
-                return back()->with('error', 'No hay una sesion remota activa para finalizar.');
+                return back()->with('error', 'No hay una sesión remota activa para finalizar.');
             }
 
             $remoteSession->update([
@@ -1126,11 +1162,25 @@ class HomeController extends Controller
 
             $anyDeskClosed = $this->tryCloseAnyDeskSession();
 
-            if ($anyDeskClosed) {
-                return back()->with('success', 'Conexion remota finalizada correctamente y AnyDesk se cerro.');
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $anyDeskClosed
+                        ? 'Conexión remota finalizada correctamente y AnyDesk se cerró.'
+                        : 'Conexión remota finalizada en el sistema.',
+                    'remote' => [
+                        'id' => (int) $remoteSession->id,
+                        'status' => (string) $remoteSession->status,
+                        'support_code' => (string) ($remoteSession->support_code ?? ''),
+                    ],
+                ]);
             }
 
-            return back()->with('error', 'Conexion remota finalizada en el sistema.');
+            if ($anyDeskClosed) {
+                return back()->with('success', 'Conexión remota finalizada correctamente y AnyDesk se cerró.');
+            }
+
+            return back()->with('error', 'Conexión remota finalizada en el sistema.');
         }
 
         if (
@@ -1142,7 +1192,7 @@ class HomeController extends Controller
         }
 
         if (!in_array($remoteSession->status, ['accepted', 'pending'], true)) {
-            return back()->with('error', 'No hay una sesion remota activa para cerrar.');
+            return back()->with('error', 'No hay una sesión remota activa para cerrar.');
         }
 
         $remoteSession->update([
@@ -1154,11 +1204,25 @@ class HomeController extends Controller
 
         $anyDeskClosed = $this->tryCloseAnyDeskSession();
 
-        if ($anyDeskClosed) {
-            return back()->with('success', 'Se marco la sesion remota como finalizada y AnyDesk se cerro.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $anyDeskClosed
+                    ? 'Se marcó la sesión remota como finalizada y AnyDesk se cerró.'
+                    : 'Se finalizó la sesión en el sistema.',
+                'remote' => [
+                    'id' => (int) $remoteSession->id,
+                    'status' => (string) $remoteSession->status,
+                    'support_code' => (string) ($remoteSession->support_code ?? ''),
+                ],
+            ]);
         }
 
-        return back()->with('error', 'Se finalizo la sesion en el sistema.');
+        if ($anyDeskClosed) {
+            return back()->with('success', 'Se marcó la sesión remota como finalizada y AnyDesk se cerró.');
+        }
+
+        return back()->with('error', 'Se finalizó la sesión en el sistema.');
     }
 
     public function fetchRemoteSupportCode(Ticket $ticket, TicketRemoteSession $remoteSession): JsonResponse
@@ -1168,7 +1232,7 @@ class HomeController extends Controller
         }
 
         if (!Schema::hasTable('ticket_eventos')) {
-            return response()->json(['message' => 'La funcionalidad de soporte remoto aun no esta disponible.'], 422);
+            return response()->json(['message' => 'La funcionalidad de soporte remoto aún no está disponible.'], 422);
         }
 
         if ((int) $remoteSession->ticket_id !== (int) $ticket->id) {
@@ -1180,12 +1244,12 @@ class HomeController extends Controller
         }
 
         if ($remoteSession->status !== 'accepted') {
-            return response()->json(['message' => 'Debes aceptar la solicitud antes de obtener el codigo.'], 422);
+            return response()->json(['message' => 'Debes aceptar la solicitud antes de obtener el código.'], 422);
         }
 
         $supportCode = $this->resolveAnyDeskSupportCode();
         if ($supportCode === null) {
-            return response()->json(['message' => 'No se pudo leer automaticamente el codigo de AnyDesk.'], 422);
+            return response()->json(['message' => 'No se pudo leer automáticamente el código de AnyDesk.'], 422);
         }
 
         $remoteSession->update([

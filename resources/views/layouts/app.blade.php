@@ -82,7 +82,7 @@
                                     <form action="{{ route('notifications.mark-all-read') }}" method="POST">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-outline-primary w-100">
-                                            Marcar todas como leidas
+                                            Marcar todas como leídas
                                         </button>
                                     </form>
                                 </div>
@@ -97,7 +97,7 @@
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesion
+                                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
                                     </button>
                                 </form>
                             </div>
@@ -267,7 +267,7 @@
                 }
 
                 const body = count === 1
-                    ? 'Tienes 1 notificacion nueva en Help Desk.'
+                    ? 'Tienes 1 notificación nueva en Help Desk.'
                     : `Tienes ${count} notificaciones sin leer en Help Desk.`;
 
                 new Notification('Help Desk', {
@@ -308,7 +308,7 @@
                     };
 
                     listElement.innerHTML = items.map(function (item) {
-                        const title = escapeHtml(item.title || 'Notificacion');
+                        const title = escapeHtml(item.title || 'Notificación');
                         const message = escapeHtml(item.message || '');
                         const created = escapeHtml(item.created_human || '');
                         const openUrl = escapeHtml(item.open_url || '#');
@@ -332,7 +332,7 @@
 
                         if (toastEl && toastBody) {
                             toastBody.textContent = unreadCount === 1
-                                ? 'Tienes 1 notificacion nueva.'
+                                ? 'Tienes 1 notificación nueva.'
                                 : `Tienes ${unreadCount} notificaciones sin leer.`;
                             window.bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 }).show();
                         }

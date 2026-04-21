@@ -40,7 +40,7 @@ class ResetPasswordController extends Controller
 
         if (!$row) {
             return back()
-                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
+                ->withErrors(['code' => 'El código es inválido o expiró.'])
                 ->withInput();
         }
 
@@ -51,13 +51,13 @@ class ResetPasswordController extends Controller
             DB::table('password_reset_tokens')->where('email', $email)->delete();
 
             return back()
-                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
+                ->withErrors(['code' => 'El código es inválido o expiró.'])
                 ->withInput();
         }
 
         if (!Hash::check($code, $row->token)) {
             return back()
-                ->withErrors(['code' => 'El codigo es invalido o expiro.'])
+                ->withErrors(['code' => 'El código es inválido o expiró.'])
                 ->withInput();
         }
 
@@ -67,7 +67,7 @@ class ResetPasswordController extends Controller
             'password_code_verified_at' => now()->toDateTimeString(),
         ]);
 
-        return back()->with('status', 'Codigo verificado. Ahora ya puedes cambiar tu contrasena.');
+        return back()->with('status', 'Código verificado. Ahora ya puedes cambiar tu contraseña.');
     }
 
     public function reset(Request $request): RedirectResponse
@@ -80,12 +80,12 @@ class ResetPasswordController extends Controller
         $email = $request->string('email')->toString();
 
         if ((int) session('password_reset_step', 1) < 3 || session('password_reset_email') !== $email) {
-            return back()->withErrors(['email' => 'Debes verificar el codigo antes de cambiar la contrasena.']);
+            return back()->withErrors(['email' => 'Debes verificar el código antes de cambiar la contraseña.']);
         }
 
         $row = DB::table('password_reset_tokens')->where('email', $email)->first();
         if (!$row) {
-            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo código.']);
         }
 
         $expirationMinutes = (int) config('auth.passwords.users.expire', 60);
@@ -95,12 +95,12 @@ class ResetPasswordController extends Controller
             DB::table('password_reset_tokens')->where('email', $email)->delete();
             session()->forget(['password_reset_step', 'password_reset_email', 'password_code_verified_at']);
 
-            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo código.']);
         }
 
         $user = User::query()->where('email', $email)->first();
         if (!$user) {
-            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo codigo.']);
+            return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo código.']);
         }
 
         $user->forceFill([
@@ -113,6 +113,6 @@ class ResetPasswordController extends Controller
         DB::table('password_reset_tokens')->where('email', $email)->delete();
         session()->forget(['password_reset_step', 'password_reset_email', 'password_code_verified_at']);
 
-        return redirect()->route('login')->with('status', 'Contrasena actualizada correctamente. Ya puedes iniciar sesion.');
+        return redirect()->route('login')->with('status', 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.');
     }
 }

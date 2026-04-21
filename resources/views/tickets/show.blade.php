@@ -57,7 +57,7 @@
             @can('atender tickets')
                 @if($ticket->estado === 'pendiente')
                     <div class="card-footer">
-                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
+                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('¿Estás seguro de que quieres atender este ticket? El estado cambiará a \"En proceso\" y se asignará a ti.');">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-info">Atender ticket</button>
@@ -98,15 +98,15 @@
 
                     @if(!$remoteEnabled)
                         <div class="alert alert-secondary py-2 mb-0">
-                            Funcionalidad remota no disponible todavia. Falta ejecutar migraciones de base de datos.
+                            Funcionalidad remota no disponible todavía. Falta ejecutar migraciones de base de datos.
                         </div>
                     @elseif($ticket->estado === 'pendiente')
                         <div class="alert alert-warning py-2 mb-0">
-                            La conexion remota estara disponible cuando el ticket sea atendido y pase a <strong>En proceso</strong>.
+                            La conexión remota estará disponible cuando el ticket sea atendido y pase a <strong>En proceso</strong>.
                         </div>
                     @elseif($ticket->estado === 'finalizado')
                         <div class="alert alert-secondary py-2 mb-0">
-                            Ticket finalizado: la conexion remota esta bloqueada.
+                            Ticket finalizado: la conexión remota está bloqueada.
                         </div>
                     @elseif(!$remoteSession || in_array($remoteSession->status, ['rejected', 'cancelled', 'ended'], true))
                         @if($canManageRemoteAsEmployee)
@@ -116,7 +116,7 @@
                             </form>
                             <small class="text-muted d-block mt-2">El usuario recibira una solicitud para autorizar el control remoto.</small>
                         @else
-                            <small class="text-muted">Aun no hay solicitud activa de soporte remoto.</small>
+                            <small class="text-muted">Aún no hay solicitud activa de soporte remoto.</small>
                         @endif
                     @elseif($remoteSession->status === 'pending')
                         <div class="alert alert-warning py-2 mb-2">
@@ -145,17 +145,17 @@
                         @endif
                     @elseif($remoteSession->status === 'accepted')
                         <div class="alert alert-success py-2 mb-2">
-                            Conexion autorizada por el usuario.
+                            Conexión autorizada por el usuario.
                         </div>
                         <button type="button" class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#remoteSupportModal">
-                            Abrir panel de conexion
+                            Abrir panel de conexión
                         </button>
                         @if($canManageRemoteAsEmployee)
                             <form id="endRemoteSessionForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="end">
-                                <button type="button" id="endRemoteSessionBtn" class="btn btn-outline-dark w-100">Finalizar conexion</button>
+                                <button type="button" id="endRemoteSessionBtn" class="btn btn-outline-dark w-100">Finalizar conexión</button>
                             </form>
                         @endif
                     @endif
@@ -243,7 +243,7 @@
                 <div class="ticket-chat-composer">
                     @if($mustAttendFirst)
                         <div class="alert alert-warning mb-0">
-                            Este ticket aun no esta siendo atendido. Presiona <strong>Atender ticket</strong> para habilitar el chat y la carga de imagenes.
+                            Este ticket aún no está siendo atendido. Presiona <strong>Atender ticket</strong> para habilitar el chat y la carga de imágenes.
                         </div>
                     @elseif($ticket->estado === 'finalizado')
                         <div class="alert alert-secondary mb-0">
@@ -287,16 +287,16 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Conexion remota del ticket {{ $ticket->codigo }}</h5>
+                <h5 class="modal-title">Conexión remota del ticket {{ $ticket->codigo }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info mb-3">
-                    Sesion autorizada por el usuario en <strong>AnyDesk</strong>.
+                    Sesión autorizada por el usuario en <strong>AnyDesk</strong>.
                 </div>
                 <div class="row g-2 align-items-end">
                     <div class="col-12">
-                        <label class="form-label mb-1">Codigo de AnyDesk</label>
+                        <label class="form-label mb-1">Código de AnyDesk</label>
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
@@ -314,8 +314,13 @@
                                         inputmode="numeric"
                                         pattern="[0-9]+"
                                     >
-                                    <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar codigo</button>
+                                    @if(!$canManageRemoteAsEmployee || $canManageRemoteAsClient)
+                                        <button type="submit" id="sendSupportCodeBtn" class="btn btn-success">Enviar código</button>
+                                    @endif
                                 </div>
+                                <small id="remoteSupportCodeStatus" class="text-muted d-block mt-2">
+                                    {{ (!$canManageRemoteAsEmployee || $canManageRemoteAsClient) ? 'Puedes enviar el código manualmente.' : 'El código se guarda automáticamente.' }}
+                                </small>
                             </form>
                         @else
                             <div class="input-group">
@@ -340,7 +345,7 @@
                             class="btn btn-outline-dark w-100"
                             {{ blank($remoteSession->support_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
                         >
-                            Abrir y copiar codigo de AnyDesk
+                            Abrir y copiar código de AnyDesk
                         </button>
                     </div>
                     @if($canManageRemoteAsClient)
@@ -349,21 +354,21 @@
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="signal_closed">
-                                <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesion remota</button>
+                                <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesión remota</button>
                             </form>
                         </div>
                     @endif
                 </div>
                 <hr>
-                <p class="mb-1"><strong>Pasos rapidos</strong></p>
+                <p class="mb-1"><strong>Pasos rápidos</strong></p>
                 <ol class="mb-0">
-                    <li>Usa "Abrir y copiar codigo de AnyDesk" para abrir la app y copiar el codigo.</li>
-                    <li>Comparte o pega el codigo para iniciar la conexion remota.</li>
-                    <li>Usa "Finalizar conexion" para cortar la sesion remota del ticket.</li>
+                    <li>Usa "Abrir y copiar código de AnyDesk" para abrir la app y copiar el código.</li>
+                    <li>Comparte o pega el código para iniciar la conexión remota.</li>
+                    <li>Usa "Finalizar conexión" para cortar la sesión remota del ticket.</li>
                 </ol>
                 <p class="mt-3 mb-0">
                     <a href="https://anydesk.com/es/downloads/windows" target="_blank" rel="noopener noreferrer">
-                        Descarga AnyDesk aqui
+                        Descarga AnyDesk aquí
                     </a>
                 </p>
             </div>
@@ -380,14 +385,16 @@
         const codeElement = document.getElementById('remoteSupportCode');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
+        const supportCodeStatus = document.getElementById('remoteSupportCodeStatus');
         const sendSupportCodeBtn = document.getElementById('sendSupportCodeBtn');
         const endRemoteSessionBtn = document.getElementById('endRemoteSessionBtn');
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
-        const canManageRemoteAsClient = @json($canManageRemoteAsClient);
-        const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
-        const shouldSyncSupportCode = false;
+        let saveTimer = null;
+        let saveRequestController = null;
+        let lastSavedCode = codeElement ? String(codeElement.value || '').replace(/\D+/g, '').trim() : '';
+        const hasManualSubmitButton = Boolean(sendSupportCodeBtn);
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();
@@ -450,19 +457,112 @@
             });
         }
 
-        if (shareCodeForm && sendSupportCodeBtn && codeElement) {
+        const setSupportCodeStatus = function (message, tone) {
+            if (!supportCodeStatus) {
+                return;
+            }
+
+            supportCodeStatus.textContent = message;
+            supportCodeStatus.classList.remove('text-muted', 'text-success', 'text-danger');
+            supportCodeStatus.classList.add(tone || 'text-muted');
+        };
+
+        const saveSupportCode = function () {
+            if (!shareCodeForm || !codeElement) {
+                return;
+            }
+
+            const code = String(codeElement.value || '').replace(/\D+/g, '').trim();
+            codeElement.value = code;
+
+            if (!code) {
+                setSupportCodeStatus('Escribe un código numérico para compartirlo.', 'text-muted');
+                return;
+            }
+
+            if (code === lastSavedCode) {
+                setSupportCodeStatus('Código sincronizado.', 'text-success');
+                return;
+            }
+
+            if (saveRequestController) {
+                saveRequestController.abort();
+            }
+
+            saveRequestController = new AbortController();
+            setSupportCodeStatus('Guardando código...', 'text-muted');
+
+            const payload = new FormData(shareCodeForm);
+            payload.set('support_code', code);
+
+            fetch(shareCodeForm.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: payload,
+                signal: saveRequestController.signal
+            })
+                .then(function (response) {
+                    return response.json().then(function (payload) {
+                        if (!response.ok) {
+                            throw new Error(payload.message || 'No se pudo guardar el código.');
+                        }
+
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    const savedCode = String(payload?.remote?.support_code || code).trim();
+                    lastSavedCode = savedCode;
+                    codeElement.value = savedCode;
+                    setSupportCodeStatus('Código sincronizado.', 'text-success');
+                })
+                .catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    setSupportCodeStatus(error.message || 'No se pudo guardar el código.', 'text-danger');
+                })
+                .finally(function () {
+                    saveRequestController = null;
+                });
+        };
+
+        if (shareCodeForm && codeElement) {
             codeElement.addEventListener('input', function () {
+                const digitsOnly = String(codeElement.value || '').replace(/\D+/g, '');
+                if (codeElement.value !== digitsOnly) {
+                    codeElement.value = digitsOnly;
+                }
+
                 if (typeof codeElement.setCustomValidity === 'function') {
                     codeElement.setCustomValidity('');
                 }
+
+                if (!hasManualSubmitButton) {
+                    setSupportCodeStatus('Guardando cambios...', 'text-muted');
+                    window.clearTimeout(saveTimer);
+                    saveTimer = window.setTimeout(saveSupportCode, 500);
+                }
             });
 
+            if (!hasManualSubmitButton) {
+                codeElement.addEventListener('blur', function () {
+                    window.clearTimeout(saveTimer);
+                    saveSupportCode();
+                });
+            }
+
             shareCodeForm.addEventListener('submit', function (event) {
-                const code = codeElement.value.replace(/\D+/g, '').trim();
+                const code = String(codeElement.value || '').replace(/\D+/g, '').trim();
                 codeElement.value = code;
 
                 if (!code) {
                     event.preventDefault();
+                    setSupportCodeStatus('Debes ingresar un código de AnyDesk.', 'text-danger');
                     if (typeof codeElement.setCustomValidity === 'function') {
                         codeElement.setCustomValidity('Rellena este campo.');
                     }
@@ -477,8 +577,16 @@
                     codeElement.setCustomValidity('');
                 }
 
-                sendSupportCodeBtn.disabled = true;
-                sendSupportCodeBtn.textContent = 'Enviando...';
+                if (hasManualSubmitButton) {
+                    setSupportCodeStatus('Enviando código...', 'text-muted');
+                    sendSupportCodeBtn.disabled = true;
+                    sendSupportCodeBtn.textContent = 'Enviando...';
+                    return;
+                }
+
+                event.preventDefault();
+                window.clearTimeout(saveTimer);
+                saveSupportCode();
             });
         }
 

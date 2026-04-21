@@ -27,7 +27,7 @@ class PendingTicketDatabaseNotification extends Notification
         $title = $this->isReminder ? 'Recordatorio de ticket pendiente' : 'Nuevo ticket pendiente';
         $message = $this->isReminder
             ? "El ticket #{$this->ticket->codigo} sigue pendiente."
-            : "Se creo el ticket #{$this->ticket->codigo} y requiere atencion.";
+            : "Se creó el ticket #{$this->ticket->codigo} y requiere atención.";
 
         return [
             'kind' => 'ticket_pending_alert',

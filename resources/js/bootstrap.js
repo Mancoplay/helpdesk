@@ -27,7 +27,12 @@ const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
 
 if (reverbKey) {
     const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? window.location.protocol.replace(':', '') ?? 'http';
-    const reverbHost = import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
+    const configuredReverbHost = import.meta.env.VITE_REVERB_HOST;
+    const currentHost = window.location.hostname;
+    const localHosts = ['127.0.0.1', '0.0.0.0', 'localhost'];
+    const shouldUseCurrentHost = !configuredReverbHost
+        || (localHosts.includes(configuredReverbHost) && !localHosts.includes(currentHost));
+    const reverbHost = shouldUseCurrentHost ? currentHost : configuredReverbHost;
     const reverbPort = Number(import.meta.env.VITE_REVERB_PORT ?? (reverbScheme === 'https' ? 443 : 8080));
 
     window.Echo = new Echo({
