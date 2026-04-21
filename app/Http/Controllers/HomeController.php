@@ -180,7 +180,7 @@ class HomeController extends Controller
 
         $usuarios = $query->paginate($perPage)->withQueryString();
 
-        return view('usuarios.index', [
+        $viewData = [
             'usuarios' => $usuarios,
             'departamentosBolivia' => $this->orderedBoliviaDepartments(),
             'areasTrabajoActivas' => $this->orderedFunctionalWorkAreas(),
@@ -189,7 +189,13 @@ class HomeController extends Controller
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return view('usuarios.partials.table', $viewData);
+        }
+
+        return view('usuarios.index', $viewData);
     }
 
     public function reportesUsuarios(Request $request)
@@ -295,7 +301,7 @@ class HomeController extends Controller
                 });
         }
 
-        return view('reportes.usuarios', [
+        $viewData = [
             'usuarios' => $usuarios,
             'searchQuery' => $search,
             'selectedRole' => $roleFilter,
@@ -316,7 +322,13 @@ class HomeController extends Controller
             'detalleRelacionLabel' => $detalleRelacionLabel,
             'generatedAt' => now(),
             'menuBadges' => $this->menuBadges(),
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return view('reportes.partials.usuarios-results', $viewData);
+        }
+
+        return view('reportes.usuarios', $viewData);
     }
 
     public function reviewCliente(Request $request, Cliente $cliente)
@@ -443,14 +455,20 @@ class HomeController extends Controller
 
         $empleados = $query->paginate($perPage)->withQueryString();
 
-        return view('empleados.index', [
+        $viewData = [
             'empleados' => $empleados,
             'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'departamentosActivos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return view('empleados.partials.table', $viewData);
+        }
+
+        return view('empleados.index', $viewData);
     }
 
     public function reviewEmpleado(Request $request, Empleado $empleado)
@@ -617,13 +635,19 @@ class HomeController extends Controller
 
         $areasTrabajo = $query->paginate($perPage)->withQueryString();
 
-        return view('departamentos.index', [
+        $viewData = [
             'departamentos' => $areasTrabajo,
             'notificationEmail' => $this->notificationRecipientEmail(),
             'searchQuery' => $search,
             'perPage' => $perPage,
             'menuBadges' => $this->menuBadges(),
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return view('departamentos.partials.table', $viewData);
+        }
+
+        return view('departamentos.index', $viewData);
     }
 
     public function updateNotificationEmail(Request $request): RedirectResponse
@@ -850,6 +874,10 @@ class HomeController extends Controller
         if ($canCreateTickets) {
             $viewData['departamentosActivos'] = Departamento::where('activo', true)->orderBy('nombre')->get();
             $viewData['nextTicketCode'] = $this->nextTicketCode();
+        }
+
+        if ($request->ajax()) {
+            return view('tickets.partials.table', $viewData);
         }
 
         return view('tickets.index', $viewData);

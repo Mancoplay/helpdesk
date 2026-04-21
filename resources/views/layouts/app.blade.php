@@ -20,9 +20,8 @@
 
     @auth
         @php
-            $notificationSummary = app(\App\Services\NotificationSummaryService::class)->forUser(Auth::user());
-            $unreadNotifications = collect($notificationSummary['items'] ?? []);
-            $unreadNotificationsCount = (int) ($notificationSummary['count'] ?? 0);
+            $unreadNotifications = collect();
+            $unreadNotificationsCount = 0;
         @endphp
         <div class="app-wrapper">
             <nav class="app-header navbar navbar-expand bg-dark navbar-dark py-1">
@@ -486,67 +485,130 @@
                 });
             });
 
-            document.querySelectorAll('form').forEach(function (form) {
-                const checkpointButton = form.querySelector('.checkpoint-switch');
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                if (!(form instanceof HTMLFormElement)) {
+                    return;
+                }
 
+                const checkpointButton = form.querySelector('.checkpoint-switch');
                 if (!checkpointButton) {
                     return;
                 }
 
-                form.addEventListener('submit', function (event) {
-                    if (form.dataset.checkpointSubmitting === '1') {
-                        return;
+                if (form.dataset.checkpointSubmitting === '1') {
+                    return;
+                }
+
+                event.preventDefault();
+                form.dataset.checkpointSubmitting = '1';
+
+                const nextIsOn = checkpointButton.classList.contains('is-off');
+                checkpointButton.classList.toggle('is-on', nextIsOn);
+                checkpointButton.classList.toggle('is-off', !nextIsOn);
+                checkpointButton.title = nextIsOn ? 'Habilitado' : 'Deshabilitado';
+
+                const labelElement = checkpointButton.querySelector('.checkpoint-switch__label');
+                if (labelElement) {
+                    labelElement.textContent = nextIsOn ? 'ON' : 'OFF';
+                }
+
+                const syncTarget = form.getAttribute('data-sync-active-target');
+                if (syncTarget) {
+                    const activeRow = document.querySelector(`[data-active-row="${syncTarget}"]`);
+                    const activeBadge = activeRow ? activeRow.querySelector('[data-active-badge]') : null;
+                    const activeSelect = document.querySelector(`[data-edit-active-select="${syncTarget}"]`);
+
+                    if (activeBadge) {
+                        activeBadge.textContent = nextIsOn ? 'Si' : 'No';
+                        activeBadge.classList.toggle('text-bg-success', nextIsOn);
+                        activeBadge.classList.toggle('text-bg-secondary', !nextIsOn);
                     }
 
-                    event.preventDefault();
-                    form.dataset.checkpointSubmitting = '1';
-
-                    const nextIsOn = checkpointButton.classList.contains('is-off');
-                    checkpointButton.classList.toggle('is-on', nextIsOn);
-                    checkpointButton.classList.toggle('is-off', !nextIsOn);
-                    checkpointButton.title = nextIsOn ? 'Habilitado' : 'Deshabilitado';
-
-                    const labelElement = checkpointButton.querySelector('.checkpoint-switch__label');
-                    if (labelElement) {
-                        labelElement.textContent = nextIsOn ? 'ON' : 'OFF';
+                    if (activeSelect) {
+                        activeSelect.value = nextIsOn ? '1' : '0';
                     }
+                }
 
-                    const syncTarget = form.getAttribute('data-sync-active-target');
-                    if (syncTarget) {
-                        const activeRow = document.querySelector(`[data-active-row="${syncTarget}"]`);
-                        const activeBadge = activeRow ? activeRow.querySelector('[data-active-badge]') : null;
-                        const activeSelect = document.querySelector(`[data-edit-active-select="${syncTarget}"]`);
+                checkpointButton.disabled = true;
 
-                        if (activeBadge) {
-                            activeBadge.textContent = nextIsOn ? 'Si' : 'No';
-                            activeBadge.classList.toggle('text-bg-success', nextIsOn);
-                            activeBadge.classList.toggle('text-bg-secondary', !nextIsOn);
-                        }
-
-                        if (activeSelect) {
-                            activeSelect.value = nextIsOn ? '1' : '0';
-                        }
-                    }
-
-                    checkpointButton.disabled = true;
-
-                    window.setTimeout(function () {
-                        form.submit();
-                    }, 180);
-                });
+                window.setTimeout(function () {
+                    form.submit();
+                }, 180);
             });
 
-            refreshNotificationSummary();
-            const hasNotificationSocket = Boolean(window.Echo && typeof window.Echo.private === 'function');
+            const notificationSocket = {
+                enabled: Boolean(window.Echo && typeof window.Echo.private === 'function'),
+                connected: false,
+                channel: null,
+            };
 
-            if (hasNotificationSocket && authUserId > 0) {
-                window.Echo.private(`users.${authUserId}.notifications`)
+            const resolveNotificationPollInterval = function () {
+                return notificationSocket.connected ? 45000 : 8000;
+            };
+
+            const scheduleNotificationPolling = function () {
+                const intervalMs = resolveNotificationPollInterval();
+
+                if (notificationSocket.pollTimer) {
+                    window.clearInterval(notificationSocket.pollTimer);
+                }
+
+                notificationSocket.pollTimer = window.setInterval(refreshNotificationSummary, intervalMs);
+            };
+
+            const bindNotificationSocket = function () {
+                if (!notificationSocket.enabled || authUserId <= 0) {
+                    scheduleNotificationPolling();
+                    return;
+                }
+
+                const pusherConnection = window.Echo?.connector?.pusher?.connection;
+                notificationSocket.connected = pusherConnection?.state === 'connected';
+
+                if (pusherConnection && typeof pusherConnection.bind === 'function') {
+                    pusherConnection.bind('connected', function () {
+                        notificationSocket.connected = true;
+                        scheduleNotificationPolling();
+                        refreshNotificationSummary();
+                    });
+
+                    pusherConnection.bind('disconnected', function () {
+                        notificationSocket.connected = false;
+                        scheduleNotificationPolling();
+                    });
+
+                    pusherConnection.bind('unavailable', function () {
+                        notificationSocket.connected = false;
+                        scheduleNotificationPolling();
+                    });
+
+                    pusherConnection.bind('failed', function () {
+                        notificationSocket.connected = false;
+                        scheduleNotificationPolling();
+                    });
+                }
+
+                notificationSocket.channel = window.Echo.private(`users.${authUserId}.notifications`)
                     .listen('.notifications.updated', function () {
                         refreshNotificationSummary();
                     });
-            }
 
-            window.setInterval(refreshNotificationSummary, hasNotificationSocket ? 180000 : 60000);
+                scheduleNotificationPolling();
+            };
+
+            refreshNotificationSummary();
+            bindNotificationSocket();
+
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    refreshNotificationSummary();
+                }
+            });
+
+            window.addEventListener('focus', function () {
+                refreshNotificationSummary();
+            });
 
             const bellButton = document.getElementById('notificationsBellButton');
             if (bellButton && 'Notification' in window) {

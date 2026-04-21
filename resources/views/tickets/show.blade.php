@@ -1024,18 +1024,80 @@ closeAnyDeskBtn.disabled = true;
 
         window.__ticketLivePollByTicket = window.__ticketLivePollByTicket || {};
         window.__ticketLivePollByTicket[ticketId] = runLivePoll;
-        const hasTicketSocket = Boolean(window.Echo && typeof window.Echo.private === 'function');
 
-        if (hasTicketSocket) {
-            window.Echo.private(`tickets.${ticketId}`)
+        const ticketSocket = {
+            enabled: Boolean(window.Echo && typeof window.Echo.private === 'function'),
+            connected: false,
+            channel: null,
+            pollTimer: null,
+        };
+
+        const resolveTicketPollInterval = function () {
+            return ticketSocket.connected ? 20000 : 4000;
+        };
+
+        const scheduleTicketPolling = function () {
+            const intervalMs = resolveTicketPollInterval();
+
+            if (ticketSocket.pollTimer) {
+                window.clearInterval(ticketSocket.pollTimer);
+            }
+
+            ticketSocket.pollTimer = window.setInterval(runLivePoll, intervalMs);
+        };
+
+        const bindTicketSocket = function () {
+            if (!ticketSocket.enabled) {
+                scheduleTicketPolling();
+                return;
+            }
+
+            const pusherConnection = window.Echo?.connector?.pusher?.connection;
+            ticketSocket.connected = pusherConnection?.state === 'connected';
+
+            if (pusherConnection && typeof pusherConnection.bind === 'function') {
+                pusherConnection.bind('connected', function () {
+                    ticketSocket.connected = true;
+                    scheduleTicketPolling();
+                    runLivePoll();
+                });
+
+                pusherConnection.bind('disconnected', function () {
+                    ticketSocket.connected = false;
+                    scheduleTicketPolling();
+                });
+
+                pusherConnection.bind('unavailable', function () {
+                    ticketSocket.connected = false;
+                    scheduleTicketPolling();
+                });
+
+                pusherConnection.bind('failed', function () {
+                    ticketSocket.connected = false;
+                    scheduleTicketPolling();
+                });
+            }
+
+            ticketSocket.channel = window.Echo.private(`tickets.${ticketId}`)
                 .listen('.ticket.stream.updated', function () {
                     runLivePoll();
                 });
-        }
+
+            scheduleTicketPolling();
+        };
 
         runLivePoll();
+        bindTicketSocket();
 
-        setInterval(runLivePoll, hasTicketSocket ? 60000 : 15000);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                runLivePoll();
+            }
+        });
+
+        window.addEventListener('focus', function () {
+            runLivePoll();
+        });
     });
 </script>
 @endpush
