@@ -1,7 +1,7 @@
 <div>
     @if($isAdmin)
-    <div class="row g-3 mb-3">
-            <div class="col-lg-3 col-md-6">
+    <div class="row g-3 mb-3 dashboard-stats-grid">
+            <div class="col dashboard-stat-col">
                 <div class="card dashboard-stat h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon bg-secondary"><i class="fas fa-users"></i></div>
@@ -12,7 +12,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col dashboard-stat-col">
                 <div class="card dashboard-stat h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon bg-info"><i class="fas fa-user-tie"></i></div>
@@ -23,7 +23,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col dashboard-stat-col">
                 <div class="card dashboard-stat h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon bg-primary"><i class="fas fa-building"></i></div>
@@ -34,7 +34,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col dashboard-stat-col">
                 <div class="card dashboard-stat h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
@@ -48,8 +48,8 @@
     </div>
     @endif
 
-    <div class="row g-3 mb-3">
-        <div class="col-lg-3 col-md-6">
+    <div class="row g-3 mb-3 dashboard-stats-grid">
+        <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon bg-warning"><i class="fas fa-hourglass-half"></i></div>
@@ -60,7 +60,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6">
+        <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon" style="background-color:#6f42c1;"><i class="fas fa-spinner"></i></div>
@@ -71,7 +71,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6">
+        <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon bg-success"><i class="fas fa-check-circle"></i></div>
@@ -82,7 +82,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6">
+        <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon bg-danger"><i class="fas fa-times-circle"></i></div>
@@ -96,8 +96,8 @@
     </div>
 
     @if(!$isAdmin)
-    <div class="row g-3 mb-3">
-        <div class="col-lg-3 col-md-6">
+    <div class="row g-3 mb-3 dashboard-stats-grid">
+        <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon" style="background-color:#0d6efd;"><i class="fas fa-ticket-alt"></i></div>
@@ -112,7 +112,7 @@
     @endif
 
     <div class="row g-3">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-12 col-xl-10 mx-auto">
             <div class="card card-graph">
                 <div class="card-header">
                     <h3 class="card-title mb-0">Grafico de Tickets</h3>
