@@ -40,7 +40,15 @@ class RunPendingTicketReminderFallback
             return false;
         }
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->expectsJson() || $request->wantsJson()) {
+            return false;
+        }
+
+        if (!$request->acceptsHtml()) {
+            return false;
+        }
+
+        if ($request->header('Sec-Fetch-Dest') && $request->header('Sec-Fetch-Dest') !== 'document') {
             return false;
         }
 
@@ -51,7 +59,10 @@ class RunPendingTicketReminderFallback
     {
         try {
             $lock = Cache::lock('tickets:notify-pending:fallback-lock', 20);
-            $checkEverySeconds = max(10, (int) config('helpdesk.pending_ticket_reminders.fallback_check_seconds', 60));
+            $intervalMinutes = max(1, (int) config('helpdesk.pending_ticket_reminders.interval_minutes', 5));
+            $minimumReminderSeconds = $intervalMinutes * 60;
+            $configuredCheckSeconds = (int) config('helpdesk.pending_ticket_reminders.fallback_check_seconds', $minimumReminderSeconds);
+            $checkEverySeconds = max($minimumReminderSeconds, $configuredCheckSeconds);
 
             if (!$lock->get()) {
                 return;

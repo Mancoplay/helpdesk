@@ -9,6 +9,7 @@ use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
+use App\Support\SafeBroadcast;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -159,7 +160,7 @@ class TicketNotificationService
 
         $recipientUsers->each(function (User $user): void {
             Cache::forget('notifications:summary:' . (int) $user->id);
-            event(new UserNotificationsUpdated((int) $user->id));
+            SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $user->id));
         });
 
         return $recipientUsers->count();

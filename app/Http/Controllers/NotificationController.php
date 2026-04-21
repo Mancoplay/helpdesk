@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UserNotificationsUpdated;
 use App\Services\NotificationSummaryService;
+use App\Support\SafeBroadcast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class NotificationController extends Controller
         if ($notification->read_at === null) {
             $notification->markAsRead();
             app(NotificationSummaryService::class)->forgetForUser($request->user());
-            event(new UserNotificationsUpdated((int) $request->user()->id));
+            SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $request->user()->id));
         }
 
         $url = (string) ($notification->data['url'] ?? route('dashboard'));
@@ -54,7 +55,7 @@ class NotificationController extends Controller
             ->unreadNotifications()
             ->update(['read_at' => now()]);
         app(NotificationSummaryService::class)->forgetForUser($request->user());
-        event(new UserNotificationsUpdated((int) $request->user()->id));
+        SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $request->user()->id));
 
         return back()->with('success', 'Notificaciones marcadas como leidas.');
     }

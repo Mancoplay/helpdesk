@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Events\TicketStreamUpdated;
+use App\Support\SafeBroadcast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,7 +46,7 @@ class TicketRemoteSession extends Model
         });
 
         static::saved(function (TicketRemoteSession $session): void {
-            event(new TicketStreamUpdated((int) $session->ticket_id));
+            SafeBroadcast::dispatch(new TicketStreamUpdated((int) $session->ticket_id));
         });
     }
 

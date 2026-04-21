@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Events\TicketStreamUpdated;
+use App\Support\SafeBroadcast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,7 +39,7 @@ class TicketMensaje extends Model
         });
 
         static::created(function (TicketMensaje $mensaje): void {
-            event(new TicketStreamUpdated((int) $mensaje->ticket_id));
+            SafeBroadcast::dispatch(new TicketStreamUpdated((int) $mensaje->ticket_id));
         });
     }
 
