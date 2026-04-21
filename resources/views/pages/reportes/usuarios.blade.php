@@ -4,10 +4,10 @@ use App\Http\Controllers\HomeController;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Areas de trabajo - Help Desk')] class extends Component
+new #[Title('Reporte de usuarios - Help Desk')] class extends Component
 {
     public function render()
     {
-        return app(HomeController::class)->departamentos(request());
+        return app(HomeController::class)->reportesUsuarios(request());
     }
 };

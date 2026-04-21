@@ -1400,11 +1400,13 @@ class HomeController extends Controller
             'tipo' => 'creacion',
         ]);
 
-        try {
-            $ticketNotificationService->notifyTicketCreated($ticket);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        dispatch(function () use ($ticketNotificationService, $ticket): void {
+            try {
+                $ticketNotificationService->notifyTicketCreated($ticket->fresh());
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        })->afterResponse();
 
         return back()->with('success', 'Ticket agregado correctamente.');
     }

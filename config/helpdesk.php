@@ -10,6 +10,7 @@ return [
     ],
 
     'pending_ticket_reminders' => [
+        'enabled' => filter_var(env('HELPDESK_PENDING_TICKET_REMINDERS_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'interval_minutes' => (int) env('HELPDESK_PENDING_TICKET_REMINDER_MINUTES', 5),
         'web_fallback_enabled' => filter_var(env('HELPDESK_PENDING_TICKET_REMINDER_WEB_FALLBACK', false), FILTER_VALIDATE_BOOLEAN),
         'fallback_check_seconds' => (int) env(

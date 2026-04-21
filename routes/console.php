@@ -13,7 +13,7 @@ Artisan::command('inspire', function () {
 Artisan::command('tickets:notify-pending', function (TicketNotificationService $ticketNotificationService) {
     $sent = $ticketNotificationService->notifyPendingTickets();
     $this->info("Notificaciones enviadas a {$sent} destinatarios.");
-})->purpose('Envia recordatorios por correo para tickets pendientes');
+})->purpose('Envia recordatorios por correo para tickets pendientes cuando estan habilitados');
 
 Artisan::command('notifications:prune-old {--days=30}', function () {
     $days = max(1, (int) $this->option('days'));
@@ -26,7 +26,9 @@ Artisan::command('notifications:prune-old {--days=30}', function () {
     $this->info("Notificaciones eliminadas: {$deleted} (anteriores a {$threshold->format('Y-m-d H:i:s')}).");
 })->purpose('Elimina notificaciones antiguas para evitar crecimiento de la base de datos');
 
-// Ejecutar cada minuto y filtrar internamente por 5 minutos evita retrasos (ej: 10-15 min).
-Schedule::command('tickets:notify-pending')->everyMinute();
+if (config('helpdesk.pending_ticket_reminders.enabled', false)) {
+    Schedule::command('tickets:notify-pending')->everyMinute();
+}
+
 Schedule::command('notifications:prune-old --days=' . max(1, (int) config('helpdesk.notifications.retention_days', 30)))
     ->dailyAt('02:00');

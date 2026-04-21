@@ -27,6 +27,10 @@ class TicketNotificationService
 
     public function notifyPendingTickets(): int
     {
+        if (!config('helpdesk.pending_ticket_reminders.enabled', false)) {
+            return 0;
+        }
+
         $intervalMinutes = max(1, (int) config('helpdesk.pending_ticket_reminders.interval_minutes', 5));
         $threshold = now()->subMinutes($intervalMinutes);
 

@@ -805,7 +805,7 @@ closeAnyDeskBtn.disabled = true;
                         return payload;
                     });
                 })
-                .then(function () {
+                .then(function (payload) {
                     form.reset();
                     selectedFiles = [];
                     renderFiles();
@@ -813,6 +813,14 @@ closeAnyDeskBtn.disabled = true;
                     if (messageInput) {
                         messageInput.value = '';
                         messageInput.focus();
+                    }
+
+                    const latestMessageId = Number(payload && payload.latest_message_id ? payload.latest_message_id : 0);
+                    if (latestMessageId > 0) {
+                        chatScroll.dataset.lastMessageId = String(Math.max(
+                            Number(chatScroll.dataset.lastMessageId || 0),
+                            latestMessageId - 1
+                        ));
                     }
 
                     const livePollFn = window.__ticketLivePollByTicket && window.__ticketLivePollByTicket[{{ (int) $ticket->id }}];
@@ -942,6 +950,10 @@ closeAnyDeskBtn.disabled = true;
                 return;
             }
 
+            currentState = String(ticketData.estado || currentState || '');
+            currentRemoteId = Number(remoteData.id || currentRemoteId || 0);
+            currentRemoteStatus = String(remoteData.status || currentRemoteStatus || '');
+
             if (assignedEmployee && ticketData.empleado_nombre) {
                 assignedEmployee.textContent = ticketData.empleado_nombre;
             }
@@ -1033,7 +1045,7 @@ closeAnyDeskBtn.disabled = true;
         };
 
         const resolveTicketPollInterval = function () {
-            return ticketSocket.connected ? 20000 : 4000;
+            return ticketSocket.connected ? 10000 : 3000;
         };
 
         const scheduleTicketPolling = function () {

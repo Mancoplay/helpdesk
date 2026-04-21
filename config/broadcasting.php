@@ -42,7 +42,8 @@ return [
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
             ],
             'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                'connect_timeout' => (float) env('REVERB_CONNECT_TIMEOUT', 0.4),
+                'timeout' => (float) env('REVERB_REQUEST_TIMEOUT', 0.6),
             ],
         ],
 
@@ -60,7 +61,8 @@ return [
                 'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
             ],
             'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                'connect_timeout' => (float) env('PUSHER_CONNECT_TIMEOUT', 0.4),
+                'timeout' => (float) env('PUSHER_REQUEST_TIMEOUT', 0.6),
             ],
         ],
 
