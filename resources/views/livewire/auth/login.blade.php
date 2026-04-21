@@ -2,7 +2,7 @@
 
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Support\SessionAccessService;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -37,21 +37,25 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
-        $this->closeOtherSessionsForUser((int) Auth::id(), (string) Session::getId());
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
-    }
+        $sessionAccessService = app(SessionAccessService::class);
+        $currentSessionId = (string) Session::getId();
+        $userId = (int) Auth::id();
 
-    private function closeOtherSessionsForUser(int $userId, string $currentSessionId): void
-    {
-        if ($userId <= 0 || $currentSessionId === '' || config('session.driver') !== 'database') {
-            return;
+        $sessionAccessService->clearExpiredSessionsForUser($userId, $currentSessionId);
+
+        if ($sessionAccessService->hasAnotherActiveSession($userId, $currentSessionId)) {
+            $sessionAccessService->clearSessionById($currentSessionId);
+            Auth::guard('web')->logout();
+            Session::invalidate();
+            Session::regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Esta cuenta ya tiene una sesion activa en otro navegador o dispositivo.',
+            ]);
         }
 
-        DB::table(config('session.table', 'sessions'))
-            ->where('user_id', $userId)
-            ->where('id', '!=', $currentSessionId)
-            ->delete();
+        $this->redirect(route('dashboard', absolute: false), navigate: true);
     }
 
     /**

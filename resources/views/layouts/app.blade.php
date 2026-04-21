@@ -227,9 +227,61 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const authUserId = @json((int) auth()->id());
+            const sessionCloseUrl = @json(route('session.close'));
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const notificationsState = {
                 lastCount: parseInt(document.getElementById('notificationsUnreadBadge')?.textContent || '0', 10) || 0,
             };
+            let suppressSessionCloseOnUnload = false;
+            let sessionCloseSent = false;
+
+            const markInternalNavigation = function () {
+                suppressSessionCloseOnUnload = true;
+            };
+
+            document.addEventListener('click', function (event) {
+                const target = event.target.closest('a, button, input[type="submit"]');
+                if (!target) {
+                    return;
+                }
+
+                if (target.matches('[data-bs-toggle], [data-lte-toggle], .btn-close')) {
+                    return;
+                }
+
+                markInternalNavigation();
+            }, true);
+
+            document.addEventListener('submit', function () {
+                markInternalNavigation();
+            }, true);
+
+            const closeSessionOnUnload = function () {
+                if (sessionCloseSent || suppressSessionCloseOnUnload || !sessionCloseUrl || !csrfToken) {
+                    return;
+                }
+
+                sessionCloseSent = true;
+
+                const payload = new FormData();
+                payload.append('_token', csrfToken);
+
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(sessionCloseUrl, payload);
+                    return;
+                }
+
+                fetch(sessionCloseUrl, {
+                    method: 'POST',
+                    body: payload,
+                    keepalive: true,
+                    credentials: 'same-origin',
+                }).catch(function () {
+                    // Ignorar errores de cierre.
+                });
+            };
+
+            window.addEventListener('pagehide', closeSessionOnUnload);
 
             const playNotificationBeep = function () {
                 try {

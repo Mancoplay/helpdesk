@@ -3,7 +3,10 @@
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NotificationController;
+use App\Support\SessionAccessService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Volt;
 
 Route::get('/', function () {
@@ -88,6 +91,15 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::post('/session/close', function (Request $request, SessionAccessService $sessionAccessService) {
+        $sessionAccessService->clearSessionById((string) $request->session()->getId());
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->noContent();
+    })->name('session.close');
+
     Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notificaciones/resumen', [NotificationController::class, 'unreadSummary'])
         ->middleware('throttle:notifications-summary')

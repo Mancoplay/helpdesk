@@ -37,6 +37,19 @@ return [
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
+    |---------------------------------------------------------------------------
+    | Concurrent Session Window
+    |---------------------------------------------------------------------------
+    |
+    | When single-session access is enforced, this value defines how many
+    | minutes a different session is considered actively in use. Older
+    | sessions are treated as stale and may be ignored during login.
+    |
+    */
+
+    'concurrent_window' => env('SESSION_CONCURRENT_WINDOW', 2),
+
+    /*
     |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------

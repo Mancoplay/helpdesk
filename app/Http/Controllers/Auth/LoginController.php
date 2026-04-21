@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\User;
+use App\Support\SessionAccessService;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class LoginController extends Controller
@@ -34,13 +34,9 @@ class LoginController extends Controller
      */
     protected $redirectTo = '/dashboard';
 
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
+    public function __construct(
+        private readonly SessionAccessService $sessionAccessService
+    ) {
         $this->middleware('guest')->except('logout');
         $this->middleware('auth')->only('logout');
     }
@@ -56,6 +52,26 @@ class LoginController extends Controller
         }
 
         if ($this->attemptLogin($request)) {
+            $loggedUser = $request->user();
+            $currentSessionId = (string) $request->session()->getId();
+
+            if ($loggedUser) {
+                $this->sessionAccessService->clearExpiredSessionsForUser((int) $loggedUser->id, $currentSessionId);
+
+                if ($this->sessionAccessService->hasAnotherActiveSession((int) $loggedUser->id, $currentSessionId)) {
+                    $this->sessionAccessService->clearSessionById($currentSessionId);
+                    auth()->logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return back()
+                        ->withErrors([
+                            'email' => 'Esta cuenta ya tiene una sesion activa en otro navegador o dispositivo.',
+                        ])
+                        ->withInput($request->only('email'));
+                }
+            }
+
             return $this->sendLoginResponse($request);
         }
 
@@ -81,9 +97,8 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, User $user): ?RedirectResponse
     {
-        $this->closeOtherSessionsForUser((int) $user->id, (string) $request->session()->getId());
-
         if ($this->employeeIsDisabled($user) || $this->clientIsDisabled($user)) {
+            $this->sessionAccessService->clearSessionById((string) $request->session()->getId());
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -104,18 +119,6 @@ class LoginController extends Controller
             $this->credentials($request),
             false
         );
-    }
-
-    private function closeOtherSessionsForUser(int $userId, string $currentSessionId): void
-    {
-        if ($userId <= 0 || $currentSessionId === '' || config('session.driver') !== 'database') {
-            return;
-        }
-
-        DB::table(config('session.table', 'sessions'))
-            ->where('user_id', $userId)
-            ->where('id', '!=', $currentSessionId)
-            ->delete();
     }
 
     private function employeeIsDisabled(User $user): bool
