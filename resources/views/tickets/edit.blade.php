@@ -10,81 +10,111 @@
 @endsection
 
 @section('content')
-<div class="card">
-    <div class="card-header"><h3 class="card-title mb-0">Editar ticket</h3></div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="row g-3">
-            @csrf
-            @method('PUT')
-            <div class="col-md-3">
-                <label class="form-label">Codigo</label>
-                <input type="text" name="codigo" class="form-control" value="{{ old('codigo', $ticket->codigo) }}" required>
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10 col-xxl-9">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h3 class="card-title mb-0">Editar ticket</h3>
+                    </div>
+                    <span class="badge text-bg-light border">#{{ old('codigo', $ticket->codigo) }}</span>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Usuario</label>
-                <select name="cliente_id" class="form-select" required>
-                    @foreach($clientes as $cliente)
-                        <option value="{{ $cliente->id }}" @selected(old('cliente_id', $ticket->cliente_id) == $cliente->id)>{{ $cliente->nombre_completo }}</option>
-                    @endforeach
-                </select>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="row g-4">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="col-12">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Codigo</label>
+                                <input type="text" name="codigo" class="form-control" value="{{ old('codigo', $ticket->codigo) }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Estado</label>
+                                <select name="estado" class="form-select" required>
+                                    <option value="pendiente" @selected(old('estado', $ticket->estado) == 'pendiente')>Pendiente</option>
+                                    <option value="en_proceso" @selected(old('estado', $ticket->estado) == 'en_proceso')>En proceso</option>
+                                    <option value="finalizado" @selected(old('estado', $ticket->estado) == 'finalizado')>Finalizado</option>
+                                    <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Departamento</label>
+                                @php
+                                    $selectedDepartment = $departamentos->firstWhere('id', old('departamento_id', $ticket->departamento_id));
+                                @endphp
+                                <input type="hidden" name="departamento_id" value="{{ old('departamento_id', $ticket->departamento_id) }}">
+                                <input type="text" class="form-control" value="{{ $selectedDepartment?->nombre ?? ($ticket->departamento->nombre ?? '-') }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="border rounded-3 p-3 p-md-4 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Usuario</label>
+                                    @php
+                                        $selectedClient = $clientes->firstWhere('id', old('cliente_id', $ticket->cliente_id));
+                                    @endphp
+                                    <input type="hidden" name="cliente_id" value="{{ old('cliente_id', $ticket->cliente_id) }}">
+                                    <input type="text" class="form-control" value="{{ $selectedClient?->nombre_completo ?? ($ticket->cliente->nombre_completo ?? '-') }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Empleado</label>
+                                    <select name="empleado_id" class="form-select">
+                                        <option value="">Sin asignar</option>
+                                        @foreach($empleados as $empleado)
+                                            <option value="{{ $empleado->id }}" @selected(old('empleado_id', $ticket->empleado_id) == $empleado->id)>{{ $empleado->nombre_completo }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Asunto</label>
+                                <input
+                                    type="text"
+                                    name="asunto"
+                                    class="form-control"
+                                    value="{{ old('asunto', $ticket->asunto) }}"
+                                    minlength="3"
+                                    required
+                                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                                    oninput="this.setCustomValidity('')"
+                                >
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripcion</label>
+                                <textarea
+                                    name="descripcion"
+                                    class="form-control"
+                                    rows="4"
+                                    minlength="3"
+                                    required
+                                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
+                                    oninput="this.setCustomValidity('')"
+                                >{{ old('descripcion', $ticket->descripcion) }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap justify-content-end gap-2 pt-2">
+                            <a href="{{ route('tickets.index') }}" class="btn btn-secondary px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">Guardar cambios</button>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Empleado</label>
-                <select name="empleado_id" class="form-select">
-                    <option value="">Sin asignar</option>
-                    @foreach($empleados as $empleado)
-                        <option value="{{ $empleado->id }}" @selected(old('empleado_id', $ticket->empleado_id) == $empleado->id)>{{ $empleado->nombre_completo }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Departamento</label>
-                <select name="departamento_id" class="form-select" required>
-                    @foreach($departamentos as $departamento)
-                        <option value="{{ $departamento->id }}" @selected(old('departamento_id', $ticket->departamento_id) == $departamento->id)>{{ $departamento->nombre }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Asunto</label>
-                <input
-                    type="text"
-                    name="asunto"
-                    class="form-control"
-                    value="{{ old('asunto', $ticket->asunto) }}"
-                    minlength="3"
-                    required
-                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
-                    oninput="this.setCustomValidity('')"
-                >
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Descripcion</label>
-                <input
-                    type="text"
-                    name="descripcion"
-                    class="form-control"
-                    value="{{ old('descripcion', $ticket->descripcion) }}"
-                    minlength="3"
-                    required
-                    oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
-                    oninput="this.setCustomValidity('')"
-                >
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Estado</label>
-                <select name="estado" class="form-select" required>
-                    <option value="pendiente" @selected(old('estado', $ticket->estado) == 'pendiente')>Pendiente</option>
-                    <option value="en_proceso" @selected(old('estado', $ticket->estado) == 'en_proceso')>En proceso</option>
-                    <option value="finalizado" @selected(old('estado', $ticket->estado) == 'finalizado')>Finalizado</option>
-                    <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
-                </select>
-            </div>
-            <div class="col-12 text-end">
-                <a href="{{ route('tickets.index') }}" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Guardar cambios</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 @endsection

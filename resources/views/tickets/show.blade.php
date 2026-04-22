@@ -57,7 +57,7 @@
             @can('atender tickets')
                 @if($ticket->estado === 'pendiente')
                     <div class="card-footer">
-                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('¿Estás seguro de que quieres atender este ticket? El estado cambiará a \"En proceso\" y se asignará a ti.');">
+                        <form method="POST" action="{{ route('tickets.attend', $ticket) }}">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-info">Atender ticket</button>

@@ -26,7 +26,6 @@
                         <thead>
                             <tr>
                                 <th style="width: 220px;">Fecha</th>
-                                <th>Titulo</th>
                                 <th>Detalle</th>
                                 <th style="width: 150px;">Accion</th>
                                 <th style="width: 120px;">Estado</th>
@@ -40,11 +39,6 @@
                                 @endphp
                                 <tr class="{{ $isUnread ? 'table-warning' : '' }}">
                                     <td>{{ optional($notification->created_at)->format('d/m/Y H:i') }}</td>
-                                    <td>
-                                        <a href="{{ route('notifications.open', $notification->id) }}" class="text-decoration-none fw-semibold">
-                                            {{ $data['title'] ?? 'Notificacion' }}
-                                        </a>
-                                    </td>
                                     <td>
                                         <a href="{{ route('notifications.open', $notification->id) }}" class="text-decoration-none text-body">
                                             {{ $data['message'] ?? '' }}

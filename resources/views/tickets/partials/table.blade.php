@@ -55,7 +55,6 @@
                                         class="d-inline mb-0 js-ticket-inline-form"
                                         method="POST"
                                         action="{{ route('tickets.attend', $ticket) }}"
-                                        data-confirm="Estas seguro de que quieres atender este ticket? El estado cambiara a &quot;En proceso&quot; y se asignara a ti."
                                         data-success-message="Ticket atendido correctamente."
                                     >
                                         @csrf
