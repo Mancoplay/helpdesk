@@ -95,7 +95,7 @@
                                             </select>
                                         </div>
                                         <div class="col-md-12">
-                                            <label class="form-label">Contrasena (opcional)</label>
+                                            <label class="form-label">Contrasena</label>
                                             <div class="input-group">
                                                 <input type="password" name="password" class="form-control js-password-input" autocomplete="new-password">
                                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
