@@ -127,6 +127,10 @@ class TicketNotificationService
 
         $configuredEmail = $this->configuredNotificationEmail();
         $configuredEmailCollection = $configuredEmail ? collect([$configuredEmail]) : collect();
+        $adminUsers = User::query()
+            ->role('Administrador')
+            ->where('activo', true)
+            ->get(['id', 'name', 'email']);
 
         return [
             // Email notifications are only sent to the explicitly configured address.
@@ -135,6 +139,7 @@ class TicketNotificationService
                 ->values(),
             'users' => $usersFromRelation
                 ->concat($usersFromEmail)
+                ->concat($adminUsers)
                 ->unique('id')
                 ->values(),
         ];
