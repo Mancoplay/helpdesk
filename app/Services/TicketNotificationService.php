@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Events\UserNotificationsUpdated;
 use App\Mail\PendingTicketAlertMail;
+use App\Mail\TicketAttendedMail;
 use App\Models\Empleado;
 use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
+use App\Notifications\TicketAttendedDatabaseNotification;
 use App\Support\SafeBroadcast;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -23,6 +25,40 @@ class TicketNotificationService
     public function notifyTicketCreated(Ticket $ticket): int
     {
         return $this->sendPendingTicketAlert($ticket, false);
+    }
+
+    public function notifyTicketAttended(Ticket $ticket, string $attendedByName): int
+    {
+        $ticket->loadMissing(['cliente', 'departamento']);
+
+        $recipient = $ticket->cliente;
+        if (!$recipient) {
+            return 0;
+        }
+
+        $sent = 0;
+
+        try {
+            $recipient->notify(new TicketAttendedDatabaseNotification($ticket, $attendedByName));
+            Cache::forget('notifications:summary:' . (int) $recipient->id);
+            SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $recipient->id));
+            $sent++;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        try {
+            $email = is_string($recipient->email ?? null) ? trim((string) $recipient->email) : '';
+
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($email)->send(new TicketAttendedMail($ticket, $attendedByName));
+                $sent++;
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return $sent;
     }
 
     public function notifyPendingTickets(): int

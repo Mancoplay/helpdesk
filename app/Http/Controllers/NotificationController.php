@@ -7,20 +7,28 @@ use App\Models\Empleado;
 use App\Models\Ticket;
 use App\Services\NotificationSummaryService;
 use App\Support\SafeBroadcast;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|ViewContract|Response
     {
         $notifications = $this->notificationHistoryQuery($request)
             ->latest()
             ->paginate(20)
             ->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->view('notifications.partials.history-card', [
+                'notifications' => $notifications,
+            ]);
+        }
 
         return view('notifications.index', [
             'notifications' => $notifications,

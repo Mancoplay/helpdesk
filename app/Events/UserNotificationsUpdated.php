@@ -2,6 +2,8 @@
 
 namespace App\Events;
 
+use App\Models\User;
+use App\Services\NotificationSummaryService;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -31,9 +33,17 @@ class UserNotificationsUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $summary = null;
+        $user = User::query()->find($this->userId);
+
+        if ($user) {
+            $summary = app(NotificationSummaryService::class)->forUser($user, false);
+        }
+
         return [
             'user_id' => $this->userId,
             'occurred_at' => now()->toIso8601String(),
+            'summary' => $summary,
         ];
     }
 }

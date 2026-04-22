@@ -1457,7 +1457,7 @@ class HomeController extends Controller
         return back()->with('success', 'Ticket agregado correctamente.');
     }
 
-    public function attendTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
+    public function attendTicket(Request $request, Ticket $ticket, TicketNotificationService $ticketNotificationService): RedirectResponse|JsonResponse
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
@@ -1472,6 +1472,7 @@ class HomeController extends Controller
         }
 
         $currentUser = auth()->user();
+        $attendedByName = $currentUser->name;
 
         if ($currentUser->hasRole('Administrador')) {
             $adminEmployee = Empleado::whereKey($currentUser->id)
@@ -1487,9 +1488,17 @@ class HomeController extends Controller
 
             $ticket->mensajes()->create([
                 'user_id' => auth()->id(),
-                'mensaje' => 'Ticket atendido por ' . $currentUser->name . '.',
+                'mensaje' => 'Ticket atendido por ' . $attendedByName . '.',
                 'tipo' => 'atencion',
             ]);
+
+            dispatch(function () use ($ticketNotificationService, $ticket, $attendedByName): void {
+                try {
+                    $ticketNotificationService->notifyTicketAttended($ticket->fresh(), $attendedByName);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            })->afterResponse();
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -1516,9 +1525,17 @@ class HomeController extends Controller
 
         $ticket->mensajes()->create([
             'user_id' => auth()->id(),
-            'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
+            'mensaje' => 'Ticket atendido por ' . $attendedByName . '.',
             'tipo' => 'atencion',
         ]);
+
+        dispatch(function () use ($ticketNotificationService, $ticket, $attendedByName): void {
+            try {
+                $ticketNotificationService->notifyTicketAttended($ticket->fresh(), $attendedByName);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        })->afterResponse();
 
         if ($request->expectsJson()) {
             return response()->json([

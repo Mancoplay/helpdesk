@@ -336,10 +336,15 @@
                 }
 
                 notificationsState.lastCount = unreadCount;
+                window.dispatchEvent(new CustomEvent('helpdesk:notifications-updated', {
+                    detail: {
+                        payload,
+                    },
+                }));
             };
 
-            const refreshNotificationSummary = function () {
-                if (document.hidden) {
+            const refreshNotificationSummary = function (force = false) {
+                if (document.hidden && !force) {
                     return;
                 }
 
@@ -590,8 +595,13 @@
                 }
 
                 notificationSocket.channel = window.Echo.private(`users.${authUserId}.notifications`)
-                    .listen('.notifications.updated', function () {
-                        refreshNotificationSummary();
+                    .listen('.notifications.updated', function (eventPayload) {
+                        if (eventPayload && eventPayload.summary) {
+                            renderNotificationDropdown(eventPayload.summary);
+                            return;
+                        }
+
+                        refreshNotificationSummary(true);
                     });
 
                 scheduleNotificationPolling();
