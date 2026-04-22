@@ -68,19 +68,19 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label">Nombre(s)</label>
-                            <input type="text" name="nombres" class="form-control" required>
+                            <input type="text" name="nombres" class="form-control" required autocomplete="off">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Apellidos</label>
-                            <input type="text" name="apellidos" class="form-control" required>
+                            <input type="text" name="apellidos" class="form-control" required autocomplete="off">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Correo</label>
-                            <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$">
+                            <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" autocomplete="off">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Contacto</label>
-                            <input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
+                            <input type="text" name="telefono" class="form-control" inputmode="numeric" maxlength="8" pattern="(?:[67][0-9]{7}|[234][0-9]{6})" placeholder="Opcional" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Departamento</label>
@@ -112,7 +112,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Contrasena</label>
                             <div class="input-group">
-                                <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
+                                <input type="password" name="password" class="form-control js-password-input" required minlength="8" autocomplete="new-password">
                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -121,7 +121,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Confirmar contrasena</label>
                             <div class="input-group">
-                                <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
+                                <input type="password" name="password_confirmation" class="form-control js-password-input" required minlength="8" autocomplete="new-password">
                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
                                     <i class="fas fa-eye"></i>
                                 </button>
