@@ -671,20 +671,31 @@ class HomeController extends Controller
         }
 
         $validated = $request->validate([
-            'notification_email' => ['required', 'email:rfc', 'max:255'],
+            'notification_email' => ['nullable', 'email:rfc', 'max:255'],
         ]);
 
         if (!Schema::hasTable('system_settings')) {
             return back()->with('error', 'Falta ejecutar migraciones para guardar la configuracion.');
         }
 
-        SystemSetting::query()->updateOrCreate(
-            ['key' => 'pending_ticket_notification_email'],
-            ['value' => mb_strtolower(trim((string) $validated['notification_email']))],
-        );
+        $notificationEmail = mb_strtolower(trim((string) ($validated['notification_email'] ?? '')));
+
+        if ($notificationEmail === '') {
+            SystemSetting::query()
+                ->where('key', 'pending_ticket_notification_email')
+                ->delete();
+        } else {
+            SystemSetting::query()->updateOrCreate(
+                ['key' => 'pending_ticket_notification_email'],
+                ['value' => $notificationEmail],
+            );
+        }
+
         Cache::forget('settings:pending_ticket_notification_email');
 
-        return back()->with('success', 'Correo de notificaciones actualizado correctamente.');
+        return back()->with('success', $notificationEmail !== ''
+            ? 'Correo de notificaciones actualizado correctamente.'
+            : 'Las notificaciones por correo fueron desactivadas. Las notificaciones del sistema seguiran activas.');
     }
 
     public function storeDepartamento(Request $request): RedirectResponse

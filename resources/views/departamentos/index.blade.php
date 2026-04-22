@@ -27,7 +27,6 @@
                             name="notification_email"
                             class="form-control"
                             value="{{ old('notification_email', $notificationEmail ?? '') }}"
-                            required
                             maxlength="255"
                             placeholder="correo@ejemplo.com"
                             pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"

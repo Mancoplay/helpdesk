@@ -105,50 +105,36 @@ class TicketNotificationService
             })
             ->get();
 
-        $emails = $employees
-            ->pluck('email')
-            ->filter(fn ($email) => is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL))
-            ->map(fn (string $email) => mb_strtolower(trim($email)))
-            ->unique()
-            ->values();
-
         $usersFromRelation = $employees->isEmpty()
             ? collect()
             : User::query()
                 ->whereIn('id', $employees->pluck('id')->all())
                 ->get(['id', 'name', 'email']);
 
-        // Fallback: if an employee was left without user_id, match by email.
-        $usersFromEmail = $emails->isEmpty()
-            ? collect()
-            : User::query()
-                ->whereIn('email', $emails->all())
-                ->get(['id', 'name', 'email']);
-
-        $emailsFromUsers = $usersFromRelation
-            ->concat($usersFromEmail)
+        $employeeEmails = $employees
             ->pluck('email')
             ->filter(fn ($email) => is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL))
             ->map(fn (string $email) => mb_strtolower(trim($email)))
             ->unique()
             ->values();
 
+        // Fallback: if an employee was left without user_id, match by email.
+        $usersFromEmail = $employeeEmails->isEmpty()
+            ? collect()
+            : User::query()
+                ->whereIn('email', $employeeEmails->all())
+                ->get(['id', 'name', 'email']);
+
         $configuredEmail = $this->configuredNotificationEmail();
         $configuredEmailCollection = $configuredEmail ? collect([$configuredEmail]) : collect();
-        $configuredUser = $configuredEmail
-            ? User::query()->where('email', $configuredEmail)->first(['id', 'name', 'email'])
-            : null;
-        $configuredUsers = $configuredUser ? collect([$configuredUser]) : collect();
 
         return [
-            'emails' => $emails
-                ->concat($emailsFromUsers)
-                ->concat($configuredEmailCollection)
+            // Email notifications are only sent to the explicitly configured address.
+            'emails' => $configuredEmailCollection
                 ->unique()
                 ->values(),
             'users' => $usersFromRelation
                 ->concat($usersFromEmail)
-                ->concat($configuredUsers)
                 ->unique('id')
                 ->values(),
         ];
