@@ -58,7 +58,7 @@
 <div class="modal fade" id="createUsuarioModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ route('usuarios.store') }}">
+            <form method="POST" action="{{ route('usuarios.store') }}" id="createUsuarioForm">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Nuevo usuario</h5>
@@ -180,6 +180,29 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         setupPasswordToggles();
+
+        const createUsuarioModal = document.getElementById('createUsuarioModal');
+        const createUsuarioForm = document.getElementById('createUsuarioForm');
+
+        if (createUsuarioModal && createUsuarioForm) {
+            createUsuarioModal.addEventListener('hidden.bs.modal', () => {
+                createUsuarioForm.reset();
+
+                createUsuarioForm.querySelectorAll('.js-password-input').forEach((input) => {
+                    input.type = 'password';
+                });
+
+                createUsuarioForm.querySelectorAll('.js-password-toggle').forEach((button) => {
+                    button.setAttribute('aria-label', 'Mostrar contrasena');
+                    const icon = button.querySelector('i');
+
+                    if (icon) {
+                        icon.classList.add('fa-eye');
+                        icon.classList.remove('fa-eye-slash');
+                    }
+                });
+            });
+        }
     });
 
     document.addEventListener('shown.bs.modal', (event) => {
