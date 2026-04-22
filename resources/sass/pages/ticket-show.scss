@@ -342,3 +342,44 @@
         }
     }
 }
+
+@media (max-width: 767.98px) {
+    .ticket-detail-page {
+        .card-header,
+        .card-body,
+        .card-footer {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .ticket-chat-card-body {
+            min-height: 360px;
+        }
+
+        .ticket-chat-scroll {
+            padding: 0.85rem !important;
+        }
+
+        .ticket-chat-bubble {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .ticket-chat-image {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .ticket-chat-composer .btn,
+        .card-footer .btn,
+        form .btn {
+            width: 100%;
+        }
+
+        .chat-composer-header {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+    }
+}

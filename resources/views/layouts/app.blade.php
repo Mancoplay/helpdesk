@@ -52,7 +52,7 @@
                                     {{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}
                                 </span>
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 330px;">
+                            <div class="dropdown-menu dropdown-menu-end p-0 notifications-dropdown-menu">
                                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
                                     <strong>Notificaciones</strong>
                                     <a href="{{ route('notifications.index') }}" class="small text-decoration-none">Ver todas</a>
@@ -87,7 +87,7 @@
                         <li class="nav-item dropdown">
                             <a class="nav-link" data-bs-toggle="dropdown" href="#" role="button">
                                 <i class="fas fa-user"></i>
-                                <span class="ms-2">{{ Auth::user()->name }}</span>
+                                <span class="ms-2 d-none d-sm-inline">{{ Auth::user()->name }}</span>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <form method="POST" action="{{ route('logout') }}">

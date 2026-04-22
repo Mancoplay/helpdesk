@@ -95,6 +95,33 @@
     line-height: 1.3;
 }
 
+.notifications-dropdown-menu {
+    min-width: 330px;
+}
+
+.app-content .card,
+.app-content .modal-content {
+    border-radius: 18px;
+}
+
+.app-content .table-responsive {
+    -webkit-overflow-scrolling: touch;
+}
+
+.app-content .table-responsive table {
+    min-width: 640px;
+}
+
+.app-content .form-control,
+.app-content .form-select,
+.app-content .btn {
+    min-height: 44px;
+}
+
+.app-content textarea.form-control {
+    min-height: 120px;
+}
+
 @media (min-width: 768px) {
     .dashboard-stats-grid > .dashboard-stat-col {
         width: 50%;
@@ -114,6 +141,136 @@
 }
 
 @media (max-width: 767.98px) {
+    .app-main {
+        overflow-x: hidden;
+    }
+
+    .app-content-header {
+        padding-top: 0.35rem;
+    }
+
+    .app-content-header .container-fluid,
+    .app-content .container-fluid {
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
+    }
+
+    .app-content-header .row {
+        row-gap: 0.45rem;
+    }
+
+    .app-content-header .breadcrumb {
+        float: none !important;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0;
+        font-size: 0.88rem;
+    }
+
+    .page-header-title-row {
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .page-header-title-row h3 {
+        width: 100%;
+        font-size: 1.6rem;
+        line-height: 1.15;
+    }
+
+    .page-back-btn {
+        padding: 0.35rem 0.8rem;
+        font-size: 0.92rem;
+    }
+
+    .app-header .navbar-nav {
+        align-items: center;
+    }
+
+    .app-header .nav-link {
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+    }
+
+    .notifications-dropdown-menu {
+        min-width: auto;
+        width: min(calc(100vw - 1rem), 24rem);
+        margin-top: 0.45rem;
+    }
+
+    .app-content .card,
+    .app-content .modal-content {
+        border-radius: 16px;
+    }
+
+    .app-content .card-header,
+    .app-content .card-body,
+    .app-content .card-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .app-content .card-header .d-flex,
+    .app-content .card-footer .d-flex {
+        gap: 0.65rem;
+    }
+
+    .app-content .btn {
+        width: 100%;
+    }
+
+    .app-content .modal-footer .btn,
+    .app-content .card-footer .btn,
+    .app-content .page-back-btn {
+        width: auto;
+    }
+
+    .app-content .modal-dialog {
+        margin: 0.65rem;
+        max-width: calc(100vw - 1.3rem);
+    }
+
+    .app-content .modal-content {
+        max-height: calc(100vh - 1.3rem);
+        overflow: hidden;
+    }
+
+    .app-content .modal-header,
+    .app-content .modal-body,
+    .app-content .modal-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .app-content .modal-body {
+        overflow-y: auto;
+    }
+
+    .app-content .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .app-content .modal-footer .btn {
+        width: 100%;
+    }
+
+    .app-content .row > [class*='col-'] .btn.w-100 {
+        width: 100% !important;
+    }
+
+    .app-content .compact-pagination .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .app-content .table-responsive table {
+        min-width: 560px;
+    }
+
     .dashboard-stat .card-body {
         padding: 1rem;
     }
