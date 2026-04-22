@@ -861,11 +861,14 @@ closeAnyDeskBtn.disabled = true;
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
         const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
+        const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
 
         let lastMessageId = Number(chatScroll.dataset.lastMessageId || 0);
         let currentState = @json((string) $ticket->estado);
         let currentRemoteId = {{ (int) ($remoteSession->id ?? 0) }};
         let currentRemoteStatus = @json((string) ($remoteSession->status ?? ''));
+        let lastSyncedRemoteCode = String(remoteCodeInput?.value || '').trim();
+        let remoteCodeDirty = false;
         let inFlight = false;
 
         const escapeHtml = function (value) {
@@ -931,6 +934,38 @@ closeAnyDeskBtn.disabled = true;
             return gap < 100;
         };
 
+        const syncRemoteSupportCode = function (remoteData) {
+            if (!remoteCodeInput || !remoteData) {
+                return;
+            }
+
+            const newCode = String(remoteData.support_code || '').trim();
+            const isEditingRemoteCode = document.activeElement === remoteCodeInput;
+
+            if (!isEditingRemoteCode && !remoteCodeDirty) {
+                remoteCodeInput.value = newCode;
+                lastSyncedRemoteCode = newCode;
+            }
+
+            if (openCopyAnyDeskBtn) {
+                openCopyAnyDeskBtn.disabled = newCode === '' && !canEditRemoteCode;
+            }
+        };
+
+        if (remoteCodeInput) {
+            remoteCodeInput.addEventListener('input', function () {
+                const currentInputValue = String(remoteCodeInput.value || '').trim();
+                remoteCodeDirty = currentInputValue !== lastSyncedRemoteCode;
+            });
+        }
+
+        if (shareCodeForm) {
+            shareCodeForm.addEventListener('submit', function () {
+                remoteCodeDirty = false;
+                lastSyncedRemoteCode = String(remoteCodeInput?.value || '').trim();
+            });
+        }
+
         const applyLiveData = function (data) {
             if (!data || data.ok !== true) {
                 return;
@@ -964,22 +999,7 @@ closeAnyDeskBtn.disabled = true;
                 stateBadge.textContent = String(ticketData.estado).replace('_', ' ');
             }
 
-            if (remoteCodeInput) {
-                const newCode = String(remoteData.support_code || '').trim();
-                const currentInputValue = String(remoteCodeInput.value || '').trim();
-                const isEditingRemoteCode = document.activeElement === remoteCodeInput;
-                const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
-                const hasLocalEditableForm = Boolean(shareCodeForm && (canManageRemoteAsClient || canManageRemoteAsEmployee));
-                const hasPendingLocalCode = hasLocalEditableForm && currentInputValue !== newCode;
-
-                if (!isEditingRemoteCode && !hasPendingLocalCode) {
-                    remoteCodeInput.value = newCode;
-                }
-
-                if (openCopyAnyDeskBtn) {
-                    openCopyAnyDeskBtn.disabled = newCode === '' && !canEditRemoteCode;
-                }
-            }
+            syncRemoteSupportCode(remoteData);
 
             if (incomingMessages.length === 0) {
                 return;
@@ -1091,7 +1111,19 @@ closeAnyDeskBtn.disabled = true;
             }
 
             ticketSocket.channel = window.Echo.private(`tickets.${ticketId}`)
-                .listen('.ticket.stream.updated', function () {
+                .listen('.ticket.stream.updated', function (eventPayload) {
+                    const remoteData = eventPayload && typeof eventPayload === 'object'
+                        ? eventPayload.remote || null
+                        : null;
+
+                    if (
+                        remoteData
+                        && Number(remoteData.id || 0) === Number(currentRemoteId || 0)
+                        && String(remoteData.status || '') === String(currentRemoteStatus || '')
+                    ) {
+                        syncRemoteSupportCode(remoteData);
+                    }
+
                     runLivePoll();
                 });
 
