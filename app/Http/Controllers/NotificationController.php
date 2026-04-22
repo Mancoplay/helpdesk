@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Events\UserNotificationsUpdated;
+use App\Models\Empleado;
+use App\Models\Ticket;
 use App\Services\NotificationSummaryService;
 use App\Support\SafeBroadcast;
 use Illuminate\Http\RedirectResponse;
@@ -43,10 +45,12 @@ class NotificationController extends Controller
             SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $request->user()->id));
         }
 
-        $url = (string) ($notification->data['url'] ?? route('dashboard'));
-        $url = $this->safeRedirectUrl($url);
+        $targetResponse = $this->resolveNotificationRedirect($request, $notification);
+        if ($targetResponse instanceof RedirectResponse) {
+            return $targetResponse;
+        }
 
-        return redirect($url);
+        return redirect($targetResponse);
     }
 
     public function markAllAsRead(Request $request): RedirectResponse
@@ -100,5 +104,67 @@ class NotificationController extends Controller
         return strcasecmp((string) $parsed['host'], $appHost) === 0
             ? $url
             : route('dashboard');
+    }
+
+    private function resolveNotificationRedirect(Request $request, DatabaseNotification $notification): string|RedirectResponse
+    {
+        $data = (array) $notification->data;
+        $ticketId = (int) ($data['ticket_id'] ?? 0);
+
+        if ($ticketId <= 0) {
+            return $this->safeRedirectUrl((string) ($data['url'] ?? route('dashboard')));
+        }
+
+        $ticket = Ticket::query()
+            ->withTrashed()
+            ->with(['cliente'])
+            ->find($ticketId);
+
+        if (!$ticket || $ticket->trashed()) {
+            return redirect()
+                ->route('notifications.index')
+                ->with('error', 'El ticket ya no esta disponible.');
+        }
+
+        $user = $request->user();
+
+        if ($user->hasRole('Administrador')) {
+            return route('tickets.show', $ticket);
+        }
+
+        if ($user->hasRole('Empleado')) {
+            $employee = Empleado::query()
+                ->whereKey($user->id)
+                ->orWhere('email', $user->email)
+                ->first();
+
+            if (!$employee) {
+                return redirect()
+                    ->route('notifications.index')
+                    ->with('error', 'No se pudo identificar al empleado.');
+            }
+
+            $isAssignedToCurrentEmployee = (int) ($ticket->empleado_id ?? 0) === (int) $employee->id;
+            $isPendingUnassigned = $ticket->estado === 'pendiente' && is_null($ticket->empleado_id);
+
+            if (!$isAssignedToCurrentEmployee && !$isPendingUnassigned) {
+                return redirect()
+                    ->route('tickets.index')
+                    ->with('error', 'El ticket ya esta siendo atendido.');
+            }
+
+            return route('tickets.show', $ticket);
+        }
+
+        $isClientOwner = (int) ($ticket->cliente->id ?? 0) === (int) $user->id
+            || (($ticket->cliente->email ?? null) === $user->email);
+
+        if (!$isClientOwner) {
+            return redirect()
+                ->route('notifications.index')
+                ->with('error', 'No tienes acceso a este ticket.');
+        }
+
+        return route('tickets.show', $ticket);
     }
 }
