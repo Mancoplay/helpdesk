@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\TicketListUpdated;
 use App\Events\TicketStreamUpdated;
 use App\Support\SafeBroadcast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,6 +48,17 @@ class TicketRemoteSession extends Model
 
         static::saved(function (TicketRemoteSession $session): void {
             SafeBroadcast::dispatch(new TicketStreamUpdated((int) $session->ticket_id));
+
+            $ticket = $session->relationLoaded('ticket')
+                ? $session->ticket
+                : $session->ticket()->withTrashed()->first();
+
+            if ($ticket) {
+                SafeBroadcast::dispatch(new TicketListUpdated(
+                    (int) $ticket->id,
+                    ($ticket->cliente_id ?? 0) > 0 ? (int) $ticket->cliente_id : null,
+                ));
+            }
         });
     }
 

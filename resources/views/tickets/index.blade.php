@@ -19,6 +19,8 @@
 </div>
 @endif
 
+<div class="js-ticket-page-feedback"></div>
+
 <div class="card mb-3">
     <div class="card-body">
         <form method="GET" action="{{ route('tickets.index') }}" class="row g-2 align-items-end js-table-filters">
@@ -54,6 +56,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="js-create-ticket-feedback"></div>
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Codigo</label>
@@ -99,23 +102,121 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const authUserId = {{ (int) auth()->id() }};
+        const isAdmin = @json(auth()->user()->hasRole('Administrador'));
+        const isEmployee = @json(auth()->user()->hasRole('Empleado'));
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const createTicketModal = document.getElementById('createTicketModal');
+        const createTicketForm = document.getElementById('createTicketForm');
+        const pageFeedback = document.querySelector('.js-ticket-page-feedback');
+        let tableRefreshController = null;
+        let createTicketRequest = null;
+        let nextTicketCodeCache = @json($nextTicketCode ?? null);
+
+        const showFeedback = function (container, type, message) {
+            if (!container || !message) {
+                return;
+            }
+
+            container.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">'
+                + message
+                + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>'
+                + '</div>';
+
+            window.setTimeout(function () {
+                const alertElement = container.querySelector('.alert');
+                if (!alertElement) {
+                    return;
+                }
+
+                if (window.bootstrap && window.bootstrap.Alert) {
+                    window.bootstrap.Alert.getOrCreateInstance(alertElement).close();
+                    return;
+                }
+
+                container.innerHTML = '';
+            }, 5000);
+        };
+
+        const extractErrorMessage = function (error) {
+            const payload = error?.response?.data;
+            const validationErrors = payload?.errors ? Object.values(payload.errors).flat() : [];
+
+            if (validationErrors.length) {
+                return validationErrors[0];
+            }
+
+            return payload?.message || 'No se pudo completar la solicitud.';
+        };
+
+        const fetchNextTicketCode = function () {
+            if (!createTicketModal) {
+                return Promise.resolve();
+            }
+
+            return window.axios.get("{{ route('tickets.next-code') }}")
+                .then(function (response) {
+                    const codeInput = createTicketModal.querySelector('input[name="codigo"]');
+                    const nextCode = response?.data?.codigo;
+
+                    if (codeInput && nextCode) {
+                        codeInput.value = nextCode;
+                    }
+
+                     if (nextCode) {
+                        nextTicketCodeCache = nextCode;
+                    }
+                })
+                .catch(function (error) {
+                    console.error('No se pudo obtener el siguiente codigo de ticket:', error);
+                });
+        };
+
+        const closeModal = function (modalElement) {
+            if (!modalElement) {
+                return;
+            }
+
+            if (window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                return;
+            }
+
+            modalElement.classList.remove('show');
+            modalElement.setAttribute('aria-hidden', 'true');
+            modalElement.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
+            document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+                backdrop.remove();
+            });
+        };
 
         if (createTicketModal) {
             createTicketModal.addEventListener('show.bs.modal', function () {
-                fetch("{{ route('tickets.next-code') }}")
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        const codeInput = createTicketModal.querySelector('input[name="codigo"]');
-                        if (codeInput && data && data.codigo) {
-                            codeInput.value = data.codigo;
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error('No se pudo obtener el siguiente codigo de ticket:', error);
-                    });
+                const codeInput = createTicketModal.querySelector('input[name="codigo"]');
+
+                if (codeInput && nextTicketCodeCache) {
+                    codeInput.value = nextTicketCodeCache;
+                }
+
+                window.setTimeout(fetchNextTicketCode, 0);
+            });
+
+            createTicketModal.addEventListener('hidden.bs.modal', function () {
+                const feedbackContainer = createTicketModal.querySelector('.js-create-ticket-feedback');
+                if (feedbackContainer) {
+                    feedbackContainer.innerHTML = '';
+                }
+
+                if (createTicketForm) {
+                    createTicketForm.reset();
+
+                    const codeInput = createTicketForm.querySelector('input[name="codigo"]');
+                    if (codeInput && nextTicketCodeCache) {
+                        codeInput.value = nextTicketCodeCache;
+                    }
+                }
             });
         }
 
@@ -132,10 +233,17 @@
             const queryString = window.location.search || '';
             const url = "{{ route('tickets.index') }}" + queryString;
 
+            if (tableRefreshController) {
+                tableRefreshController.abort();
+            }
+
+            tableRefreshController = new AbortController();
+
             fetch(url, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                signal: tableRefreshController.signal,
             })
                 .then(function (response) {
                     return response.text();
@@ -152,25 +260,220 @@
                     tableContainer.innerHTML = freshTable.innerHTML;
                 })
                 .catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
                     console.error('No se pudo actualizar la tabla de tickets:', error);
                 });
         };
 
-        const searchParams = new URLSearchParams(window.location.search || '');
-        const hasActiveSearch = (searchParams.get('q') || '').trim() !== '';
+        const submitInlineTicketForm = function (form) {
+            const confirmMessage = form.getAttribute('data-confirm');
+            if (confirmMessage && !window.confirm(confirmMessage)) {
+                return;
+            }
 
-        if (!hasActiveSearch) {
-            setInterval(function () {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            window.axios({
+                method: form.getAttribute('method') || 'POST',
+                url: form.getAttribute('action'),
+                data: new window.FormData(form),
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            })
+                .then(function (response) {
+                    const redirectUrl = response?.data?.redirect_url;
+
+                    if (redirectUrl) {
+                        window.location.assign(redirectUrl);
+                        return;
+                    }
+
+                    showFeedback(pageFeedback, 'success', response?.data?.message || form.getAttribute('data-success-message'));
+                    refreshTableResults();
+                })
+                .catch(function (error) {
+                    showFeedback(pageFeedback, 'danger', extractErrorMessage(error));
+                })
+                .finally(function () {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                });
+        };
+
+        if (createTicketForm) {
+            createTicketForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                if (createTicketRequest) {
+                    return;
+                }
+
+                const feedbackContainer = createTicketModal?.querySelector('.js-create-ticket-feedback');
+                const submitButton = createTicketForm.querySelector('button[type="submit"]');
+
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Guardando...';
+                }
+
+                if (feedbackContainer) {
+                    feedbackContainer.innerHTML = '';
+                }
+
+                createTicketRequest = window.axios.post(createTicketForm.action, new window.FormData(createTicketForm), {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                })
+                    .then(function (response) {
+                        const nextCode = response?.data?.next_code;
+
+                        if (nextCode) {
+                            nextTicketCodeCache = nextCode;
+                        }
+
+                        closeModal(createTicketModal);
+                        showFeedback(pageFeedback, 'success', response?.data?.message || 'Ticket agregado correctamente.');
+
+                        if (!ticketListSocket.enabled || !ticketListSocket.connected) {
+                            window.setTimeout(refreshTableResults, 120);
+                        }
+
+                        window.setTimeout(fetchNextTicketCode, 0);
+                    })
+                    .catch(function (error) {
+                        showFeedback(feedbackContainer, 'danger', extractErrorMessage(error));
+                    })
+                    .finally(function () {
+                        createTicketRequest = null;
+
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Guardar';
+                        }
+                    });
+            });
+        }
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement) || !form.matches('.js-ticket-inline-form')) {
+                return;
+            }
+
+            event.preventDefault();
+            submitInlineTicketForm(form);
+        });
+
+        const ticketListSocket = {
+            enabled: Boolean(window.Echo && typeof window.Echo.private === 'function'),
+            connected: false,
+            channels: [],
+            pollTimer: null,
+        };
+
+        const resolveTicketListPollInterval = function () {
+            return ticketListSocket.connected ? 120000 : 25000;
+        };
+
+        const scheduleTicketListPolling = function () {
+            const intervalMs = resolveTicketListPollInterval();
+
+            if (ticketListSocket.pollTimer) {
+                window.clearInterval(ticketListSocket.pollTimer);
+            }
+
+            ticketListSocket.pollTimer = window.setInterval(function () {
                 if (!document.hidden) {
                     refreshTableResults();
                 }
-            }, 45000);
-        }
+            }, intervalMs);
+        };
+
+        const subscribeToChannel = function (channelName) {
+            if (!channelName) {
+                return;
+            }
+
+            ticketListSocket.channels.push(
+                window.Echo.private(channelName).listen('.ticket.list.updated', function () {
+                    refreshTableResults();
+                })
+            );
+        };
+
+        const bindTicketListSocket = function () {
+            if (!ticketListSocket.enabled || authUserId <= 0) {
+                scheduleTicketListPolling();
+                return;
+            }
+
+            const pusherConnection = window.Echo?.connector?.pusher?.connection;
+            ticketListSocket.connected = pusherConnection?.state === 'connected';
+
+            if (pusherConnection && typeof pusherConnection.bind === 'function') {
+                pusherConnection.bind('connected', function () {
+                    ticketListSocket.connected = true;
+                    scheduleTicketListPolling();
+                    refreshTableResults();
+                });
+
+                pusherConnection.bind('disconnected', function () {
+                    ticketListSocket.connected = false;
+                    scheduleTicketListPolling();
+                });
+
+                pusherConnection.bind('unavailable', function () {
+                    ticketListSocket.connected = false;
+                    scheduleTicketListPolling();
+                });
+
+                pusherConnection.bind('failed', function () {
+                    ticketListSocket.connected = false;
+                    scheduleTicketListPolling();
+                });
+            }
+
+            subscribeToChannel('users.' + authUserId + '.tickets');
+
+            if (isAdmin) {
+                subscribeToChannel('tickets.admins');
+            }
+
+            if (isEmployee) {
+                subscribeToChannel('tickets.employees');
+            }
+
+            scheduleTicketListPolling();
+        };
+
+        bindTicketListSocket();
+        window.setTimeout(fetchNextTicketCode, 0);
 
         document.addEventListener('hidden.bs.modal', function () {
             if (!document.hidden) {
                 refreshTableResults();
             }
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refreshTableResults();
+            }
+        });
+
+        window.addEventListener('focus', function () {
+            refreshTableResults();
         });
     });
 </script>

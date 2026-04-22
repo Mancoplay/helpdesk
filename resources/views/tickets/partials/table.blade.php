@@ -51,7 +51,13 @@
 
                             @can('atender tickets')
                                 @if(!$isDisabled && $ticket->estado === 'pendiente')
-                                    <form class="d-inline mb-0" method="POST" action="{{ route('tickets.attend', $ticket) }}" onsubmit="return confirm('Estas seguro de que quieres atender este ticket? El estado cambiara a \"En proceso\" y se asignara a ti.');">
+                                    <form
+                                        class="d-inline mb-0 js-ticket-inline-form"
+                                        method="POST"
+                                        action="{{ route('tickets.attend', $ticket) }}"
+                                        data-confirm="Estas seguro de que quieres atender este ticket? El estado cambiara a &quot;En proceso&quot; y se asignara a ti."
+                                        data-success-message="Ticket atendido correctamente."
+                                    >
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="btn btn-info btn-sm">Atender</button>
@@ -85,7 +91,13 @@
                                     )
                                 )
                             )
-                                <form class="d-inline" method="POST" action="{{ route('tickets.destroy', $ticket) }}">
+                                <form
+                                    class="d-inline js-ticket-inline-form"
+                                    method="POST"
+                                    action="{{ route('tickets.destroy', $ticket) }}"
+                                    data-confirm="Estas seguro de que quieres eliminar este ticket?"
+                                    data-success-message="Ticket eliminado correctamente."
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>

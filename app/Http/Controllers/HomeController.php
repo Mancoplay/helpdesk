@@ -1318,7 +1318,7 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeTicket(Request $request, TicketNotificationService $ticketNotificationService): RedirectResponse
+    public function storeTicket(Request $request, TicketNotificationService $ticketNotificationService): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
@@ -1344,6 +1344,10 @@ class HomeController extends Controller
         }
 
         if ($departmentId <= 0) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No tienes un departamento asignado para crear tickets.'], 422);
+            }
+
             return back()->with('error', 'No tienes un departamento asignado para crear tickets.');
         }
 
@@ -1353,6 +1357,10 @@ class HomeController extends Controller
             ->exists();
 
         if (!$activeDepartmentExists) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Tu departamento asignado no esta activo. Contacta al administrador.'], 422);
+            }
+
             return back()->with('error', 'Tu departamento asignado no esta activo. Contacta al administrador.');
         }
 
@@ -1377,6 +1385,10 @@ class HomeController extends Controller
         }
 
         if (!$cliente) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No se pudo identificar al usuario para crear el ticket.'], 422);
+            }
+
             return back()->with('error', 'No se pudo identificar al usuario para crear el ticket.');
         }
 
@@ -1422,16 +1434,29 @@ class HomeController extends Controller
             }
         })->afterResponse();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Ticket agregado correctamente.',
+                'ticket_id' => (int) $ticket->id,
+                'codigo' => $ticket->codigo,
+                'next_code' => $this->nextTicketCode(),
+            ]);
+        }
+
         return back()->with('success', 'Ticket agregado correctamente.');
     }
 
-    public function attendTicket(Ticket $ticket): RedirectResponse
+    public function attendTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
         }
 
         if ($ticket->estado !== 'pendiente') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Solo se pueden atender tickets en estado pendiente.'], 422);
+            }
+
             return back()->with('error', 'Solo se pueden atender tickets en estado pendiente.');
         }
 
@@ -1455,6 +1480,14 @@ class HomeController extends Controller
                 'tipo' => 'atencion',
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Ticket atendido correctamente.',
+                    'ticket_id' => (int) $ticket->id,
+                    'redirect_url' => route('tickets.show', $ticket),
+                ]);
+            }
+
             return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
         }
 
@@ -1475,6 +1508,14 @@ class HomeController extends Controller
             'mensaje' => 'Ticket atendido por ' . auth()->user()->name . '.',
             'tipo' => 'atencion',
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Ticket atendido correctamente.',
+                'ticket_id' => (int) $ticket->id,
+                'redirect_url' => route('tickets.show', $ticket),
+            ]);
+        }
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket atendido correctamente.');
     }
@@ -1638,7 +1679,7 @@ class HomeController extends Controller
         return back()->with('success', 'Ticket actualizado correctamente.');
     }
 
-    public function destroyTicket(Ticket $ticket): RedirectResponse
+    public function destroyTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         if (!$this->canDeleteTicket($ticket)) {
             abort(403);
@@ -1650,10 +1691,10 @@ class HomeController extends Controller
         $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue eliminado.');
         $ticket->delete();
 
-        return back()->with('success', 'Ticket eliminado correctamente.');
+        return $this->ticketActionResponse($request, 'Ticket eliminado correctamente.');
     }
 
-    public function toggleTicketCheckpoint(int $ticket): RedirectResponse
+    public function toggleTicketCheckpoint(Request $request, int $ticket): RedirectResponse|JsonResponse
     {
         if (!auth()->user()->hasRole('Administrador')) {
             abort(403);
@@ -1663,7 +1704,7 @@ class HomeController extends Controller
 
         if ($ticketModel->trashed()) {
             $ticketModel->restore();
-            return back()->with('success', 'Ticket habilitado correctamente.');
+            return $this->ticketActionResponse($request, 'Ticket habilitado correctamente.');
         }
 
         $ticketModel->estado = 'cerrado';
@@ -1672,7 +1713,7 @@ class HomeController extends Controller
         $this->closeActiveRemoteSessionsForTicket($ticketModel, 'La sesion remota se cerro automaticamente porque el ticket fue deshabilitado.');
         $ticketModel->delete();
 
-        return back()->with('success', 'Ticket deshabilitado correctamente.');
+        return $this->ticketActionResponse($request, 'Ticket deshabilitado correctamente.');
     }
 
     public function finalizeTicket(Ticket $ticket): RedirectResponse
@@ -1793,6 +1834,17 @@ class HomeController extends Controller
     public function nextTicketCodeJson()
     {
         return response()->json(['codigo' => $this->nextTicketCode()]);
+    }
+
+    private function ticketActionResponse(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ]);
+        }
+
+        return back()->with('success', $message);
     }
 
     private function canAccessTicket(Ticket $ticket): bool

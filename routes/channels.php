@@ -12,6 +12,18 @@ Broadcast::channel('users.{id}.notifications', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('users.{id}.tickets', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
+Broadcast::channel('tickets.admins', function ($user) {
+    return $user->hasRole('Administrador');
+});
+
+Broadcast::channel('tickets.employees', function ($user) {
+    return $user->hasRole('Empleado');
+});
+
 Broadcast::channel('tickets.{ticketId}', function ($user, $ticketId) {
     if ($user->hasRole('Administrador')) {
         return true;
