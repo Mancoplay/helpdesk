@@ -188,11 +188,6 @@
                     @endphp
                     @forelse($messages as $mensaje)
                         @php
-                            $tipoBadge = match($mensaje->tipo) {
-                                'creacion' => 'primary',
-                                'atencion' => 'info',
-                                default => 'secondary',
-                            };
                             $isOwnMessage = (int) ($mensaje->user_id ?? 0) === (int) auth()->id();
                         @endphp
                         <div class="ticket-chat-message {{ $isOwnMessage ? 'mine' : '' }}">
@@ -200,7 +195,6 @@
                                 <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                                     <div>
                                         <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
-                                        <span class="badge text-bg-{{ $tipoBadge }}">{{ $mensaje->tipo }}</span>
                                     </div>
                                     <span class="ticket-chat-meta">
                                         {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }}
@@ -881,16 +875,9 @@ closeAnyDeskBtn.disabled = true;
         };
 
         const buildMessageHtml = function (message) {
-            const badgeByType = {
-                creacion: 'primary',
-                atencion: 'info',
-                comentario: 'secondary'
-            };
             const bubbleClass = message.is_own ? 'ticket-chat-message mine' : 'ticket-chat-message';
-            const tipo = escapeHtml(message.tipo || 'comentario');
             const userName = escapeHtml(message.user_name || 'Sistema');
             const createdAt = escapeHtml(message.created_at || '');
-            const badge = badgeByType[message.tipo] || 'secondary';
             const textHtml = message.mensaje ? `<p class="mb-1">${escapeHtml(message.mensaje)}</p>` : '';
 
             let attachmentHtml = '';
@@ -918,7 +905,6 @@ closeAnyDeskBtn.disabled = true;
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                             <div>
                                 <strong>${userName}</strong>
-                                <span class="badge text-bg-${badge}">${tipo}</span>
                             </div>
                             <span class="ticket-chat-meta">${createdAt}</span>
                         </div>

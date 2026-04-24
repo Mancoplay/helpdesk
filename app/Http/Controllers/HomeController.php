@@ -910,7 +910,7 @@ class HomeController extends Controller
 
     public function editTicket(Ticket $ticket)
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (!$this->canEditTicket($ticket)) {
             abort(403);
         }
 
@@ -1675,20 +1675,33 @@ class HomeController extends Controller
 
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
     {
-        $validated = $request->validate([
-            'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
-            'cliente_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'empleado_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
-            'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
+        if (!$this->canEditTicket($ticket)) {
+            abort(403);
+        }
+
+        $isAdmin = auth()->user()->hasRole('Administrador');
+
+        $rules = [
             'asunto' => ['required', 'string', 'min:3', 'max:180'],
             'descripcion' => ['required', 'string', 'min:3'],
-            'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
-        ], [
+        ];
+
+        if ($isAdmin) {
+            $rules = array_merge($rules, [
+                'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
+                'cliente_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'empleado_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
+            ]);
+        }
+
+        $validated = $request->validate($rules, [
             'asunto.min' => 'Debe ingresar minimo 3 caracteres en el asunto.',
             'descripcion.min' => 'Debe ingresar minimo 3 caracteres en la descripcion.',
         ]);
 
-        if (!empty($validated['empleado_id'])) {
+        if ($isAdmin && !empty($validated['empleado_id'])) {
             $empleado = Empleado::with('departamentos')->find($validated['empleado_id']);
 
             if (!$empleado || !$this->employeeBelongsToDepartment($empleado, (int) $validated['departamento_id'])) {
@@ -1700,7 +1713,7 @@ class HomeController extends Controller
 
         $ticket->update($validated);
 
-        if (in_array((string) ($validated['estado'] ?? ''), ['finalizado', 'cerrado'], true)) {
+        if ($isAdmin && in_array((string) ($validated['estado'] ?? ''), ['finalizado', 'cerrado'], true)) {
             $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue cerrado.');
         }
 
@@ -1888,6 +1901,10 @@ class HomeController extends Controller
 
     private function canDeleteTicket(Ticket $ticket): bool
     {
+        if ((string) $ticket->estado !== 'finalizado') {
+            return false;
+        }
+
         if (auth()->user()->hasRole('Administrador')) {
             return true;
         }
@@ -1911,6 +1928,11 @@ class HomeController extends Controller
         }
 
         return false;
+    }
+
+    private function canEditTicket(Ticket $ticket): bool
+    {
+        return (string) $ticket->estado === 'pendiente' && $this->canAccessTicket($ticket);
     }
 
     private function canFinalizeTicket(Ticket $ticket): bool

@@ -25,6 +25,13 @@
                         $isDisabled = $ticket->trashed();
                         $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
                         $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
+                        $isEmployeeOwner = auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0);
+                        $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
+                            && (
+                                (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
+                                || (($ticket->cliente->email ?? null) === auth()->user()->email)
+                            );
+                        $canManageTicket = auth()->user()->hasRole('Administrador') || $isEmployeeOwner || $isClientOwner;
                         $isRemoteActive = (string) $ticket->estado === 'en_proceso'
                             && (
                                 ($isAdmin && $activeRemoteIds->contains((int) $ticket->id))
@@ -49,6 +56,10 @@
                                 <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm">Ver</a>
                             @endif
 
+                            @if($canManageTicket && !$isDisabled && $ticket->estado === 'pendiente')
+                                <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-warning btn-sm">Editar</a>
+                            @endif
+
                             @can('atender tickets')
                                 @if(!$isDisabled && $ticket->estado === 'pendiente')
                                     <form
@@ -64,10 +75,6 @@
                                 @endif
                             @endcan
 
-                            @if(auth()->user()->hasRole('Administrador') && !$isDisabled)
-                                <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-warning btn-sm">Editar</a>
-                            @endif
-
                             @if(auth()->user()->hasRole('Administrador'))
                                 <form class="d-inline mb-0 ms-auto" method="POST" action="{{ route('tickets.checkpoint', $ticket->id) }}">
                                     @csrf
@@ -77,19 +84,7 @@
                                         <span class="checkpoint-switch__knob"></span>
                                     </button>
                                 </form>
-                            @elseif(
-                                !$isDisabled
-                                && (
-                                    (auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0))
-                                    || (
-                                        auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
-                                        && (
-                                            (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
-                                            || (($ticket->cliente->email ?? null) === auth()->user()->email)
-                                        )
-                                    )
-                                )
-                            )
+                            @elseif(!$isDisabled && $canManageTicket && $ticket->estado === 'finalizado')
                                 <form
                                     class="d-inline js-ticket-inline-form"
                                     method="POST"

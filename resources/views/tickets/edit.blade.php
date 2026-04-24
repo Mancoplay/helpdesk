@@ -10,6 +10,9 @@
 @endsection
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->hasRole('Administrador');
+@endphp
 <div class="row justify-content-center">
     <div class="col-12 col-xl-10 col-xxl-9">
         <div class="card shadow-sm border-0">
@@ -34,19 +37,25 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Estado</label>
-                                <select name="estado" class="form-select" required>
-                                    <option value="pendiente" @selected(old('estado', $ticket->estado) == 'pendiente')>Pendiente</option>
-                                    <option value="en_proceso" @selected(old('estado', $ticket->estado) == 'en_proceso')>En proceso</option>
-                                    <option value="finalizado" @selected(old('estado', $ticket->estado) == 'finalizado')>Finalizado</option>
-                                    <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
-                                </select>
+                                @if($isAdmin)
+                                    <select name="estado" class="form-select" required>
+                                        <option value="pendiente" @selected(old('estado', $ticket->estado) == 'pendiente')>Pendiente</option>
+                                        <option value="en_proceso" @selected(old('estado', $ticket->estado) == 'en_proceso')>En proceso</option>
+                                        <option value="finalizado" @selected(old('estado', $ticket->estado) == 'finalizado')>Finalizado</option>
+                                        <option value="cerrado" @selected(old('estado', $ticket->estado) == 'cerrado')>Cerrado</option>
+                                    </select>
+                                @else
+                                    <input type="text" class="form-control" value="{{ str_replace('_', ' ', old('estado', $ticket->estado)) }}" readonly>
+                                @endif
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Departamento</label>
                                 @php
                                     $selectedDepartment = $departamentos->firstWhere('id', old('departamento_id', $ticket->departamento_id));
                                 @endphp
-                                <input type="hidden" name="departamento_id" value="{{ old('departamento_id', $ticket->departamento_id) }}">
+                                @if($isAdmin)
+                                    <input type="hidden" name="departamento_id" value="{{ old('departamento_id', $ticket->departamento_id) }}">
+                                @endif
                                 <input type="text" class="form-control" value="{{ $selectedDepartment?->nombre ?? ($ticket->departamento->nombre ?? '-') }}" readonly>
                             </div>
                         </div>
@@ -60,17 +69,26 @@
                                     @php
                                         $selectedClient = $clientes->firstWhere('id', old('cliente_id', $ticket->cliente_id));
                                     @endphp
-                                    <input type="hidden" name="cliente_id" value="{{ old('cliente_id', $ticket->cliente_id) }}">
+                                    @if($isAdmin)
+                                        <input type="hidden" name="cliente_id" value="{{ old('cliente_id', $ticket->cliente_id) }}">
+                                    @endif
                                     <input type="text" class="form-control" value="{{ $selectedClient?->nombre_completo ?? ($ticket->cliente->nombre_completo ?? '-') }}" readonly>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Empleado</label>
-                                    <select name="empleado_id" class="form-select">
-                                        <option value="">Sin asignar</option>
-                                        @foreach($empleados as $empleado)
-                                            <option value="{{ $empleado->id }}" @selected(old('empleado_id', $ticket->empleado_id) == $empleado->id)>{{ $empleado->nombre_completo }}</option>
-                                        @endforeach
-                                    </select>
+                                    @if($isAdmin)
+                                        <select name="empleado_id" class="form-select">
+                                            <option value="">Sin asignar</option>
+                                            @foreach($empleados as $empleado)
+                                                <option value="{{ $empleado->id }}" @selected(old('empleado_id', $ticket->empleado_id) == $empleado->id)>{{ $empleado->nombre_completo }}</option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        @php
+                                            $selectedEmployee = $empleados->firstWhere('id', old('empleado_id', $ticket->empleado_id));
+                                        @endphp
+                                        <input type="text" class="form-control" value="{{ $selectedEmployee?->nombre_completo ?? ($ticket->empleado->nombre_completo ?? 'Sin asignar') }}" readonly>
+                                    @endif
                                 </div>
                             </div>
                         </div>
