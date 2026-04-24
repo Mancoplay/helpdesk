@@ -1763,8 +1763,16 @@ class HomeController extends Controller
             abort(403);
         }
 
+        if ($ticket->estado === 'finalizado') {
+            return back()->with('success', 'El ticket ya estaba finalizado.');
+        }
+
+        if ($ticket->estado === 'cerrado') {
+            return back()->with('error', 'El ticket ya fue cerrado y no se puede finalizar nuevamente.');
+        }
+
         if (!$this->canFinalizeTicket($ticket)) {
-            abort(403);
+            return back()->with('error', 'Solo se pueden finalizar tickets pendientes o en proceso.');
         }
 
         $ticket->estado = 'finalizado';

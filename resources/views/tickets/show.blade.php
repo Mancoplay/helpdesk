@@ -165,7 +165,7 @@
             @can('atender tickets')
                 @if($canFinalizeTicketHere)
                     <div class="card-footer border-top">
-                        <form method="POST" action="{{ route('tickets.finalize', $ticket) }}">
+                        <form method="POST" action="{{ route('tickets.finalize', $ticket) }}" id="finalizeTicketForm">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-success fs-5 w-100">Finalizar ticket</button>
@@ -853,6 +853,7 @@ closeAnyDeskBtn.disabled = true;
         const remoteCodeInput = document.getElementById('remoteSupportCode');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
+        const finalizeTicketForm = document.getElementById('finalizeTicketForm');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
         const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
         const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
@@ -914,6 +915,23 @@ closeAnyDeskBtn.disabled = true;
                 </div>
             `;
         };
+
+        if (finalizeTicketForm) {
+            finalizeTicketForm.addEventListener('submit', function (event) {
+                const submitButton = finalizeTicketForm.querySelector('button[type="submit"]');
+                if (finalizeTicketForm.dataset.submitting === '1') {
+                    event.preventDefault();
+                    return;
+                }
+
+                finalizeTicketForm.dataset.submitting = '1';
+
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Finalizando...';
+                }
+            });
+        }
 
         const shouldStickToBottom = function () {
             const gap = chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight;
