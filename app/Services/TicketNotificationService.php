@@ -169,8 +169,9 @@ class TicketNotificationService
             ->get(['id', 'name', 'email']);
 
         return [
-            // Email notifications are only sent to the explicitly configured address.
-            'emails' => $configuredEmailCollection
+            // Send mail to department employees and optionally copy the configured address.
+            'emails' => $employeeEmails
+                ->concat($configuredEmailCollection)
                 ->unique()
                 ->values(),
             'users' => $usersFromRelation
