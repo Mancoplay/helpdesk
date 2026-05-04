@@ -57,19 +57,7 @@ class LoginController extends Controller
 
             if ($loggedUser) {
                 $this->sessionAccessService->clearExpiredSessionsForUser((int) $loggedUser->id, $currentSessionId);
-
-                if ($this->sessionAccessService->hasAnotherActiveSession((int) $loggedUser->id, $currentSessionId)) {
-                    $this->sessionAccessService->clearSessionById($currentSessionId);
-                    auth()->logout();
-                    $request->session()->invalidate();
-                    $request->session()->regenerateToken();
-
-                    return back()
-                        ->withErrors([
-                            'email' => 'Esta cuenta ya tiene una sesion activa en otro navegador o dispositivo.',
-                        ])
-                        ->withInput($request->only('email'));
-                }
+                $this->sessionAccessService->clearOtherSessions((int) $loggedUser->id, $currentSessionId);
             }
 
             return $this->sendLoginResponse($request);

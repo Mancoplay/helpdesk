@@ -9,6 +9,24 @@
 @endsection
 
 @section('content')
+@php
+    $ticketSubjectOptions = [
+        'Problema con el sistema de correspondencia',
+        'Falla en equipo de computacion',
+        'Problema con impresora o escaner',
+        'Problema de conexion a internet o red',
+        'Acceso bloqueado o recuperacion de cuenta',
+        'Error al registrar o actualizar envios',
+        'Problema con reportes o consultas internas',
+        'Solicitud de soporte para ventanilla',
+        'Solicitud de soporte para clasificacion o distribucion',
+        'Solicitud de mantenimiento o revision tecnica',
+    ];
+
+    $oldSubject = old('asunto');
+    $isCustomSubject = filled($oldSubject) && ! in_array($oldSubject, $ticketSubjectOptions, true);
+@endphp
+
 @if(auth()->user()->can('crear tickets'))
 <div class="card mb-3">
     <div class="card-body">
@@ -64,13 +82,30 @@
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Asunto</label>
+                            <input type="hidden" name="asunto" id="ticketSubjectValue" value="{{ $oldSubject }}">
+                            <select
+                                id="ticketSubjectSelect"
+                                class="form-select"
+                                required
+                                data-other-value="__other__"
+                                oninvalid="this.setCustomValidity('Debe seleccionar un asunto.')"
+                                onchange="this.setCustomValidity('')"
+                            >
+                                <option value="">Seleccione un asunto</option>
+                                @foreach($ticketSubjectOptions as $subjectOption)
+                                    <option value="{{ $subjectOption }}" @selected($oldSubject === $subjectOption)>{{ $subjectOption }}</option>
+                                @endforeach
+                                <option value="__other__" @selected($isCustomSubject)>Otro asunto</option>
+                            </select>
                             <input
                                 type="text"
-                                name="asunto"
-                                class="form-control"
-                                value="{{ old('asunto') }}"
+                                id="ticketSubjectOther"
+                                class="form-control mt-2 {{ $isCustomSubject ? '' : 'd-none' }}"
+                                value="{{ $isCustomSubject ? $oldSubject : '' }}"
                                 minlength="3"
-                                required
+                                maxlength="180"
+                                placeholder="Escriba el asunto"
+                                @disabled(! $isCustomSubject)
                                 oninvalid="this.setCustomValidity('Debe ingresar minimo 3 caracteres.')"
                                 oninput="this.setCustomValidity('')"
                             >
@@ -109,9 +144,41 @@
         const createTicketModal = document.getElementById('createTicketModal');
         const createTicketForm = document.getElementById('createTicketForm');
         const pageFeedback = document.querySelector('.js-ticket-page-feedback');
+        const ticketSubjectSelect = document.getElementById('ticketSubjectSelect');
+        const ticketSubjectValue = document.getElementById('ticketSubjectValue');
+        const ticketSubjectOther = document.getElementById('ticketSubjectOther');
         let tableRefreshController = null;
         let createTicketRequest = null;
         let nextTicketCodeCache = @json($nextTicketCode ?? null);
+
+        const syncTicketSubject = function () {
+            if (!ticketSubjectSelect || !ticketSubjectValue || !ticketSubjectOther) {
+                return;
+            }
+
+            const otherValue = ticketSubjectSelect.dataset.otherValue || '__other__';
+            const isOtherSubject = ticketSubjectSelect.value === otherValue;
+
+            ticketSubjectOther.classList.toggle('d-none', !isOtherSubject);
+            ticketSubjectOther.disabled = !isOtherSubject;
+            ticketSubjectOther.required = isOtherSubject;
+
+            if (isOtherSubject) {
+                ticketSubjectValue.value = ticketSubjectOther.value.trim();
+                return;
+            }
+
+            ticketSubjectOther.value = '';
+            ticketSubjectValue.value = ticketSubjectSelect.value;
+        };
+
+        if (ticketSubjectSelect) {
+            ticketSubjectSelect.addEventListener('change', syncTicketSubject);
+        }
+
+        if (ticketSubjectOther) {
+            ticketSubjectOther.addEventListener('input', syncTicketSubject);
+        }
 
         const showFeedback = function (container, type, message) {
             if (!container || !message) {
@@ -216,6 +283,8 @@
                     if (codeInput && nextTicketCodeCache) {
                         codeInput.value = nextTicketCodeCache;
                     }
+
+                    syncTicketSubject();
                 }
             });
         }
@@ -312,6 +381,11 @@
         if (createTicketForm) {
             createTicketForm.addEventListener('submit', function (event) {
                 event.preventDefault();
+                syncTicketSubject();
+
+                if (!createTicketForm.reportValidity()) {
+                    return;
+                }
 
                 if (createTicketRequest) {
                     return;
@@ -349,7 +423,6 @@
                             window.setTimeout(refreshTableResults, 120);
                         }
 
-                        window.setTimeout(fetchNextTicketCode, 0);
                     })
                     .catch(function (error) {
                         showFeedback(feedbackContainer, 'danger', extractErrorMessage(error));
@@ -458,6 +531,7 @@
         };
 
         bindTicketListSocket();
+        syncTicketSubject();
         window.setTimeout(fetchNextTicketCode, 0);
 
         document.addEventListener('hidden.bs.modal', function () {

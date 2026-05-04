@@ -9,6 +9,19 @@ class SafeBroadcast
 {
     public static function dispatch(object $event): void
     {
+        if (!app()->runningInConsole()) {
+            app()->terminating(static function () use ($event): void {
+                self::dispatchNow($event);
+            });
+
+            return;
+        }
+
+        self::dispatchNow($event);
+    }
+
+    private static function dispatchNow(object $event): void
+    {
         try {
             event($event);
         } catch (Throwable $exception) {

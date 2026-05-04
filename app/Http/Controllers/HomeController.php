@@ -6,6 +6,7 @@ use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\StoreEmpleadoRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Http\Requests\Admin\UpdateEmpleadoRequest;
+use App\Jobs\NotifyTicketCreated;
 use App\Services\TicketNotificationService;
 use App\Services\ReviewRangeService;
 use App\Models\Cliente;
@@ -1329,10 +1330,10 @@ class HomeController extends Controller
         ]);
     }
 
-    public function storeTicket(Request $request, TicketNotificationService $ticketNotificationService): RedirectResponse|JsonResponse
+    public function storeTicket(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
-            'codigo' => ['nullable', 'string', 'max:25', Rule::unique('tickets', 'codigo')],
+            'codigo' => ['nullable', 'string', 'max:25'],
             'asunto' => ['required', 'string', 'min:3', 'max:180'],
             'descripcion' => ['required', 'string', 'min:3'],
         ], [
@@ -1422,7 +1423,7 @@ class HomeController extends Controller
         }
 
         // Firehose-safe dedupe in case another user just created a ticket
-        while (Ticket::where('codigo', $validated['codigo'])->exists()) {
+        while (Ticket::withTrashed()->where('codigo', $validated['codigo'])->exists()) {
             $validated['codigo'] = $this->nextTicketCode();
         }
 
@@ -1437,13 +1438,7 @@ class HomeController extends Controller
             'tipo' => 'creacion',
         ]);
 
-        dispatch(function () use ($ticketNotificationService, $ticket): void {
-            try {
-                $ticketNotificationService->notifyTicketCreated($ticket->fresh());
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        })->afterResponse();
+        NotifyTicketCreated::dispatch((int) $ticket->id);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -1875,7 +1870,7 @@ class HomeController extends Controller
 
     private function nextTicketCode(): string
     {
-        $lastId = (int) Ticket::max('id');
+        $lastId = (int) Ticket::withTrashed()->max('id');
 
         return 'TCK-' . str_pad((string) ($lastId + 1), 4, '0', STR_PAD_LEFT);
     }

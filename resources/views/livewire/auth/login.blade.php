@@ -43,17 +43,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $userId = (int) Auth::id();
 
         $sessionAccessService->clearExpiredSessionsForUser($userId, $currentSessionId);
-
-        if ($sessionAccessService->hasAnotherActiveSession($userId, $currentSessionId)) {
-            $sessionAccessService->clearSessionById($currentSessionId);
-            Auth::guard('web')->logout();
-            Session::invalidate();
-            Session::regenerateToken();
-
-            throw ValidationException::withMessages([
-                'email' => 'Esta cuenta ya tiene una sesion activa en otro navegador o dispositivo.',
-            ]);
-        }
+        $sessionAccessService->clearOtherSessions($userId, $currentSessionId);
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }
