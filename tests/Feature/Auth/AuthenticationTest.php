@@ -3,9 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Livewire\Volt\Volt as LivewireVolt;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -23,14 +23,12 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = LivewireVolt::test('auth.login')
-            ->set('email', $user->email)
-            ->set('password', 'password')
-            ->call('login');
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
 
-        $response
-            ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticated();
     }
@@ -57,7 +55,7 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect('/');
     }
 
-    public function test_login_is_blocked_when_same_account_has_another_active_session(): void
+    public function test_login_clears_another_active_session_for_the_same_account(): void
     {
         config([
             'session.driver' => 'database',
@@ -75,16 +73,17 @@ class AuthenticationTest extends TestCase
             'last_activity' => time(),
         ]);
 
-        $response = LivewireVolt::test('auth.login')
-            ->set('email', $user->email)
-            ->set('password', 'password')
-            ->call('login');
-
-        $response->assertHasErrors([
-            'email' => 'Esta cuenta ya tiene una sesion activa en otro navegador o dispositivo.',
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
         ]);
 
-        $this->assertGuest();
+        $response->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticated();
+        $this->assertDatabaseMissing('sessions', [
+            'id' => 'existing-active-session',
+        ]);
     }
 
     public function test_login_is_allowed_when_previous_session_is_stale(): void
@@ -105,18 +104,36 @@ class AuthenticationTest extends TestCase
             'last_activity' => time() - 600,
         ]);
 
-        $response = LivewireVolt::test('auth.login')
-            ->set('email', $user->email)
-            ->set('password', 'password')
-            ->call('login');
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
 
-        $response
-            ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticated();
         $this->assertDatabaseMissing('sessions', [
             'id' => 'existing-stale-session',
         ]);
+    }
+
+    public function test_login_redirects_disabled_users_back_to_login(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->create([
+            'activo' => false,
+        ]);
+        $user->assignRole('Usuario');
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+        $response
+            ->assertRedirect(route('login', absolute: false))
+            ->assertSessionHas('disabled_account_error');
     }
 }

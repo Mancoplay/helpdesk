@@ -16,7 +16,10 @@ new class extends Component {
             'password' => ['required', 'string', 'current_password'],
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+
+        $logout(app(\App\Support\SessionAccessService::class));
+        $user->delete();
 
         $this->redirect('/', navigate: true);
     }

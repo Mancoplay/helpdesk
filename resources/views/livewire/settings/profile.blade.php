@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\Cliente;
-use App\Models\Empleado;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -28,15 +26,6 @@ new class extends Component {
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
-        $linkedEmpleado = Empleado::query()
-            ->whereKey($user->id)
-            ->orWhere('email', $user->email)
-            ->first();
-        $linkedCliente = Cliente::query()
-            ->whereKey($user->id)
-            ->orWhere('email', $user->email)
-            ->first();
-
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
 
@@ -46,13 +35,10 @@ new class extends Component {
                 'email',
                 'max:255',
                 Rule::unique(User::class)->ignore($user->id),
-                Rule::unique('empleados', 'email')->ignore($linkedEmpleado?->id),
-                Rule::unique('clientes', 'email')->ignore($linkedCliente?->id),
             ],
         ]);
 
-        DB::transaction(function () use ($user, $linkedEmpleado, $linkedCliente, $validated): void {
-            $oldEmail = $user->email;
+        DB::transaction(function () use ($user, $validated): void {
             $user->fill($validated);
 
             if ($user->isDirty('email')) {
@@ -60,18 +46,6 @@ new class extends Component {
             }
 
             $user->save();
-
-            if ($oldEmail !== $validated['email']) {
-                if ($linkedEmpleado) {
-                    $linkedEmpleado->email = $validated['email'];
-                    $linkedEmpleado->save();
-                }
-
-                if ($linkedCliente) {
-                    $linkedCliente->email = $validated['email'];
-                    $linkedCliente->save();
-                }
-            }
         });
 
         $this->dispatch('profile-updated', name: $user->name);

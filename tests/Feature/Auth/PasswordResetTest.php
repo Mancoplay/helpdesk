@@ -3,10 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Mail\PasswordVerificationCodeMail;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
-use Livewire\Volt\Volt;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -15,65 +16,57 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_password_link_screen_can_be_rendered(): void
     {
-        $response = $this->get('/forgot-password');
+        $response = $this->get('/password/reset');
 
         $response->assertStatus(200);
     }
 
     public function test_reset_password_link_can_be_requested(): void
     {
-        Notification::fake();
+        Mail::fake();
 
         $user = User::factory()->create();
 
-        Volt::test('auth.forgot-password')
-            ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
+        $this->post('/password/email', [
+            'email' => $user->email,
+        ]);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        Mail::assertSent(PasswordVerificationCodeMail::class);
     }
 
-    public function test_reset_password_screen_can_be_rendered(): void
+    public function test_reset_password_form_redirects_to_code_request_screen(): void
     {
-        Notification::fake();
+        $response = $this->get('/password/reset/example-token');
+
+        $response->assertRedirect(route('password.request', absolute: false));
+    }
+
+    public function test_password_can_be_reset_with_valid_code(): void
+    {
+        Mail::fake();
+        Event::fake();
 
         $user = User::factory()->create();
 
-        Volt::test('auth.forgot-password')
-            ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
+        $this->post('/password/email', [
+            'email' => $user->email,
+        ]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get('/reset-password/'.$notification->token);
+        Mail::assertSent(PasswordVerificationCodeMail::class, function (PasswordVerificationCodeMail $mail) use ($user) {
+            $this->post('/password/verify-code', [
+                'email' => $user->email,
+                'code' => $mail->code,
+            ])->assertSessionHasNoErrors();
 
-            $response->assertStatus(200);
+            $this->post('/password/reset', [
+                'email' => $user->email,
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])->assertRedirect(route('login', absolute: false));
 
             return true;
         });
-    }
 
-    public function test_password_can_be_reset_with_valid_token(): void
-    {
-        Notification::fake();
-
-        $user = User::factory()->create();
-
-        Volt::test('auth.forgot-password')
-            ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
-
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = Volt::test('auth.reset-password', ['token' => $notification->token])
-                ->set('email', $user->email)
-                ->set('password', 'password')
-                ->set('password_confirmation', 'password')
-                ->call('resetPassword');
-
-            $response
-                ->assertHasNoErrors()
-                ->assertRedirect(route('login', absolute: false));
-
-            return true;
-        });
+        Event::assertDispatched(PasswordReset::class);
     }
 }

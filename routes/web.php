@@ -10,7 +10,7 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
 
-Auth::routes(['verify' => true]);
+Auth::routes(['verify' => true, 'register' => false]);
 
 Route::post('/password/verify-code', [ResetPasswordController::class, 'verifyCode'])
     ->middleware('guest')
