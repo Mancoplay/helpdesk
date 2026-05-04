@@ -1,8 +1,8 @@
 <?php
 
 use App\Mail\PasswordVerificationCodeMail;
-use App\Models\User;
 use Carbon\Carbon;
+use App\Support\PasswordResetEmailGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -27,9 +27,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'email' => ['required', 'string', 'email'],
         ]);
 
-        $user = User::query()->where('email', $this->email)->first();
-        if (!$user) {
-            $this->addError('email', 'No encontramos ese correo en el sistema.');
+        $emailGuard = app(PasswordResetEmailGuard::class);
+        $this->email = $emailGuard->normalize($this->email);
+        [$isValid, $message] = $emailGuard->validate($this->email);
+
+        if (!$isValid) {
+            $this->addError('email', $message);
             $this->codeSent = false;
             return;
         }
@@ -63,6 +66,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
+        $emailGuard = app(PasswordResetEmailGuard::class);
+        $this->email = $emailGuard->normalize($this->email);
+        [$isValid, $message, $user] = $emailGuard->validate($this->email);
+
+        if (!$isValid || !$user) {
+            $this->addError('email', $message ?: 'No encontramos ese correo en el sistema.');
+            return;
+        }
+
         $row = DB::table('password_reset_tokens')->where('email', $this->email)->first();
         if (!$row) {
             $this->addError('code', 'Primero debes solicitar un código de verificación.');
@@ -81,12 +93,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         if (!Hash::check($this->code, $row->token)) {
             $this->addError('code', 'El código es incorrecto.');
-            return;
-        }
-
-        $user = User::query()->where('email', $this->email)->first();
-        if (!$user) {
-            $this->addError('email', 'No encontramos ese correo en el sistema.');
             return;
         }
 

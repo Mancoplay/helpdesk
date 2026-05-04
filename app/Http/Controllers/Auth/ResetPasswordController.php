@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Support\PasswordResetEmailGuard;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
@@ -26,14 +26,22 @@ class ResetPasswordController extends Controller
         return redirect()->route('password.request');
     }
 
-    public function verifyCode(Request $request): RedirectResponse
+    public function verifyCode(Request $request, PasswordResetEmailGuard $emailGuard): RedirectResponse
     {
         $request->validate([
             'email' => ['required', 'string', 'email'],
             'code' => ['required', 'digits:6'],
         ]);
 
-        $email = $request->string('email')->toString();
+        $email = $emailGuard->normalize($request->string('email')->toString());
+        [$isValid, $message] = $emailGuard->validate($email);
+
+        if (!$isValid) {
+            return back()
+                ->withErrors(['email' => $message])
+                ->withInput(['email' => $email]);
+        }
+
         $code = $request->string('code')->toString();
 
         $row = DB::table('password_reset_tokens')->where('email', $email)->first();
@@ -70,14 +78,19 @@ class ResetPasswordController extends Controller
         return back()->with('status', 'Código verificado. Ahora ya puedes cambiar tu contraseña.');
     }
 
-    public function reset(Request $request): RedirectResponse
+    public function reset(Request $request, PasswordResetEmailGuard $emailGuard): RedirectResponse
     {
         $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
-        $email = $request->string('email')->toString();
+        $email = $emailGuard->normalize($request->string('email')->toString());
+        [$isValid, $message, $user] = $emailGuard->validate($email);
+
+        if (!$isValid) {
+            return back()->withErrors(['email' => $message])->withInput(['email' => $email]);
+        }
 
         if ((int) session('password_reset_step', 1) < 3 || session('password_reset_email') !== $email) {
             return back()->withErrors(['email' => 'Debes verificar el código antes de cambiar la contraseña.']);
@@ -98,7 +111,6 @@ class ResetPasswordController extends Controller
             return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo código.']);
         }
 
-        $user = User::query()->where('email', $email)->first();
         if (!$user) {
             return back()->withErrors(['email' => 'No fue posible completar el cambio. Solicita un nuevo código.']);
         }

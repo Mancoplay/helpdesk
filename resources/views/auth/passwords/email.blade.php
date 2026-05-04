@@ -39,6 +39,8 @@
                                         autocomplete="email"
                                         autofocus
                                         placeholder="correo@ejemplo.com"
+                                        pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                                        title="Ingresa un correo real registrado en el sistema."
                                     >
 
                                     @error('email')

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\PasswordVerificationCodeMail;
-use App\Models\User;
+use App\Support\PasswordResetEmailGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,32 +25,37 @@ class ForgotPasswordController extends Controller
         return view('auth.passwords.email');
     }
 
-    public function sendResetLinkEmail(Request $request): RedirectResponse
+    public function sendResetLinkEmail(Request $request, PasswordResetEmailGuard $emailGuard): RedirectResponse
     {
         $request->validate([
             'email' => ['required', 'string', 'email'],
         ]);
 
-        $email = $request->string('email')->toString();
+        $email = $emailGuard->normalize($request->string('email')->toString());
+        [$isValid, $message] = $emailGuard->validate($email);
 
-        $user = User::query()->where('email', $email)->first();
+        if (!$isValid) {
+            session()->forget(['password_reset_step', 'password_reset_email']);
+
+            return back()
+                ->withErrors(['email' => $message])
+                ->withInput(['email' => $email]);
+        }
 
         $code = (string) random_int(100000, 999999);
 
-        if ($user) {
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $email],
-                [
-                    'token' => Hash::make($code),
-                    'created_at' => now(),
-                ]
-            );
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            [
+                'token' => Hash::make($code),
+                'created_at' => now(),
+            ]
+        );
 
-            try {
-                Mail::to($email)->send(new PasswordVerificationCodeMail($code));
-            } catch (Throwable $e) {
-                report($e);
-            }
+        try {
+            Mail::to($email)->send(new PasswordVerificationCodeMail($code));
+        } catch (Throwable $e) {
+            report($e);
         }
 
         session([
@@ -58,6 +63,6 @@ class ForgotPasswordController extends Controller
             'password_reset_email' => $email,
         ]);
 
-        return back()->with('status', 'Si el correo existe en el sistema, te enviamos un código de verificación.');
+        return back()->with('status', 'Te enviamos un codigo de verificacion a tu correo.');
     }
 }
