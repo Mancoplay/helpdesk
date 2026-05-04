@@ -62,6 +62,7 @@ Route::middleware(['auth', 'permission:ver tickets'])->group(function () {
     Route::post('/tickets/{ticket}/mensajes', [HomeController::class, 'storeTicketMessage'])
         ->middleware('throttle:tickets-message')
         ->name('tickets.messages.store');
+    Route::post('/tickets/{ticket}/calificar', [HomeController::class, 'rateTicket'])->name('tickets.rate');
     Route::post('/tickets/{ticket}/remote/request', [HomeController::class, 'requestRemoteSession'])
         ->middleware('throttle:tickets-remote')
         ->name('tickets.remote.request');

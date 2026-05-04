@@ -250,18 +250,18 @@ class HomeController extends Controller
                 }
             }, 'tickets_total_count')
             ->latest();
-        $this->applyUsersDirectoryFilters($query, $search, $roleFilter, $departamentoId, $areaTrabajoId, '', $fechaDesde, $fechaHasta);
+        $this->applyUsersDirectoryFilters($query, $search, $roleFilter, $departamentoId, $areaTrabajoId);
 
         $usuarios = $query->get();
         $summaryBase = User::query()->where('activo', true);
-        $this->applyUsersDirectoryFilters($summaryBase, $search, $roleFilter, $departamentoId, $areaTrabajoId, '', $fechaDesde, $fechaHasta);
+        $this->applyUsersDirectoryFilters($summaryBase, $search, $roleFilter, $departamentoId, $areaTrabajoId);
 
         $detalleTicketsUsuario = collect();
         $usuarioDetalle = null;
         $detalleRelacionLabel = 'Participacion';
         $isSingleUserReport = $usuarios->count() === 1;
 
-        if ($search !== '' && $usuarios->count() === 1) {
+        if ($usuarios->count() === 1) {
             $usuarioDetalle = $usuarios->first();
             $detalleRole = $roleFilter !== ''
                 ? $roleFilter
@@ -273,7 +273,8 @@ class HomeController extends Controller
                 default => 'Participacion',
             };
 
-            $detalleTicketsUsuario = Ticket::with(['cliente', 'empleado', 'departamento'])
+            $detalleTicketsUsuario = Ticket::withTrashed()
+                ->with(['cliente', 'empleado', 'departamento'])
                 ->where(function ($ticketQuery) use ($usuarioDetalle): void {
                     $ticketQuery->where('cliente_id', $usuarioDetalle->id)
                         ->orWhere('empleado_id', $usuarioDetalle->id);
@@ -298,6 +299,7 @@ class HomeController extends Controller
                         'departamento' => $ticket->departamento->nombre ?? '-',
                         'estado' => $ticket->estado,
                         'relacion' => $detalleRelacionValor,
+                        'puntuacion' => $ticket->atencion_puntuacion,
                         'fecha' => optional($ticket->created_at)->format('Y-m-d H:i'),
                     ];
                 });
@@ -511,6 +513,8 @@ class HomeController extends Controller
                 ->count('cliente_id'),
             'tickets_cerrados' => (clone $baseQuery)->where('estado', 'finalizado')->count(),
             'tickets_eliminados' => (clone $baseQuery)->onlyTrashed()->count(),
+            'puntuacion_promedio' => (float) ($empleado->puntuacion_promedio ?? 0),
+            'puntuaciones_count' => (int) ($empleado->puntuaciones_count ?? 0),
         ];
 
         return view('empleados.review', [
@@ -1668,6 +1672,47 @@ class HomeController extends Controller
         return back();
     }
 
+    public function rateTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
+    {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403);
+        }
+
+        if (!$this->isTicketClientOwner($ticket)) {
+            abort(403);
+        }
+
+        if ($ticket->estado !== 'finalizado') {
+            return $this->ticketRatingResponse($request, 'Solo puedes calificar un ticket finalizado.', false);
+        }
+
+        if ((int) ($ticket->empleado_id ?? 0) <= 0) {
+            return $this->ticketRatingResponse($request, 'Este ticket no tiene empleado asignado para calificar.', false);
+        }
+
+        if (!is_null($ticket->atencion_puntuacion)) {
+            return $this->ticketRatingResponse($request, 'Este ticket ya fue calificado.', true);
+        }
+
+        $validated = $request->validate([
+            'puntuacion' => ['required', 'integer', 'min:1', 'max:5'],
+        ], [
+            'puntuacion.required' => 'Selecciona una puntuacion del 1 al 5.',
+            'puntuacion.min' => 'La puntuacion minima es 1.',
+            'puntuacion.max' => 'La puntuacion maxima es 5.',
+        ]);
+
+        $ticket->forceFill([
+            'atencion_puntuacion' => (int) $validated['puntuacion'],
+            'puntuado_por_id' => auth()->id(),
+            'puntuado_at' => now(),
+        ])->save();
+
+        $this->refreshEmployeeRatingAverage((int) $ticket->empleado_id);
+
+        return $this->ticketRatingResponse($request, 'Gracias por calificar la atencion.', true);
+    }
+
     public function updateTicket(Request $request, Ticket $ticket): RedirectResponse
     {
         if (!$this->canEditTicket($ticket)) {
@@ -1889,6 +1934,40 @@ class HomeController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    private function ticketRatingResponse(Request $request, string $message, bool $success): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ], $success ? 200 : 422);
+        }
+
+        return back()->with($success ? 'success' : 'error', $message);
+    }
+
+    private function refreshEmployeeRatingAverage(int $employeeId): void
+    {
+        if ($employeeId <= 0) {
+            return;
+        }
+
+        $ratedTickets = Ticket::withTrashed()
+            ->where('empleado_id', $employeeId)
+            ->whereNotNull('atencion_puntuacion');
+
+        $ratingCount = (int) (clone $ratedTickets)->count();
+        $ratingAverage = $ratingCount > 0
+            ? round((float) (clone $ratedTickets)->avg('atencion_puntuacion'), 2)
+            : 0;
+
+        User::query()
+            ->whereKey($employeeId)
+            ->update([
+                'puntuacion_promedio' => $ratingAverage,
+                'puntuaciones_count' => $ratingCount,
+            ]);
     }
 
     private function canAccessTicket(Ticket $ticket): bool

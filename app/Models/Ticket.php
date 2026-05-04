@@ -24,11 +24,16 @@ class Ticket extends Model
         'descripcion',
         'estado',
         'fecha_cierre',
+        'atencion_puntuacion',
+        'puntuado_por_id',
+        'puntuado_at',
         'last_notified_at',
     ];
 
     protected $casts = [
         'fecha_cierre' => 'datetime',
+        'atencion_puntuacion' => 'integer',
+        'puntuado_at' => 'datetime',
         'last_notified_at' => 'datetime',
     ];
 

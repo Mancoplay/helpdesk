@@ -92,6 +92,16 @@
                 );
             @endphp
 
+            @if($ticket->estado === 'finalizado' && $isClientOwner && (int) ($ticket->empleado_id ?? 0) > 0)
+                @if(!is_null($ticket->atencion_puntuacion))
+                    <div class="card-footer border-top">
+                        <div class="alert alert-success mb-0">
+                            Calificaste esta atencion con <strong>{{ (int) $ticket->atencion_puntuacion }}/5</strong>.
+                        </div>
+                    </div>
+                @endif
+            @endif
+
             @if($isClientOwner || $isAssignedEmployee || $isAdmin)
                 <div class="card-footer border-top">
                     <h6 class="mb-2">Soporte remoto</h6>
@@ -275,6 +285,83 @@
         </div>
     </div>
 </div>
+
+@if($ticket->estado === 'finalizado' && $isClientOwner && (int) ($ticket->empleado_id ?? 0) > 0 && is_null($ticket->atencion_puntuacion))
+<div class="modal fade" id="rateTicketModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('tickets.rate', $ticket) }}" id="rateTicketForm">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Calificar atencion</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Selecciona una puntuacion para la atencion recibida por {{ $ticket->empleado->nombre_completo ?? 'el empleado' }}.
+                    </p>
+                    <div class="row g-2">
+                        @php
+                            $ratingLabels = [
+                                1 => 'Mala',
+                                2 => 'Regular',
+                                3 => 'Aceptable',
+                                4 => 'Buena',
+                                5 => 'Excelente',
+                            ];
+                        @endphp
+                        @foreach($ratingLabels as $score => $ratingLabel)
+                            <div class="col">
+                                <input class="btn-check" type="radio" name="puntuacion" id="ticketRating{{ $score }}" value="{{ $score }}" required>
+                                <label class="btn btn-outline-warning w-100 py-3 ticket-rating-option" for="ticketRating{{ $score }}">
+                                    <span class="d-block fs-4 fw-bold">{{ $score }}</span>
+                                    <span class="d-block small text-dark">{{ $ratingLabel }}</span>
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+@if($ticket->estado === 'finalizado' && $isClientOwner && (int) ($ticket->empleado_id ?? 0) > 0 && is_null($ticket->atencion_puntuacion))
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalElement = document.getElementById('rateTicketModal');
+        if (!modalElement) {
+            return;
+        }
+
+        if (window.bootstrap?.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalElement, {
+                backdrop: 'static',
+                keyboard: false,
+            }).show();
+            return;
+        }
+
+        modalElement.classList.add('show');
+        modalElement.removeAttribute('aria-hidden');
+        modalElement.setAttribute('aria-modal', 'true');
+        modalElement.setAttribute('role', 'dialog');
+        modalElement.style.display = 'block';
+        document.body.classList.add('modal-open');
+
+        if (!document.querySelector('.modal-backdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
+    });
+</script>
+@endpush
+@endif
 
 @if($remoteEnabled && $remoteSession && $remoteSession->status === 'accepted')
 <div class="modal fade" id="remoteSupportModal" tabindex="-1" aria-hidden="true">
@@ -854,6 +941,8 @@ closeAnyDeskBtn.disabled = true;
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
         const finalizeTicketForm = document.getElementById('finalizeTicketForm');
+        const rateTicketForm = document.getElementById('rateTicketForm');
+        const rateTicketModal = document.getElementById('rateTicketModal');
         const canManageRemoteAsClient = @json($canManageRemoteAsClient);
         const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
         const canEditRemoteCode = canManageRemoteAsClient || canManageRemoteAsEmployee;
@@ -865,6 +954,13 @@ closeAnyDeskBtn.disabled = true;
         let lastSyncedRemoteCode = String(remoteCodeInput?.value || '').trim();
         let remoteCodeDirty = false;
         let inFlight = false;
+
+        if (rateTicketModal && window.bootstrap?.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(rateTicketModal, {
+                backdrop: 'static',
+                keyboard: false,
+            }).show();
+        }
 
         const escapeHtml = function (value) {
             return String(value || '')
@@ -929,6 +1025,23 @@ closeAnyDeskBtn.disabled = true;
                 if (submitButton) {
                     submitButton.disabled = true;
                     submitButton.textContent = 'Finalizando...';
+                }
+            });
+        }
+
+        if (rateTicketForm) {
+            rateTicketForm.addEventListener('submit', function (event) {
+                const submitButton = rateTicketForm.querySelector('button[type="submit"]');
+                if (rateTicketForm.dataset.submitting === '1') {
+                    event.preventDefault();
+                    return;
+                }
+
+                rateTicketForm.dataset.submitting = '1';
+
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Enviando...';
                 }
             });
         }

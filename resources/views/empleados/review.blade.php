@@ -63,6 +63,7 @@
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets atendidos</div><p class="value">{{ $summary['total_tickets'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Usuarios atendidos</div><p class="value">{{ $summary['clientes_atendidos'] }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickeds finalizados</div><p class="value">{{ $summary['tickets_cerrados'] }}</p></div></div></div>
+    <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Puntuacion</div><p class="value">{{ (int) ($summary['puntuaciones_count'] ?? 0) > 0 ? number_format((float) $summary['puntuacion_promedio'], 2) . '/5' : '-' }}</p></div></div></div>
     <div class="col-md-3"><div class="card dashboard-stat h-100"><div class="card-body"><div class="label">Tickets eliminados</div><p class="value">{{ $summary['tickets_eliminados'] }}</p></div></div></div>
 </div>
 
@@ -77,6 +78,7 @@
                     <th>Usuario</th>
                     <th>Departamento</th>
                     <th>Estado</th>
+                    <th>Puntuacion</th>
                     <th>Creado</th>
                     <th>Cierre</th>
                     <th>Eliminado</th>
@@ -96,6 +98,13 @@
                         <td>{{ $ticket->cliente->nombre_completo ?? '-' }}</td>
                         <td>{{ $ticket->departamento->nombre ?? '-' }}</td>
                         <td>{{ str_replace('_', ' ', $ticket->estado) }}</td>
+                        <td>
+                            @if(!is_null($ticket->atencion_puntuacion))
+                                <span class="badge text-bg-warning text-dark">{{ (int) $ticket->atencion_puntuacion }}/5</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
                         <td>{{ $ticket->created_at?->format('d/m/Y H:i') }}</td>
                         <td>{{ $ticket->fecha_cierre?->format('d/m/Y H:i') ?? '-' }}</td>
                         <td>
@@ -107,7 +116,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted">Sin registros para el filtro aplicado.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted">Sin registros para el filtro aplicado.</td></tr>
                 @endforelse
             </tbody>
         </table>

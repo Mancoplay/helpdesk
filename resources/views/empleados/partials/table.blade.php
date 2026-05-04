@@ -8,6 +8,7 @@
                     <th>Departamentos</th>
                     <th>Contacto</th>
                     <th>Correo</th>
+                    <th>Puntuacion</th>
                     <th style="width:300px;">Accion</th>
                 </tr>
             </thead>
@@ -24,6 +25,14 @@
                         </td>
                         <td>{{ $empleado->telefono ?? '-' }}</td>
                         <td>{{ $empleado->email }}</td>
+                        <td>
+                            @if((int) ($empleado->puntuaciones_count ?? 0) > 0)
+                                <span class="badge text-bg-warning text-dark">{{ number_format((float) $empleado->puntuacion_promedio, 2) }}/5</span>
+                                <small class="text-muted d-block">{{ (int) $empleado->puntuaciones_count }} calif.</small>
+                            @else
+                                <span class="text-muted">Sin calificar</span>
+                            @endif
+                        </td>
                         <td class="text-nowrap">
                             <div class="d-flex flex-nowrap align-items-center gap-2">
                                 <a href="{{ route('empleados.review', ['empleado' => $empleado, 'period' => 'month']) }}" class="btn btn-secondary btn-sm">Revisar</a>
@@ -128,7 +137,7 @@
                         </div>
                     </div>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted">Sin datos</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted">Sin datos</td></tr>
                 @endforelse
             </tbody>
         </table>

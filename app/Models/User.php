@@ -27,6 +27,8 @@ class User extends Authenticatable
         'activo',
         'departamento_id',
         'area_trabajo_id',
+        'puntuacion_promedio',
+        'puntuaciones_count',
     ];
 
     protected $hidden = [
@@ -40,6 +42,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'activo' => 'boolean',
+            'puntuacion_promedio' => 'decimal:2',
+            'puntuaciones_count' => 'integer',
         ];
     }
 
