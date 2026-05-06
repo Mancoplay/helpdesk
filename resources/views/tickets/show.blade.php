@@ -274,7 +274,7 @@
                                 >
                                 <div id="chatSelectedFiles" class="chat-selected-files"></div>
                             </div>
-                            <small class="text-muted d-block mb-2">Adjunta imagen, documento o archivo. Maximo 5 archivos por mensaje (12 MB c/u).</small>
+                            <small class="text-muted d-block mb-2">Adjunta imagen, documento o archivo.</small>
                             <div class="text-center">
                                 <button type="submit" class="btn btn-primary btn-sm fs-4 w-100">Enviar</button>
                             </div>
