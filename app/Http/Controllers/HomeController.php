@@ -6,8 +6,8 @@ use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\StoreEmpleadoRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Http\Requests\Admin\UpdateEmpleadoRequest;
+use App\Jobs\NotifyTicketAttended;
 use App\Jobs\NotifyTicketCreated;
-use App\Services\TicketNotificationService;
 use App\Services\ReviewRangeService;
 use App\Models\Cliente;
 use App\Models\AreaTrabajo;
@@ -31,7 +31,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\Process\Process;
-use Throwable;
 
 class HomeController extends Controller
 {
@@ -1496,7 +1495,7 @@ class HomeController extends Controller
         return back()->with('success', 'Ticket agregado correctamente.');
     }
 
-    public function attendTicket(Request $request, Ticket $ticket, TicketNotificationService $ticketNotificationService): RedirectResponse|JsonResponse
+    public function attendTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         if (!$this->canAccessTicket($ticket)) {
             abort(403);
@@ -1531,13 +1530,7 @@ class HomeController extends Controller
                 'tipo' => 'atencion',
             ]);
 
-            dispatch(function () use ($ticketNotificationService, $ticket, $attendedByName): void {
-                try {
-                    $ticketNotificationService->notifyTicketAttended($ticket->fresh(), $attendedByName);
-                } catch (Throwable $exception) {
-                    report($exception);
-                }
-            })->afterResponse();
+            NotifyTicketAttended::dispatch((int) $ticket->id, $attendedByName);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -1568,13 +1561,7 @@ class HomeController extends Controller
             'tipo' => 'atencion',
         ]);
 
-        dispatch(function () use ($ticketNotificationService, $ticket, $attendedByName): void {
-            try {
-                $ticketNotificationService->notifyTicketAttended($ticket->fresh(), $attendedByName);
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        })->afterResponse();
+        NotifyTicketAttended::dispatch((int) $ticket->id, $attendedByName);
 
         if ($request->expectsJson()) {
             return response()->json([
