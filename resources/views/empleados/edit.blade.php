@@ -78,7 +78,7 @@
                     <label class="form-label mt-2">Correo</label>
                     <input type="email" name="email" class="form-control" value="{{ old('email', $empleado->email) }}" required>
 
-                    <label class="form-label mt-2">Contraseña (opcional)</label>
+                    <label class="form-label mt-2">Contraseña</label>
                     <div class="input-group">
                         <input type="password" name="password" class="form-control" placeholder="Nueva contraseña" autocomplete="new-password">
                         <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contraseña">
