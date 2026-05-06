@@ -100,14 +100,14 @@
                             <input type="text" name="cargo" class="form-control">
                             <label class="form-label mt-2">Correo</label>
                             <input type="email" name="email" class="form-control" required maxlength="255" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Ingresa un correo valido, por ejemplo usuario@dominio.com">
-                            <label class="form-label mt-2">Contrasena</label>
+                            <label class="form-label mt-2">Contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password" class="form-control js-password-input" required autocomplete="new-password">
                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
-                            <label class="form-label mt-2">Confirmar Contrasena</label>
+                            <label class="form-label mt-2">Confirmar Contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password_confirmation" class="form-control js-password-input" required autocomplete="new-password">
                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
