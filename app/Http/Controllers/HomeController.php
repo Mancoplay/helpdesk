@@ -946,12 +946,27 @@ class HomeController extends Controller
         $remoteSession = $remoteEnabled
             ? $ticket->remoteSessions()->latest('id')->first()
             : null;
+        $remoteSupportCode = $remoteSession
+            ? (string) ($remoteSession->support_code ?? '')
+            : '';
+
+        if (
+            $remoteSession
+            && $remoteSession->status === 'accepted'
+            && $remoteSupportCode === ''
+        ) {
+            $remoteSupportCode = $this->rememberedAnyDeskSupportCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
+        }
 
         return view('tickets.show', [
             'ticket' => $ticket,
             'messages' => $messages,
             'remoteEnabled' => $remoteEnabled,
             'remoteSession' => $remoteSession,
+            'remoteSupportCode' => $remoteSupportCode,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -996,6 +1011,20 @@ class HomeController extends Controller
         $remoteSession = $remoteEnabled
             ? $ticket->remoteSessions()->latest('id')->first()
             : null;
+        $remoteSupportCode = $remoteSession
+            ? (string) ($remoteSession->support_code ?? '')
+            : '';
+
+        if (
+            $remoteSession
+            && $remoteSession->status === 'accepted'
+            && $remoteSupportCode === ''
+        ) {
+            $remoteSupportCode = $this->rememberedAnyDeskSupportCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
+        }
 
         $ticket->loadMissing(['empleado']);
 
@@ -1013,7 +1042,7 @@ class HomeController extends Controller
                 'enabled' => $remoteEnabled,
                 'id' => (int) ($remoteSession->id ?? 0),
                 'status' => (string) ($remoteSession->status ?? ''),
-                'support_code' => (string) ($remoteSession->support_code ?? ''),
+                'support_code' => $remoteSupportCode,
             ],
         ]);
     }
@@ -1134,10 +1163,21 @@ class HomeController extends Controller
                 return back()->with('error', 'Ya tienes otra conexión remota activa. Finalízala antes de aceptar una nueva.');
             }
 
-            $remoteSession->update([
+            $rememberedSupportCode = $this->rememberedAnyDeskSupportCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
+
+            $updateData = [
                 'status' => 'accepted',
                 'responded_at' => now(),
-            ]);
+            ];
+
+            if (blank($remoteSession->support_code) && $rememberedSupportCode !== '') {
+                $updateData['support_code'] = $rememberedSupportCode;
+            }
+
+            $remoteSession->update($updateData);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -2109,6 +2149,25 @@ class HomeController extends Controller
             })
             ->when($exceptSessionId, fn ($query) => $query->where('id', '!=', $exceptSessionId))
             ->exists();
+    }
+
+    private function rememberedAnyDeskSupportCodeForClient(int $clientId, ?int $exceptSessionId = null): string
+    {
+        if ($clientId <= 0 || !Schema::hasTable('ticket_eventos')) {
+            return '';
+        }
+
+        $supportCode = TicketRemoteSession::query()
+            ->whereNotNull('support_code')
+            ->where('support_code', '!=', '')
+            ->whereHas('ticket', function ($ticketQuery) use ($clientId): void {
+                $ticketQuery->where('cliente_id', $clientId);
+            })
+            ->when($exceptSessionId, fn ($query) => $query->where('id', '!=', $exceptSessionId))
+            ->latest('id')
+            ->value('support_code');
+
+        return (string) ($supportCode ?? '');
     }
 
     private function closeActiveRemoteSessionsForTicket(Ticket $ticket, ?string $note = null): void

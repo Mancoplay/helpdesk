@@ -389,7 +389,7 @@
                                         id="remoteSupportCode"
                                         name="support_code"
                                         class="form-control"
-                                        value="{{ old('support_code', $remoteSession->support_code) }}"
+                                        value="{{ old('support_code', $remoteSupportCode ?? $remoteSession->support_code) }}"
                                         maxlength="40"
                                         placeholder="Ej: 123456789"
                                         inputmode="numeric"
@@ -407,7 +407,7 @@
                                     type="text"
                                     id="remoteSupportCode"
                                     class="form-control"
-                                    value="{{ $remoteSession->support_code }}"
+                                    value="{{ $remoteSupportCode ?? $remoteSession->support_code }}"
                                     readonly
                                     maxlength="40"
                                     placeholder="Ej: 123456789"
@@ -422,7 +422,7 @@
                             type="button"
                             id="openCopyAnyDeskBtn"
                             class="btn btn-outline-dark w-100"
-                            {{ blank($remoteSession->support_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
+                            {{ blank($remoteSupportCode ?? $remoteSession->support_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
                         >
                             Abrir y copiar código de AnyDesk
                         </button>
@@ -951,7 +951,7 @@ closeAnyDeskBtn.disabled = true;
         let currentState = @json((string) $ticket->estado);
         let currentRemoteId = {{ (int) ($remoteSession->id ?? 0) }};
         let currentRemoteStatus = @json((string) ($remoteSession->status ?? ''));
-        let lastSyncedRemoteCode = String(remoteCodeInput?.value || '').trim();
+        let lastSyncedRemoteCode = @json((string) ($remoteSupportCode ?? $remoteSession->support_code ?? ''));
         let remoteCodeDirty = false;
         let inFlight = false;
 
