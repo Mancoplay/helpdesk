@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\DB;
 
 class SessionAccessService
 {
+    public function shouldEnforceSingleLogin(): bool
+    {
+        return (bool) config('session.enforce_single_login', false);
+    }
+
     public function clearExpiredSessionsForUser(int $userId, string $currentSessionId = ''): void
     {
         if ($userId <= 0 || config('session.driver') !== 'database') {

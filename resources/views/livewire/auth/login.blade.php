@@ -43,7 +43,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $userId = (int) Auth::id();
 
         $sessionAccessService->clearExpiredSessionsForUser($userId, $currentSessionId);
-        $sessionAccessService->clearOtherSessions($userId, $currentSessionId);
+
+        if ($sessionAccessService->shouldEnforceSingleLogin()) {
+            $sessionAccessService->clearOtherSessions($userId, $currentSessionId);
+        }
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }

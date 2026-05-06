@@ -50,6 +50,19 @@ return [
     'concurrent_window' => env('SESSION_CONCURRENT_WINDOW', 2),
 
     /*
+    |---------------------------------------------------------------------------
+    | Enforce Single Login
+    |---------------------------------------------------------------------------
+    |
+    | When enabled, a successful login removes the user's previous database
+    | sessions. Keep this disabled when users may keep the app open in more
+    | than one browser tab, device, or account-switching workflow.
+    |
+    */
+
+    'enforce_single_login' => env('SESSION_ENFORCE_SINGLE_LOGIN', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------

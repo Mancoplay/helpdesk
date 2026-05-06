@@ -55,11 +55,44 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect('/');
     }
 
-    public function test_login_clears_another_active_session_for_the_same_account(): void
+    public function test_login_keeps_another_active_session_when_single_login_is_disabled(): void
     {
         config([
             'session.driver' => 'database',
             'session.concurrent_window' => 2,
+            'session.enforce_single_login' => false,
+        ]);
+
+        $user = User::factory()->create();
+
+        DB::table('sessions')->insert([
+            'id' => 'existing-active-session',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+            'payload' => 'test',
+            'last_activity' => time(),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('sessions', [
+            'id' => 'existing-active-session',
+        ]);
+    }
+
+    public function test_login_clears_another_active_session_when_single_login_is_enabled(): void
+    {
+        config([
+            'session.driver' => 'database',
+            'session.concurrent_window' => 2,
+            'session.enforce_single_login' => true,
         ]);
 
         $user = User::factory()->create();

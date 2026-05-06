@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cliente;
-use App\Models\Empleado;
 use App\Models\User;
 use App\Support\SessionAccessService;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
@@ -57,7 +55,10 @@ class LoginController extends Controller
 
             if ($loggedUser) {
                 $this->sessionAccessService->clearExpiredSessionsForUser((int) $loggedUser->id, $currentSessionId);
-                $this->sessionAccessService->clearOtherSessions((int) $loggedUser->id, $currentSessionId);
+
+                if ($this->sessionAccessService->shouldEnforceSingleLogin()) {
+                    $this->sessionAccessService->clearOtherSessions((int) $loggedUser->id, $currentSessionId);
+                }
             }
 
             return $this->sendLoginResponse($request);
@@ -111,27 +112,11 @@ class LoginController extends Controller
 
     private function employeeIsDisabled(User $user): bool
     {
-        if (!$user->hasRole('Empleado')) {
-            return false;
-        }
-
-        $empleado = Empleado::whereKey($user->id)
-            ->orWhere('email', $user->email)
-            ->first();
-
-        return $empleado ? !$empleado->activo : false;
+        return $user->hasRole('Empleado') && !$user->activo;
     }
 
     private function clientIsDisabled(User $user): bool
     {
-        if (!$user->hasAnyRole(['Usuario', 'Cliente'])) {
-            return false;
-        }
-
-        $cliente = Cliente::whereKey($user->id)
-            ->orWhere('email', $user->email)
-            ->first();
-
-        return $cliente ? !$cliente->activo : false;
+        return $user->hasAnyRole(['Usuario', 'Cliente']) && !$user->activo;
     }
 }

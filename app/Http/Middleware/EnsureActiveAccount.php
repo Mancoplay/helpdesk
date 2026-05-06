@@ -2,8 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Cliente;
-use App\Models\Empleado;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,24 +16,8 @@ class EnsureActiveAccount
 
         $user = $request->user();
 
-        if ($user->hasRole('Empleado')) {
-            $empleado = Empleado::whereKey($user->id)
-                ->orWhere('email', $user->email)
-                ->first();
-
-            if ($empleado && !$empleado->activo) {
-                return $this->logoutDisabledUser($request, $user->email);
-            }
-        }
-
-        if ($user->hasAnyRole(['Usuario', 'Cliente'])) {
-            $cliente = Cliente::whereKey($user->id)
-                ->orWhere('email', $user->email)
-                ->first();
-
-            if ($cliente && !$cliente->activo) {
-                return $this->logoutDisabledUser($request, $user->email);
-            }
+        if ($user->hasAnyRole(['Empleado', 'Usuario', 'Cliente']) && !$user->activo) {
+            return $this->logoutDisabledUser($request, $user->email);
         }
 
         return $next($request);
