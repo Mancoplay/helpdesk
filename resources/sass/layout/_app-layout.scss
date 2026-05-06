@@ -227,6 +227,11 @@
         width: 100%;
     }
 
+    .app-content .table .btn,
+    .app-content .table form .btn {
+        width: auto;
+    }
+
     .app-content .modal-footer .btn,
     .app-content .card-footer .btn,
     .app-content .page-back-btn {
