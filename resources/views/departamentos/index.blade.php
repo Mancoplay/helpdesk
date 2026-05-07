@@ -65,7 +65,32 @@
 </div>
 @include('departamentos.partials.table')
 
-<div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">@csrf<div class="modal-header"><h5 class="modal-title">Nueva area de trabajo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-md-6"><label class="form-label">Nombre</label><input type="text" name="nombre" class="form-control" required></div><div class="col-md-6"><label class="form-label">Descripcion</label><input type="text" name="descripcion" class="form-control"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div></form></div></div></div>
+<div class="modal fade" id="createDepartamentoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content"><form method="POST" action="{{ route('departamentos.store') }}">
+            @csrf<div class="modal-header">
+                <h5 class="modal-title">Nueva area de trabajo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Descripcion</label>
+                        <input type="text" name="descripcion" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 

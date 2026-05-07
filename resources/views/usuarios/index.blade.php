@@ -110,7 +110,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Contrasena</label>
+                            <label class="form-label">Contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password" class="form-control js-password-input" required minlength="8" autocomplete="new-password">
                                 <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
@@ -119,10 +119,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Confirmar contrasena</label>
+                            <label class="form-label">Confirmar contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password_confirmation" class="form-control js-password-input" required minlength="8" autocomplete="new-password">
-                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contraseña">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
