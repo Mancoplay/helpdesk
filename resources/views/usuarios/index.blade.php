@@ -113,7 +113,7 @@
                             <label class="form-label">Contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password" class="form-control js-password-input" required minlength="8" autocomplete="new-password">
-                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contrasena">
+                                <button type="button" class="btn btn-outline-secondary js-password-toggle" aria-label="Mostrar contraseña">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -168,7 +168,7 @@
 
                 const showPassword = input.type === 'password';
                 input.type = showPassword ? 'text' : 'password';
-                button.setAttribute('aria-label', showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena');
+                button.setAttribute('aria-label', showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
 
                 if (icon) {
                     icon.classList.toggle('fa-eye', !showPassword);
@@ -193,7 +193,7 @@
                 });
 
                 createUsuarioForm.querySelectorAll('.js-password-toggle').forEach((button) => {
-                    button.setAttribute('aria-label', 'Mostrar contrasena');
+                    button.setAttribute('aria-label', 'Mostrar contraseña');
                     const icon = button.querySelector('i');
 
                     if (icon) {
