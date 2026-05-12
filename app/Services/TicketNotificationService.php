@@ -11,6 +11,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
 use App\Notifications\TicketAttendedDatabaseNotification;
+use App\Notifications\TicketFinalizedDatabaseNotification;
 use App\Support\SafeBroadcast;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -59,6 +60,28 @@ class TicketNotificationService
         }
 
         return $sent;
+    }
+
+    public function notifyTicketFinalized(Ticket $ticket, string $finalizedByName): int
+    {
+        $ticket->loadMissing(['cliente', 'departamento']);
+
+        $recipient = $ticket->cliente;
+        if (!$recipient) {
+            return 0;
+        }
+
+        try {
+            $recipient->notify(new TicketFinalizedDatabaseNotification($ticket, $finalizedByName));
+            Cache::forget('notifications:summary:' . (int) $recipient->id);
+            SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $recipient->id));
+
+            return 1;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return 0;
     }
 
     public function notifyPendingTickets(): int
@@ -162,18 +185,17 @@ class TicketNotificationService
                 ->get(['id', 'name', 'email']);
 
         $configuredEmail = $this->configuredNotificationEmail();
-        $configuredEmailCollection = $configuredEmail ? collect([$configuredEmail]) : collect();
+        $mailRecipients = $configuredEmail
+            ? $employeeEmails->concat([$configuredEmail])->unique()->values()
+            : collect();
         $adminUsers = User::query()
             ->role('Administrador')
             ->where('activo', true)
             ->get(['id', 'name', 'email']);
 
         return [
-            // Send mail to department employees and optionally copy the configured address.
-            'emails' => $employeeEmails
-                ->concat($configuredEmailCollection)
-                ->unique()
-                ->values(),
+            // Mail alerts are disabled unless the global notification address is configured.
+            'emails' => $mailRecipients,
             'users' => $usersFromRelation
                 ->concat($usersFromEmail)
                 ->concat($adminUsers)

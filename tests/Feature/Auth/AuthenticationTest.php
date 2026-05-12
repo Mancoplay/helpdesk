@@ -19,6 +19,11 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_project_uses_a_dedicated_session_cookie_name(): void
+    {
+        $this->assertSame('helpdesk_session', config('session.cookie'));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();

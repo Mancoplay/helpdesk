@@ -6,9 +6,8 @@ use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\StoreEmpleadoRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Http\Requests\Admin\UpdateEmpleadoRequest;
-use App\Jobs\NotifyTicketAttended;
-use App\Jobs\NotifyTicketCreated;
 use App\Services\ReviewRangeService;
+use App\Services\TicketNotificationService;
 use App\Models\Cliente;
 use App\Models\AreaTrabajo;
 use App\Models\Departamento;
@@ -1481,7 +1480,7 @@ class HomeController extends Controller
             'tipo' => 'creacion',
         ]);
 
-        NotifyTicketCreated::dispatch((int) $ticket->id);
+        app(TicketNotificationService::class)->notifyTicketCreated($ticket);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -1530,7 +1529,7 @@ class HomeController extends Controller
                 'tipo' => 'atencion',
             ]);
 
-            NotifyTicketAttended::dispatch((int) $ticket->id, $attendedByName);
+            app(TicketNotificationService::class)->notifyTicketAttended($ticket, $attendedByName);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -1561,7 +1560,7 @@ class HomeController extends Controller
             'tipo' => 'atencion',
         ]);
 
-        NotifyTicketAttended::dispatch((int) $ticket->id, $attendedByName);
+        app(TicketNotificationService::class)->notifyTicketAttended($ticket, $attendedByName);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -1852,6 +1851,8 @@ class HomeController extends Controller
             'mensaje' => 'Ticket finalizado por ' . auth()->user()->name . '.',
             'tipo' => 'atencion',
         ]);
+
+        app(TicketNotificationService::class)->notifyTicketFinalized($ticket, auth()->user()->name);
 
         return back()->with('success', 'Ticket finalizado correctamente.');
     }

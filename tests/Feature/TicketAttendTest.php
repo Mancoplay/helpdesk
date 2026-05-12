@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\NotifyTicketAttended;
 use App\Models\Departamento;
+use App\Models\Cliente;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Notifications\TicketAttendedDatabaseNotification;
+use App\Notifications\TicketFinalizedDatabaseNotification;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class TicketAttendTest extends TestCase
@@ -18,7 +21,8 @@ class TicketAttendTest extends TestCase
     public function test_employee_can_attend_pending_ticket_without_running_notification_inline(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
-        Queue::fake([NotifyTicketAttended::class]);
+        Mail::fake();
+        Notification::fake();
 
         $departamento = Departamento::query()->create([
             'nombre' => 'Sistemas',
@@ -71,9 +75,60 @@ class TicketAttendTest extends TestCase
             'tipo' => 'atencion',
         ]);
 
-        Queue::assertPushed(NotifyTicketAttended::class, function (NotifyTicketAttended $job) use ($ticket, $employee): bool {
-            return $job->ticketId === $ticket->id
-                && $job->attendedByName === $employee->name;
-        });
+        Notification::assertSentTo(Cliente::query()->findOrFail($client->id), TicketAttendedDatabaseNotification::class);
+    }
+
+    public function test_employee_finalizing_ticket_notifies_ticket_creator(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        Mail::fake();
+        Notification::fake();
+
+        $departamento = Departamento::query()->create([
+            'nombre' => 'Sistemas',
+            'descripcion' => 'Soporte tecnico',
+            'activo' => true,
+        ]);
+
+        $employee = User::factory()->create([
+            'name' => 'Empleado Soporte',
+            'nombres' => 'Empleado',
+            'apellidos' => 'Soporte',
+            'activo' => true,
+            'departamento_id' => $departamento->id,
+        ]);
+        $employee->assignRole('Empleado');
+        $employee->departamentos()->sync([$departamento->id]);
+
+        $client = User::factory()->create([
+            'name' => 'Usuario Demo',
+            'nombres' => 'Usuario',
+            'apellidos' => 'Demo',
+            'activo' => true,
+            'departamento_id' => $departamento->id,
+        ]);
+        $client->assignRole('Usuario');
+
+        $ticket = Ticket::query()->create([
+            'codigo' => 'TCK-0002',
+            'cliente_id' => $client->id,
+            'empleado_id' => $employee->id,
+            'departamento_id' => $departamento->id,
+            'asunto' => 'No imprime',
+            'descripcion' => 'La impresora no responde.',
+            'estado' => 'en_proceso',
+        ]);
+
+        $response = $this->actingAs($employee)->patch(route('tickets.finalize', $ticket));
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'estado' => 'finalizado',
+        ]);
+
+        Notification::assertSentTo(Cliente::query()->findOrFail($client->id), TicketFinalizedDatabaseNotification::class);
+        Notification::assertNotSentTo($employee, TicketFinalizedDatabaseNotification::class);
     }
 }
