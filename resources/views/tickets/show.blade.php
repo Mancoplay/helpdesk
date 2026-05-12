@@ -364,7 +364,7 @@
 @endif
 
 @if($remoteEnabled && $remoteSession && $remoteSession->status === 'accepted')
-<div class="modal fade" id="remoteSupportModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade remote-support-modal" id="remoteSupportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -375,15 +375,15 @@
                 <div class="alert alert-info mb-3">
                     Sesión autorizada por el usuario. Puedes usar <strong>AnyDesk</strong> o <strong>RustDesk</strong>.
                 </div>
-                <div class="row g-3 align-items-start">
-                    <div class="col-md-6">
+                <div class="remote-support-tools">
+                    <div class="remote-support-tool">
                         <label class="form-label mb-1">Código de AnyDesk</label>
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="share_code">
-                                <div class="input-group">
+                                <div class="input-group remote-code-group">
                                     <input
                                         type="text"
                                         id="remoteSupportCode"
@@ -402,7 +402,7 @@
                                 <small id="remoteSupportCodeStatus" class="d-block mt-2" style="min-height: 1.25rem;"></small>
                             </form>
                         @else
-                            <div class="input-group">
+                            <div class="input-group remote-code-group">
                                 <input
                                     type="text"
                                     id="remoteSupportCode"
@@ -425,14 +425,14 @@
                             Abrir AnyDesk
                         </button>
                     </div>
-                    <div class="col-md-6">
+                    <div class="remote-support-tool">
                         <label class="form-label mb-1">Código de RustDesk</label>
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteRustDeskShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="share_code">
-                                <div class="input-group">
+                                <div class="input-group remote-code-group">
                                     <input
                                         type="text"
                                         id="remoteRustDeskCode"
@@ -449,7 +449,7 @@
                                 </div>
                             </form>
                         @else
-                            <div class="input-group">
+                            <div class="input-group remote-code-group">
                                 <input
                                     type="text"
                                     id="remoteRustDeskCode"
@@ -471,7 +471,7 @@
                         </button>
                     </div>
                     @if($canManageRemoteAsClient)
-                        <div class="col-12">
+                        <div class="remote-support-tool remote-support-tool--full">
                             <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')

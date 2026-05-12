@@ -330,6 +330,37 @@
     }
 }
 
+.remote-support-modal {
+    .remote-support-tools {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem 1.25rem;
+        align-items: start;
+    }
+
+    .remote-support-tool--full {
+        grid-column: 1 / -1;
+    }
+
+    .remote-code-group {
+        flex-wrap: nowrap;
+    }
+
+    .remote-code-group .form-control {
+        min-width: 0;
+    }
+
+    .remote-code-group .btn {
+        flex: 0 0 auto;
+        width: auto;
+        white-space: nowrap;
+    }
+
+    .btn[id^='openCopy'] {
+        min-height: 3.35rem;
+    }
+}
+
 @media (max-width: 991.98px) {
     .ticket-detail-page {
         .ticket-chat-card-body {
@@ -344,6 +375,30 @@
 }
 
 @media (max-width: 767.98px) {
+    .remote-support-modal {
+        .remote-support-tools {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem 1.25rem;
+        }
+
+        .remote-code-group .btn {
+            width: auto;
+        }
+
+        .btn[id^='openCopy'] {
+            width: 100%;
+        }
+
+        .modal-footer {
+            align-items: flex-end;
+        }
+
+        .modal-footer .btn {
+            width: auto;
+            min-width: 5.5rem;
+        }
+    }
+
     .ticket-detail-page {
         .card-header,
         .card-body,
@@ -387,6 +442,31 @@
             align-items: center;
             flex-direction: row;
             gap: 0.45rem;
+        }
+    }
+}
+
+@media (max-width: 575.98px) {
+    .remote-support-modal {
+        .remote-support-tools {
+            grid-template-columns: 1fr;
+        }
+
+        .remote-code-group {
+            flex-wrap: wrap;
+        }
+
+        .remote-code-group .form-control,
+        .remote-code-group .btn {
+            width: 100%;
+        }
+
+        .modal-footer {
+            align-items: stretch;
+        }
+
+        .modal-footer .btn {
+            width: 100%;
         }
     }
 }
