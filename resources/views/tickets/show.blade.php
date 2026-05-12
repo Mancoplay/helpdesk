@@ -861,6 +861,14 @@ closeAnyDeskBtn.disabled = true;
                 return;
             }
 
+            const messageText = messageInput ? messageInput.value.trim() : '';
+            if (messageText === '' && selectedFiles.length === 0) {
+                if (messageInput) {
+                    messageInput.focus();
+                }
+                return;
+            }
+
             form.dataset.sending = '1';
             const submitButton = form.querySelector('button[type="submit"]');
             const originalLabel = submitButton ? submitButton.textContent : 'Enviar';

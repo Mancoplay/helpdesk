@@ -245,7 +245,7 @@
                     oscillator.type = 'sine';
                     oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
                     gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.45, audioContext.currentTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.95, audioContext.currentTime + 0.02);
                     gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
 
                     oscillator.connect(gainNode);
