@@ -378,6 +378,7 @@
                 <div class="remote-support-tools">
                     <div class="remote-support-tool">
                         <label class="form-label mb-1">Código de AnyDesk</label>
+                        <div class="remote-code-entry">
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
@@ -416,6 +417,7 @@
                                 >
                             </div>
                         @endif
+                        </div>
                         <button
                             type="button"
                             id="openCopyAnyDeskBtn"
@@ -427,6 +429,7 @@
                     </div>
                     <div class="remote-support-tool">
                         <label class="form-label mb-1">Código de RustDesk</label>
+                        <div class="remote-code-entry">
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteRustDeskShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
@@ -461,6 +464,7 @@
                                 >
                             </div>
                         @endif
+                        </div>
                         <button
                             type="button"
                             id="openCopyRustDeskBtn"

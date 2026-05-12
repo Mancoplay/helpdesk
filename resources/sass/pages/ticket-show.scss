@@ -342,6 +342,16 @@
         grid-column: 1 / -1;
     }
 
+    .remote-support-tool {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .remote-code-entry {
+        min-height: 5.35rem;
+    }
+
     .remote-code-group {
         flex-wrap: nowrap;
     }
@@ -358,6 +368,7 @@
 
     .btn[id^='openCopy'] {
         min-height: 3.35rem;
+        margin-top: 0;
     }
 }
 
@@ -383,6 +394,10 @@
 
         .remote-code-group .btn {
             width: auto;
+        }
+
+        .remote-code-entry {
+            min-height: 5.35rem;
         }
 
         .btn[id^='openCopy'] {
@@ -454,6 +469,10 @@
 
         .remote-code-group {
             flex-wrap: wrap;
+        }
+
+        .remote-code-entry {
+            min-height: 0;
         }
 
         .remote-code-group .form-control,
