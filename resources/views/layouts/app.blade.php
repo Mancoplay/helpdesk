@@ -225,6 +225,27 @@
         </div>
     </div>
     <script>
+        (function () {
+            const desktopSidebarQuery = window.matchMedia('(min-width: 992px)');
+
+            const restoreDesktopSidebar = function () {
+                if (!desktopSidebarQuery.matches) {
+                    return;
+                }
+
+                document.body.classList.remove('sidebar-collapse', 'sidebar-open');
+            };
+
+            restoreDesktopSidebar();
+
+            if (typeof desktopSidebarQuery.addEventListener === 'function') {
+                desktopSidebarQuery.addEventListener('change', restoreDesktopSidebar);
+            } else if (typeof desktopSidebarQuery.addListener === 'function') {
+                desktopSidebarQuery.addListener(restoreDesktopSidebar);
+            }
+        })();
+    </script>
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
             const authUserId = @json((int) auth()->id());
             const notificationsState = {
