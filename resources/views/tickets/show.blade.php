@@ -373,10 +373,10 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-info mb-3">
-                    Sesión autorizada por el usuario en <strong>AnyDesk</strong>.
+                    Sesión autorizada por el usuario. Puedes usar <strong>AnyDesk</strong> o <strong>RustDesk</strong>.
                 </div>
-                <div class="row g-2 align-items-end">
-                    <div class="col-12">
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-6">
                         <label class="form-label mb-1">Código de AnyDesk</label>
                         @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
                             <form id="remoteShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
@@ -416,24 +416,67 @@
                                 >
                             </div>
                         @endif
-                    </div>
-                    <div class="col-md-6">
                         <button
                             type="button"
                             id="openCopyAnyDeskBtn"
-                            class="btn btn-outline-dark w-100"
+                            class="btn btn-outline-dark w-100 mt-3"
                             {{ blank($remoteSupportCode ?? $remoteSession->support_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
                         >
-                            Abrir y copiar código de AnyDesk
+                            Abrir AnyDesk
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Código de RustDesk</label>
+                        @if($canManageRemoteAsClient || $canManageRemoteAsEmployee)
+                            <form id="remoteRustDeskShareCodeForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="action" value="share_code">
+                                <div class="input-group">
+                                    <input
+                                        type="text"
+                                        id="remoteRustDeskCode"
+                                        name="rustdesk_code"
+                                        class="form-control"
+                                        value="{{ old('rustdesk_code', $remoteRustDeskCode ?? $remoteSession->rustdesk_code) }}"
+                                        maxlength="80"
+                                        placeholder="Ej: 123456789"
+                                        autocomplete="off"
+                                    >
+                                    @if(!$canManageRemoteAsEmployee || $canManageRemoteAsClient)
+                                        <button type="submit" id="sendRustDeskCodeBtn" class="btn btn-success">Enviar código</button>
+                                    @endif
+                                </div>
+                            </form>
+                        @else
+                            <div class="input-group">
+                                <input
+                                    type="text"
+                                    id="remoteRustDeskCode"
+                                    class="form-control"
+                                    value="{{ $remoteRustDeskCode ?? $remoteSession->rustdesk_code }}"
+                                    readonly
+                                    maxlength="80"
+                                    placeholder="Ej: 123456789"
+                                >
+                            </div>
+                        @endif
+                        <button
+                            type="button"
+                            id="openCopyRustDeskBtn"
+                            class="btn btn-outline-dark w-100 mt-3"
+                            {{ blank($remoteRustDeskCode ?? $remoteSession->rustdesk_code) && !$canManageRemoteAsClient && !$canManageRemoteAsEmployee ? 'disabled' : '' }}
+                        >
+                            Abrir RustDesk
                         </button>
                     </div>
                     @if($canManageRemoteAsClient)
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <form id="closeAnyDeskForm" method="POST" action="{{ route('tickets.remote.update', [$ticket, $remoteSession]) }}">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="action" value="signal_closed">
-                                <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesión remota</button>
+                                <!-- <button type="button" id="closeAnyDeskBtn" class="btn btn-danger w-100">Cerrar sesión remota</button> -->
                             </form>
                         </div>
                     @endif
@@ -441,13 +484,15 @@
                 <hr>
                 <p class="mb-1"><strong>Pasos rápidos</strong></p>
                 <ol class="mb-0">
-                    <li>Usa "Abrir y copiar código de AnyDesk" para abrir la app y copiar el código.</li>
+                    <li>Usa el botón de AnyDesk o RustDesk para abrir la app y copiar el código.</li>
                     <li>Comparte o pega el código para iniciar la conexión remota.</li>
-                    <li>Usa "Finalizar conexión" para cortar la sesión remota del ticket.</li>
                 </ol>
-                <p class="mt-3 mb-0">
+                <p class="mt-3 mb-0 d-flex flex-wrap gap-3">
                     <a href="https://anydesk.com/es/downloads/windows" target="_blank" rel="noopener noreferrer">
                         Descarga AnyDesk aquí
+                    </a>
+                    <a href="https://rustdesk.com/" target="_blank" rel="noopener noreferrer">
+                        Descarga RustDesk aquí
                     </a>
                 </p>
             </div>
@@ -462,10 +507,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const codeElement = document.getElementById('remoteSupportCode');
+        const rustDeskCodeElement = document.getElementById('remoteRustDeskCode');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
+        const openCopyRustDeskBtn = document.getElementById('openCopyRustDeskBtn');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
+        const rustDeskShareCodeForm = document.getElementById('remoteRustDeskShareCodeForm');
         const supportCodeStatus = document.getElementById('remoteSupportCodeStatus');
         const sendSupportCodeBtn = document.getElementById('sendSupportCodeBtn');
+        const sendRustDeskCodeBtn = document.getElementById('sendRustDeskCodeBtn');
         const endRemoteSessionBtn = document.getElementById('endRemoteSessionBtn');
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
@@ -473,12 +522,20 @@
         let saveTimer = null;
         let saveRequestController = null;
         let lastSavedCode = codeElement ? String(codeElement.value || '').replace(/\D+/g, '').trim() : '';
+        let lastSavedRustDeskCode = rustDeskCodeElement ? String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '').trim() : '';
         const hasManualSubmitButton = Boolean(sendSupportCodeBtn);
+        const hasManualRustDeskSubmitButton = Boolean(sendRustDeskCodeBtn);
 
         const openAnyDesk = function (code) {
             const rawCode = (code || '').trim();
             const cleanCode = rawCode.replace(/\s+/g, '');
             window.location.href = cleanCode ? `anydesk:${cleanCode}` : 'anydesk:';
+        };
+
+        const openRustDesk = function (code) {
+            const rawCode = (code || '').trim();
+            const cleanCode = rawCode.replace(/\s+/g, '');
+            window.location.href = cleanCode ? `rustdesk:${cleanCode}` : 'rustdesk:';
         };
 
         const copyText = function (text) {
@@ -532,6 +589,31 @@
 
                 copyText(code).finally(function () {
                     openAnyDesk(code);
+                });
+            });
+        }
+
+        if (openCopyRustDeskBtn && rustDeskCodeElement) {
+            rustDeskCodeElement.addEventListener('input', function () {
+                const cleanValue = String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '');
+                if (rustDeskCodeElement.value !== cleanValue) {
+                    rustDeskCodeElement.value = cleanValue;
+                }
+            });
+
+            openCopyRustDeskBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const code = rustDeskCodeElement.value.trim();
+
+                if (!code) {
+                    openRustDesk('');
+                    return;
+                }
+
+                copyText(code).finally(function () {
+                    openRustDesk(code);
                 });
             });
         }
@@ -631,6 +713,57 @@
                 });
         };
 
+        const saveRustDeskCode = function () {
+            if (!rustDeskShareCodeForm || !rustDeskCodeElement) {
+                return;
+            }
+
+            const code = String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '').trim();
+            rustDeskCodeElement.value = code;
+
+            if (!code) {
+                setSupportCodeStatus('Escribe un código de RustDesk para compartirlo.', 'text-muted');
+                return;
+            }
+
+            if (code === lastSavedRustDeskCode) {
+                setSupportCodeStatus('Código de RustDesk sincronizado.', 'text-success');
+                return;
+            }
+
+            setSupportCodeStatus('Guardando código de RustDesk...', 'text-muted');
+
+            const payload = new FormData(rustDeskShareCodeForm);
+            payload.set('rustdesk_code', code);
+
+            fetch(rustDeskShareCodeForm.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: payload
+            })
+                .then(function (response) {
+                    return response.json().then(function (payload) {
+                        if (!response.ok) {
+                            throw new Error(payload.message || 'No se pudo guardar el código de RustDesk.');
+                        }
+
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    const savedCode = String(payload?.remote?.rustdesk_code || code).trim();
+                    lastSavedRustDeskCode = savedCode;
+                    rustDeskCodeElement.value = savedCode;
+                    setSupportCodeStatus('Código de RustDesk sincronizado.', 'text-success');
+                })
+                .catch(function (error) {
+                    setSupportCodeStatus(getFriendlySupportCodeError(error), 'text-danger');
+                });
+        };
+
         if (shareCodeForm && codeElement) {
             codeElement.addEventListener('input', function () {
                 const digitsOnly = String(codeElement.value || '').replace(/\D+/g, '');
@@ -687,6 +820,51 @@
                 event.preventDefault();
                 window.clearTimeout(saveTimer);
                 saveSupportCode();
+            });
+        }
+
+        if (rustDeskShareCodeForm && rustDeskCodeElement) {
+            rustDeskCodeElement.addEventListener('input', function () {
+                const cleanValue = String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '');
+                if (rustDeskCodeElement.value !== cleanValue) {
+                    rustDeskCodeElement.value = cleanValue;
+                }
+
+                if (!hasManualRustDeskSubmitButton) {
+                    setSupportCodeStatus('Guardando cambios...', 'text-muted');
+                    window.clearTimeout(saveTimer);
+                    saveTimer = window.setTimeout(saveRustDeskCode, 500);
+                }
+            });
+
+            if (!hasManualRustDeskSubmitButton) {
+                rustDeskCodeElement.addEventListener('blur', function () {
+                    window.clearTimeout(saveTimer);
+                    saveRustDeskCode();
+                });
+            }
+
+            rustDeskShareCodeForm.addEventListener('submit', function (event) {
+                const code = String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '').trim();
+                rustDeskCodeElement.value = code;
+
+                if (!code) {
+                    event.preventDefault();
+                    setSupportCodeStatus('Debes ingresar un código de RustDesk.', 'text-danger');
+                    rustDeskCodeElement.focus();
+                    return;
+                }
+
+                if (hasManualRustDeskSubmitButton) {
+                    setSupportCodeStatus('Enviando código de RustDesk...', 'text-muted');
+                    sendRustDeskCodeBtn.disabled = true;
+                    sendRustDeskCodeBtn.textContent = 'Enviando...';
+                    return;
+                }
+
+                event.preventDefault();
+                window.clearTimeout(saveTimer);
+                saveRustDeskCode();
             });
         }
 
@@ -946,8 +1124,10 @@ closeAnyDeskBtn.disabled = true;
         const stateBadge = document.getElementById('ticketStateBadge');
         const assignedEmployee = document.getElementById('ticketAssignedEmployee');
         const remoteCodeInput = document.getElementById('remoteSupportCode');
+        const remoteRustDeskCodeInput = document.getElementById('remoteRustDeskCode');
         const shareCodeForm = document.getElementById('remoteShareCodeForm');
         const openCopyAnyDeskBtn = document.getElementById('openCopyAnyDeskBtn');
+        const openCopyRustDeskBtn = document.getElementById('openCopyRustDeskBtn');
         const finalizeTicketForm = document.getElementById('finalizeTicketForm');
         const rateTicketForm = document.getElementById('rateTicketForm');
         const rateTicketModal = document.getElementById('rateTicketModal');
@@ -960,7 +1140,9 @@ closeAnyDeskBtn.disabled = true;
         let currentRemoteId = {{ (int) ($remoteSession->id ?? 0) }};
         let currentRemoteStatus = @json((string) ($remoteSession->status ?? ''));
         let lastSyncedRemoteCode = @json((string) ($remoteSupportCode ?? $remoteSession->support_code ?? ''));
+        let lastSyncedRustDeskCode = @json((string) ($remoteRustDeskCode ?? $remoteSession->rustdesk_code ?? ''));
         let remoteCodeDirty = false;
+        let rustDeskCodeDirty = false;
         let inFlight = false;
 
         if (rateTicketModal && window.bootstrap?.Modal) {
@@ -1060,20 +1242,30 @@ closeAnyDeskBtn.disabled = true;
         };
 
         const syncRemoteSupportCode = function (remoteData) {
-            if (!remoteCodeInput || !remoteData) {
+            if (!remoteData) {
                 return;
             }
 
             const newCode = String(remoteData.support_code || '').trim();
-            const isEditingRemoteCode = document.activeElement === remoteCodeInput;
+            const newRustDeskCode = String(remoteData.rustdesk_code || '').trim();
+            const isEditingRemoteCode = remoteCodeInput && document.activeElement === remoteCodeInput;
+            const isEditingRustDeskCode = remoteRustDeskCodeInput && document.activeElement === remoteRustDeskCodeInput;
 
-            if (!isEditingRemoteCode && !remoteCodeDirty) {
+            if (remoteCodeInput && !isEditingRemoteCode && !remoteCodeDirty) {
                 remoteCodeInput.value = newCode;
                 lastSyncedRemoteCode = newCode;
             }
 
+            if (remoteRustDeskCodeInput && !isEditingRustDeskCode && !rustDeskCodeDirty) {
+                remoteRustDeskCodeInput.value = newRustDeskCode;
+                lastSyncedRustDeskCode = newRustDeskCode;
+            }
+
             if (openCopyAnyDeskBtn) {
                 openCopyAnyDeskBtn.disabled = newCode === '' && !canEditRemoteCode;
+            }
+            if (openCopyRustDeskBtn) {
+                openCopyRustDeskBtn.disabled = newRustDeskCode === '' && !canEditRemoteCode;
             }
         };
 
@@ -1088,6 +1280,21 @@ closeAnyDeskBtn.disabled = true;
             shareCodeForm.addEventListener('submit', function () {
                 remoteCodeDirty = false;
                 lastSyncedRemoteCode = String(remoteCodeInput?.value || '').trim();
+            });
+        }
+
+        if (remoteRustDeskCodeInput) {
+            remoteRustDeskCodeInput.addEventListener('input', function () {
+                const currentInputValue = String(remoteRustDeskCodeInput.value || '').trim();
+                rustDeskCodeDirty = currentInputValue !== lastSyncedRustDeskCode;
+            });
+        }
+
+        const rustDeskShareCodeForm = document.getElementById('remoteRustDeskShareCodeForm');
+        if (rustDeskShareCodeForm) {
+            rustDeskShareCodeForm.addEventListener('submit', function () {
+                rustDeskCodeDirty = false;
+                lastSyncedRustDeskCode = String(remoteRustDeskCodeInput?.value || '').trim();
             });
         }
 

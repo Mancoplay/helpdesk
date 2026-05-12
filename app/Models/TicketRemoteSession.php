@@ -22,6 +22,7 @@ class TicketRemoteSession extends Model
         'cancelled_by_user_id',
         'status',
         'support_code',
+        'rustdesk_code',
         'requested_at',
         'responded_at',
         'ended_at',

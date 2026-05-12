@@ -43,6 +43,7 @@ class TicketStreamUpdated implements ShouldBroadcastNow
                 'id' => (int) $remoteSession->id,
                 'status' => (string) $remoteSession->status,
                 'support_code' => (string) ($remoteSession->support_code ?? ''),
+                'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
             ];
         }
 

@@ -947,6 +947,9 @@ class HomeController extends Controller
         $remoteSupportCode = $remoteSession
             ? (string) ($remoteSession->support_code ?? '')
             : '';
+        $remoteRustDeskCode = $remoteSession
+            ? (string) ($remoteSession->rustdesk_code ?? '')
+            : '';
 
         if (
             $remoteSession
@@ -959,12 +962,24 @@ class HomeController extends Controller
             );
         }
 
+        if (
+            $remoteSession
+            && $remoteSession->status === 'accepted'
+            && $remoteRustDeskCode === ''
+        ) {
+            $remoteRustDeskCode = $this->rememberedRustDeskCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
+        }
+
         return view('tickets.show', [
             'ticket' => $ticket,
             'messages' => $messages,
             'remoteEnabled' => $remoteEnabled,
             'remoteSession' => $remoteSession,
             'remoteSupportCode' => $remoteSupportCode,
+            'remoteRustDeskCode' => $remoteRustDeskCode,
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -1012,6 +1027,9 @@ class HomeController extends Controller
         $remoteSupportCode = $remoteSession
             ? (string) ($remoteSession->support_code ?? '')
             : '';
+        $remoteRustDeskCode = $remoteSession
+            ? (string) ($remoteSession->rustdesk_code ?? '')
+            : '';
 
         if (
             $remoteSession
@@ -1019,6 +1037,17 @@ class HomeController extends Controller
             && $remoteSupportCode === ''
         ) {
             $remoteSupportCode = $this->rememberedAnyDeskSupportCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
+        }
+
+        if (
+            $remoteSession
+            && $remoteSession->status === 'accepted'
+            && $remoteRustDeskCode === ''
+        ) {
+            $remoteRustDeskCode = $this->rememberedRustDeskCodeForClient(
                 (int) ($ticket->cliente_id ?? 0),
                 (int) $remoteSession->id,
             );
@@ -1041,6 +1070,7 @@ class HomeController extends Controller
                 'id' => (int) ($remoteSession->id ?? 0),
                 'status' => (string) ($remoteSession->status ?? ''),
                 'support_code' => $remoteSupportCode,
+                'rustdesk_code' => $remoteRustDeskCode,
             ],
         ]);
     }
@@ -1137,6 +1167,7 @@ class HomeController extends Controller
         $validated = $request->validate([
             'action' => ['required', Rule::in(['accept', 'reject', 'share_code', 'end', 'signal_closed'])],
             'support_code' => ['nullable', 'string', 'max:40', 'regex:/^[0-9]+$/'],
+            'rustdesk_code' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9_-]+$/'],
         ], [
             'support_code.regex' => 'El código de AnyDesk solo debe contener números.',
         ]);
@@ -1165,6 +1196,10 @@ class HomeController extends Controller
                 (int) ($ticket->cliente_id ?? 0),
                 (int) $remoteSession->id,
             );
+            $rememberedRustDeskCode = $this->rememberedRustDeskCodeForClient(
+                (int) ($ticket->cliente_id ?? 0),
+                (int) $remoteSession->id,
+            );
 
             $updateData = [
                 'status' => 'accepted',
@@ -1173,6 +1208,9 @@ class HomeController extends Controller
 
             if (blank($remoteSession->support_code) && $rememberedSupportCode !== '') {
                 $updateData['support_code'] = $rememberedSupportCode;
+            }
+            if (blank($remoteSession->rustdesk_code) && $rememberedRustDeskCode !== '') {
+                $updateData['rustdesk_code'] = $rememberedRustDeskCode;
             }
 
             $remoteSession->update($updateData);
@@ -1185,6 +1223,7 @@ class HomeController extends Controller
                         'id' => (int) $remoteSession->id,
                         'status' => (string) $remoteSession->status,
                         'support_code' => (string) ($remoteSession->support_code ?? ''),
+                        'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
                     ],
                 ]);
             }
@@ -1214,6 +1253,7 @@ class HomeController extends Controller
                         'id' => (int) $remoteSession->id,
                         'status' => (string) $remoteSession->status,
                         'support_code' => (string) ($remoteSession->support_code ?? ''),
+                        'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
                     ],
                 ]);
             }
@@ -1234,13 +1274,20 @@ class HomeController extends Controller
             }
 
             $supportCode = preg_replace('/\D+/', '', trim((string) ($validated['support_code'] ?? ''))) ?? '';
-            if ($supportCode === '') {
-                return back()->with('error', 'Debes ingresar el código de AnyDesk.');
+            $rustDeskCode = preg_replace('/[^A-Za-z0-9_-]+/', '', trim((string) ($validated['rustdesk_code'] ?? ''))) ?? '';
+            if ($supportCode === '' && $rustDeskCode === '') {
+                return back()->with('error', 'Debes ingresar el codigo de AnyDesk o RustDesk.');
             }
 
-            $remoteSession->update([
-                'support_code' => $supportCode,
-            ]);
+            $updateData = [];
+            if ($supportCode !== '') {
+                $updateData['support_code'] = $supportCode;
+            }
+            if ($rustDeskCode !== '') {
+                $updateData['rustdesk_code'] = $rustDeskCode;
+            }
+
+            $remoteSession->update($updateData);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -1250,6 +1297,7 @@ class HomeController extends Controller
                         'id' => (int) $remoteSession->id,
                         'status' => (string) $remoteSession->status,
                         'support_code' => (string) ($remoteSession->support_code ?? ''),
+                        'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
                     ],
                 ]);
             }
@@ -1283,6 +1331,7 @@ class HomeController extends Controller
                         'id' => (int) $remoteSession->id,
                         'status' => (string) $remoteSession->status,
                         'support_code' => (string) ($remoteSession->support_code ?? ''),
+                        'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
                     ],
                 ]);
             }
@@ -1325,6 +1374,7 @@ class HomeController extends Controller
                     'id' => (int) $remoteSession->id,
                     'status' => (string) $remoteSession->status,
                     'support_code' => (string) ($remoteSession->support_code ?? ''),
+                    'rustdesk_code' => (string) ($remoteSession->rustdesk_code ?? ''),
                 ],
             ]);
         }
@@ -2156,6 +2206,29 @@ class HomeController extends Controller
             ->value('support_code');
 
         return (string) ($supportCode ?? '');
+    }
+
+    private function rememberedRustDeskCodeForClient(int $clientId, ?int $exceptSessionId = null): string
+    {
+        if (
+            $clientId <= 0
+            || !Schema::hasTable('ticket_eventos')
+            || !Schema::hasColumn('ticket_eventos', 'rustdesk_code')
+        ) {
+            return '';
+        }
+
+        $rustDeskCode = TicketRemoteSession::query()
+            ->whereNotNull('rustdesk_code')
+            ->where('rustdesk_code', '!=', '')
+            ->whereHas('ticket', function ($ticketQuery) use ($clientId): void {
+                $ticketQuery->where('cliente_id', $clientId);
+            })
+            ->when($exceptSessionId, fn ($query) => $query->where('id', '!=', $exceptSessionId))
+            ->latest('id')
+            ->value('rustdesk_code');
+
+        return (string) ($rustDeskCode ?? '');
     }
 
     private function closeActiveRemoteSessionsForTicket(Ticket $ticket, ?string $note = null): void
