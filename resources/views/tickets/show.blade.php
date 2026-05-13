@@ -29,7 +29,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row">
+                <div class="row ticket-detail-fields">
                     <div class="col-md-6 mb-3">
                         <strong>Asunto</strong>
                         <div>{{ $ticket->asunto }}</div>

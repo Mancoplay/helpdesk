@@ -44,6 +44,11 @@
         padding: 1.15rem 1.2rem;
     }
 
+    .ticket-detail-fields > [class*='col-'] {
+        flex: 0 0 auto;
+        width: 50%;
+    }
+
     .card-footer {
         background: #fbfcfe;
         border-top: 1px solid var(--line);
