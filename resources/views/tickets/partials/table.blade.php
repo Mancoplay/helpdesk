@@ -56,7 +56,7 @@
                                 <a href="{{ route('tickets.show', $ticket) }}" class="btn btn-secondary btn-sm">Ver</a>
                             @endif
 
-                            @if($canManageTicket && !$isDisabled && $ticket->estado === 'pendiente')
+                            @if($canManageTicket && !$isDisabled && ($isAdmin || $ticket->estado === 'pendiente'))
                                 <a href="{{ route('tickets.edit', $ticket) }}" class="btn btn-warning btn-sm">Editar</a>
                             @endif
 

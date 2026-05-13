@@ -2092,6 +2092,10 @@ class HomeController extends Controller
 
     private function canEditTicket(Ticket $ticket): bool
     {
+        if (auth()->user()->hasRole('Administrador')) {
+            return $this->canAccessTicket($ticket);
+        }
+
         return (string) $ticket->estado === 'pendiente' && $this->canAccessTicket($ticket);
     }
 
