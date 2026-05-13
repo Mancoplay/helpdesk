@@ -61,13 +61,20 @@ class NotificationController extends Controller
         return redirect($targetResponse);
     }
 
-    public function markAllAsRead(Request $request): RedirectResponse
+    public function markAllAsRead(Request $request, NotificationSummaryService $notificationSummaryService): RedirectResponse|JsonResponse
     {
         $request->user()
             ->unreadNotifications()
             ->update(['read_at' => now()]);
-        app(NotificationSummaryService::class)->forgetForUser($request->user());
+        $notificationSummaryService->forgetForUser($request->user());
         SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $request->user()->id));
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'summary' => $notificationSummaryService->forUser($request->user()),
+            ]);
+        }
 
         return back()->with('success', 'Notificaciones marcadas como leídas.');
     }

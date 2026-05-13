@@ -75,7 +75,7 @@
                                 </div>
 
                                 <div class="border-top px-3 py-2">
-                                    <form action="{{ route('notifications.mark-all-read') }}" method="POST">
+                                    <form action="{{ route('notifications.mark-all-read') }}" method="POST" class="js-mark-notifications-read-form">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-outline-primary w-100">
                                             Marcar todas como leídas
@@ -388,6 +388,60 @@
                         // Ignore transient network errors silently.
                     });
             };
+
+            document.querySelectorAll('.js-mark-notifications-read-form').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+
+                    if (form.dataset.submitting === '1') {
+                        return;
+                    }
+
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const originalLabel = submitButton ? submitButton.textContent : '';
+
+                    form.dataset.submitting = '1';
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.textContent = 'Marcando...';
+                    }
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new FormData(form),
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('mark-read-failed');
+                            }
+
+                            return response.json();
+                        })
+                        .then(function (payload) {
+                            if (payload && payload.summary) {
+                                renderNotificationDropdown(payload.summary);
+                                return;
+                            }
+
+                            refreshNotificationSummary(true);
+                        })
+                        .catch(function () {
+                            refreshNotificationSummary(true);
+                        })
+                        .finally(function () {
+                            form.dataset.submitting = '0';
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.textContent = originalLabel;
+                            }
+                        });
+                });
+            });
 
             document.querySelectorAll('.js-auto-dismiss-alert').forEach(function (alertElement) {
                 const timeoutValue = parseInt(alertElement.getAttribute('data-auto-dismiss') || '5000', 10);

@@ -93,10 +93,7 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    @if(!$isAdmin)
-    <div class="row g-3 mb-3 dashboard-stats-grid">
+        @if(!$isAdmin)
         <div class="col dashboard-stat-col">
             <div class="card dashboard-stat h-100">
                 <div class="card-body d-flex align-items-center">
@@ -108,8 +105,8 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
-    @endif
 
     <div class="row g-3">
         <div class="col-12 col-xl-10 mx-auto">

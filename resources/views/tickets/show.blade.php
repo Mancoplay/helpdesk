@@ -1011,6 +1011,24 @@ closeAnyDeskBtn.disabled = true;
         });
 
         if (messageInput) {
+            messageInput.addEventListener('keydown', function (event) {
+                if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    return;
+                }
+
+                form.dispatchEvent(new Event('submit', {
+                    bubbles: true,
+                    cancelable: true,
+                }));
+            });
+
             messageInput.addEventListener('paste', function (event) {
                 if (!event.clipboardData || !event.clipboardData.items) {
                     return;
