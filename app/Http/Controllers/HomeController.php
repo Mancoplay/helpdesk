@@ -283,11 +283,14 @@ class HomeController extends Controller
                 ->get()
                 ->map(function (Ticket $ticket) use ($detalleRole) {
                     $clienteNombre = trim((string) ($ticket->cliente->nombre_completo ?? ''));
-                    $empleadoNombre = trim((string) ($ticket->empleado->nombre_completo ?? ''));
+                    $empleadosSoporte = $this->ticketAssignedEmployeeNames($ticket);
+                    $empleadosSoporteTexto = $empleadosSoporte->isNotEmpty()
+                        ? $empleadosSoporte->implode(', ')
+                        : 'Sin soporte asignado';
 
                     $detalleRelacionValor = match ($detalleRole) {
                         'Empleado' => $clienteNombre !== '' ? $clienteNombre : 'Sin usuario asignado',
-                        'Usuario', 'Cliente', 'Administrador' => $empleadoNombre !== '' ? $empleadoNombre : 'Sin soporte asignado',
+                        'Usuario', 'Cliente', 'Administrador' => $empleadosSoporteTexto,
                         default => '-',
                     };
 
