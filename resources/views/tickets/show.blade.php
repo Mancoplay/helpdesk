@@ -15,17 +15,40 @@
 @endsection
 
 @section('content')
+@php
+    $currentEmployee = \App\Models\Empleado::query()
+        ->whereKey(auth()->id())
+        ->orWhere('email', auth()->user()->email)
+        ->first();
+    $currentEmployeeId = (int) ($currentEmployee->id ?? 0);
+    $additionalAssignedIds = collect($ticket->assigned_employee_ids ?? [])
+        ->map(fn ($employeeId) => (int) $employeeId);
+    $isAdmin = auth()->user()->hasRole('Administrador');
+    $isAssignedEmployee = auth()->user()->hasRole('Empleado')
+        && (
+            (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId
+            || $additionalAssignedIds->contains($currentEmployeeId)
+        );
+    $assignedEmployeeDisplay = ($assignedEmployeeNames ?? collect())->isNotEmpty()
+        ? $assignedEmployeeNames->implode(', ')
+        : ($ticket->empleado->nombre_completo ?? 'Sin asignar');
+@endphp
 <div class="row g-3 ticket-detail-page">
     <div class="col-lg-5">
         <div class="card border-success ticket-panel ticket-panel-detail">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0">Ticket</h3>
-                <div>
+                <div class="d-flex align-items-center gap-2">
                     @php
                         $stateMap = config('adminlte.ticket_states');
                         $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
                     @endphp
                     <span id="ticketStateBadge" class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
+                    @if($isAssignedEmployee && in_array($ticket->estado, ['pendiente', 'en_proceso'], true))
+                        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#assignmentRequestModal">
+                            Solicitar
+                        </button>
+                    @endif
                 </div>
             </div>
             <div class="card-body">
@@ -44,7 +67,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <strong>Empleado</strong>
-                        <div id="ticketAssignedEmployee">{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</div>
+                        <div id="ticketAssignedEmployee">{{ $assignedEmployeeDisplay }}</div>
                     </div>
                 </div>
                 <hr>
@@ -79,7 +102,10 @@
                         || (($ticket->cliente->email ?? null) === auth()->user()->email)
                     );
                 $isAssignedEmployee = auth()->user()->hasRole('Empleado')
-                    && (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId;
+                    && (
+                        (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId
+                        || collect($ticket->assigned_employee_ids ?? [])->map(fn ($employeeId) => (int) $employeeId)->contains($currentEmployeeId)
+                    );
                 $canManageRemoteAsClient = $isClientOwner || $isAdmin;
                 $canManageRemoteAsEmployee = $isAssignedEmployee || $isAdmin;
                 $canFinalizeTicketHere = (
@@ -285,6 +311,40 @@
         </div>
     </div>
 </div>
+
+@if($isAssignedEmployee && in_array($ticket->estado, ['pendiente', 'en_proceso'], true))
+<div class="modal fade" id="assignmentRequestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('tickets.assignment-request', $ticket) }}">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title">Solicitud para administracion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-2">
+                        <input type="radio" class="btn-check" name="request_type" id="requestChangeEmployee" value="change_employee" required>
+                        <label class="btn btn-outline-primary text-start" for="requestChangeEmployee">
+                            Cambiar de empleado
+                        </label>
+
+                        <input type="radio" class="btn-check" name="request_type" id="requestAddEmployees" value="add_employees" required>
+                        <label class="btn btn-outline-primary text-start" for="requestAddEmployees">
+                            Asignar mas empleados
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Enviar solicitud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 
 @if($ticket->estado === 'finalizado' && $isClientOwner && (int) ($ticket->empleado_id ?? 0) > 0 && is_null($ticket->atencion_puntuacion))
 <div class="modal fade" id="rateTicketModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">

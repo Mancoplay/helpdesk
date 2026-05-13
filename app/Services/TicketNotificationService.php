@@ -10,6 +10,7 @@ use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\PendingTicketDatabaseNotification;
+use App\Notifications\TicketAssignmentRequestDatabaseNotification;
 use App\Notifications\TicketAttendedDatabaseNotification;
 use App\Notifications\TicketFinalizedDatabaseNotification;
 use App\Support\SafeBroadcast;
@@ -77,6 +78,33 @@ class TicketNotificationService
             SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $recipient->id));
 
             return 1;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return 0;
+    }
+
+    public function notifyTicketAssignmentRequest(Ticket $ticket, string $requestTypeLabel, string $requestedByName): int
+    {
+        $admins = User::query()
+            ->role('Administrador')
+            ->where('activo', true)
+            ->get(['id', 'name', 'email']);
+
+        if ($admins->isEmpty()) {
+            return 0;
+        }
+
+        try {
+            Notification::send($admins, new TicketAssignmentRequestDatabaseNotification($ticket, $requestTypeLabel, $requestedByName));
+
+            $admins->each(function (User $user): void {
+                Cache::forget('notifications:summary:' . (int) $user->id);
+                SafeBroadcast::dispatch(new UserNotificationsUpdated((int) $user->id));
+            });
+
+            return $admins->count();
         } catch (Throwable $exception) {
             report($exception);
         }

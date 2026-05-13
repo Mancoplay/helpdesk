@@ -28,6 +28,10 @@ class Ticket extends Model
         'puntuado_por_id',
         'puntuado_at',
         'last_notified_at',
+        'assigned_employee_ids',
+        'assignment_request_type',
+        'assignment_request_by_id',
+        'assignment_request_at',
     ];
 
     protected $casts = [
@@ -35,6 +39,8 @@ class Ticket extends Model
         'atencion_puntuacion' => 'integer',
         'puntuado_at' => 'datetime',
         'last_notified_at' => 'datetime',
+        'assigned_employee_ids' => 'array',
+        'assignment_request_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -44,11 +50,11 @@ class Ticket extends Model
         });
 
         static::updated(function (Ticket $ticket): void {
-            if ($ticket->wasChanged(['estado', 'empleado_id', 'departamento_id', 'asunto', 'descripcion'])) {
+            if ($ticket->wasChanged(['estado', 'empleado_id', 'assigned_employee_ids', 'assignment_request_type', 'departamento_id', 'asunto', 'descripcion'])) {
                 SafeBroadcast::dispatch(new TicketStreamUpdated((int) $ticket->id));
             }
 
-            if ($ticket->wasChanged(['cliente_id', 'estado', 'empleado_id', 'departamento_id', 'asunto', 'descripcion', 'fecha_cierre'])) {
+            if ($ticket->wasChanged(['cliente_id', 'estado', 'empleado_id', 'assigned_employee_ids', 'assignment_request_type', 'departamento_id', 'asunto', 'descripcion', 'fecha_cierre'])) {
                 $ticket->broadcastListUpdate();
             }
         });
@@ -70,6 +76,11 @@ class Ticket extends Model
     public function empleado(): BelongsTo
     {
         return $this->belongsTo(Empleado::class);
+    }
+
+    public function assignmentRequestBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assignment_request_by_id');
     }
 
     public function departamento(): BelongsTo

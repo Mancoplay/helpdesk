@@ -43,7 +43,17 @@ Broadcast::channel('tickets.{ticketId}', function ($user, $ticketId) {
             ->orWhere('email', $user->email)
             ->first();
 
-        return $employee && (int) $ticket->empleado_id === (int) $employee->id;
+        if (!$employee) {
+            return false;
+        }
+
+        if ((int) $ticket->empleado_id === (int) $employee->id) {
+            return true;
+        }
+
+        return collect($ticket->assigned_employee_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->contains((int) $employee->id);
     }
 
     if (!$user->hasAnyRole(['Cliente', 'Usuario']) || !$ticket->cliente) {

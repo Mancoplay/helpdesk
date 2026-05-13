@@ -12,6 +12,18 @@
 @section('content')
 @php
     $isAdmin = auth()->user()->hasRole('Administrador');
+    $requestTypeLabels = [
+        'change_employee' => 'Cambio de empleado',
+        'add_employees' => 'Asignacion de empleados',
+    ];
+    $primarySelectedEmployeeId = (int) old('empleado_id', $ticket->empleado_id);
+    $assignmentRequestedById = (int) ($ticket->assignment_request_by_id ?? 0);
+    $selectedAssignedEmployeeIds = collect(old('assigned_employee_ids', $assignedEmployeeIds ?? []))
+        ->map(fn ($employeeId) => (int) $employeeId)
+        ->filter(fn (int $employeeId) => $employeeId > 0 && $employeeId !== $primarySelectedEmployeeId)
+        ->reject(fn (int $employeeId) => $ticket->assignment_request_type === 'change_employee' && $employeeId === $assignmentRequestedById)
+        ->unique()
+        ->values();
 @endphp
 <div class="row justify-content-center">
     <div class="col-12 col-xl-10 col-xxl-9">
@@ -25,6 +37,14 @@
                 </div>
             </div>
             <div class="card-body p-4">
+                @if($isAdmin && $ticket->assignment_request_type)
+                    <div class="alert alert-warning">
+                        <strong>{{ $requestTypeLabels[$ticket->assignment_request_type] ?? 'Solicitud de asignacion' }}:</strong>
+                        {{ $ticket->assignmentRequestBy->nombre_completo ?? $ticket->assignmentRequestBy->name ?? 'Un empleado' }}
+                        solicito revisar la asignacion de este ticket.
+                    </div>
+                @endif
+
                 <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="row g-4">
                     @csrf
                     @method('PUT')
@@ -90,6 +110,41 @@
                                         <input type="text" class="form-control" value="{{ $selectedEmployee?->nombre_completo ?? ($ticket->empleado->nombre_completo ?? 'Sin asignar') }}" readonly>
                                     @endif
                                 </div>
+                                @if($isAdmin)
+                                    <div class="col-12">
+                                        <label class="form-label">Empleados adicionales</label>
+                                        <div class="row g-2">
+                                            <div class="col-md-8">
+                                                <select id="additionalEmployeeSelect" class="form-select">
+                                                    <option value="">Seleccione un empleado</option>
+                                                    @foreach($empleados as $empleado)
+                                                        <option value="{{ $empleado->id }}">{{ $empleado->nombre_completo }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <button type="button" id="addAdditionalEmployeeBtn" class="btn btn-outline-primary w-100">Agregar</button>
+                                            </div>
+                                        </div>
+                                        <div id="additionalEmployeesList" class="border rounded p-2 mt-2 bg-white" data-empty-text="Sin empleados adicionales.">
+                                            @foreach($selectedAssignedEmployeeIds as $selectedAssignedEmployeeId)
+                                                @php
+                                                    $selectedAdditionalEmployee = $empleados->firstWhere('id', $selectedAssignedEmployeeId);
+                                                @endphp
+                                                @if($selectedAdditionalEmployee)
+                                                    <span class="badge text-bg-light border text-dark me-1 mb-1 p-2 js-additional-employee-chip" data-employee-id="{{ $selectedAdditionalEmployee->id }}">
+                                                        {{ $selectedAdditionalEmployee->nombre_completo }}
+                                                        <button type="button" class="btn-close btn-close-sm ms-2 js-remove-additional-employee" aria-label="Quitar"></button>
+                                                        <input type="hidden" name="assigned_employee_ids[]" value="{{ $selectedAdditionalEmployee->id }}">
+                                                    </span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                        @error('assigned_employee_ids')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -135,4 +190,122 @@
         </div>
     </div>
 </div>
+
+@if($isAdmin)
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const primaryEmployeeSelect = document.querySelector('select[name="empleado_id"]');
+        const additionalSelect = document.getElementById('additionalEmployeeSelect');
+        const addButton = document.getElementById('addAdditionalEmployeeBtn');
+        const list = document.getElementById('additionalEmployeesList');
+
+        if (!additionalSelect || !addButton || !list) {
+            return;
+        }
+
+        const renderEmptyState = function () {
+            let emptyState = list.querySelector('.js-additional-empty');
+            const hasEmployees = Boolean(list.querySelector('.js-additional-employee-chip'));
+
+            if (hasEmployees && emptyState) {
+                emptyState.remove();
+                return;
+            }
+
+            if (!hasEmployees && !emptyState) {
+                emptyState = document.createElement('span');
+                emptyState.className = 'text-muted small js-additional-empty';
+                emptyState.textContent = list.dataset.emptyText || 'Sin empleados adicionales.';
+                list.appendChild(emptyState);
+            }
+        };
+
+        const selectedAdditionalIds = function () {
+            return Array.from(list.querySelectorAll('input[name="assigned_employee_ids[]"]'))
+                .map(function (input) {
+                    return String(input.value);
+                });
+        };
+
+        const syncOptions = function () {
+            const selectedIds = selectedAdditionalIds();
+            const primaryId = String(primaryEmployeeSelect?.value || '');
+
+            additionalSelect.querySelectorAll('option').forEach(function (option) {
+                if (!option.value) {
+                    return;
+                }
+
+                option.disabled = selectedIds.includes(String(option.value)) || option.value === primaryId;
+            });
+
+            if (additionalSelect.value && additionalSelect.selectedOptions[0]?.disabled) {
+                additionalSelect.value = '';
+            }
+        };
+
+        const addSelectedEmployee = function () {
+            const option = additionalSelect.selectedOptions[0];
+            const employeeId = String(additionalSelect.value || '');
+
+            if (!option || !employeeId || option.disabled || selectedAdditionalIds().includes(employeeId)) {
+                return;
+            }
+
+            const chip = document.createElement('span');
+            chip.className = 'badge text-bg-light border text-dark me-1 mb-1 p-2 js-additional-employee-chip';
+            chip.dataset.employeeId = employeeId;
+            chip.append(document.createTextNode(option.textContent.trim() + ' '));
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn-close btn-close-sm ms-2 js-remove-additional-employee';
+            removeButton.setAttribute('aria-label', 'Quitar');
+            chip.appendChild(removeButton);
+
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'assigned_employee_ids[]';
+            hiddenInput.value = employeeId;
+            chip.appendChild(hiddenInput);
+
+            list.appendChild(chip);
+            additionalSelect.value = '';
+            renderEmptyState();
+            syncOptions();
+        };
+
+        addButton.addEventListener('click', addSelectedEmployee);
+
+        list.addEventListener('click', function (event) {
+            const button = event.target.closest('.js-remove-additional-employee');
+            if (!button) {
+                return;
+            }
+
+            button.closest('.js-additional-employee-chip')?.remove();
+            renderEmptyState();
+            syncOptions();
+        });
+
+        primaryEmployeeSelect?.addEventListener('change', function () {
+            const primaryId = String(primaryEmployeeSelect.value || '');
+
+            list.querySelectorAll('.js-additional-employee-chip').forEach(function (chip) {
+                if (String(chip.dataset.employeeId || '') === primaryId) {
+                    chip.remove();
+                }
+            });
+
+            renderEmptyState();
+            syncOptions();
+        });
+
+        renderEmptyState();
+        syncOptions();
+    });
+</script>
+@endpush
+@endif
 @endsection

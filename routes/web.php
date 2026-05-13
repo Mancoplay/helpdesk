@@ -79,6 +79,7 @@ Route::middleware(['auth', 'permission:crear tickets'])->group(function () {
 
 Route::middleware(['auth', 'permission:atender tickets'])->group(function () {
     Route::patch('/tickets/{ticket}/atender', [HomeController::class, 'attendTicket'])->name('tickets.attend');
+    Route::patch('/tickets/{ticket}/solicitud-asignacion', [HomeController::class, 'requestTicketAssignmentChange'])->name('tickets.assignment-request');
     Route::patch('/tickets/{ticket}/finalizar', [HomeController::class, 'finalizeTicket'])->name('tickets.finalize');
 });
 

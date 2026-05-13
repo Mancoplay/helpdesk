@@ -881,6 +881,19 @@ class HomeController extends Controller
         }
 
         $tickets = $query->latest()->paginate($perPage)->withQueryString();
+        $assignedEmployeeIds = $tickets->getCollection()
+            ->flatMap(fn (Ticket $ticket) => $ticket->assigned_employee_ids ?? [])
+            ->map(fn ($employeeId) => (int) $employeeId)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $assignedEmployeesById = empty($assignedEmployeeIds)
+            ? collect()
+            : Empleado::query()
+                ->whereIn('id', $assignedEmployeeIds)
+                ->get()
+                ->keyBy('id');
 
         $currentEmployee = null;
         if ($currentUser->hasRole('Empleado')) {
@@ -896,6 +909,7 @@ class HomeController extends Controller
             'pendingRemoteTicketId' => $pendingRemoteTicketId,
             'activeRemoteTicketIds' => $activeRemoteTicketIds,
             'pendingRemoteTicketIds' => $pendingRemoteTicketIds,
+            'assignedEmployeesById' => $assignedEmployeesById,
             'menuBadges' => $this->menuBadges(),
         ];
 
@@ -917,11 +931,19 @@ class HomeController extends Controller
             abort(403);
         }
 
+        $ticket->loadMissing('assignmentRequestBy');
+
         return view('tickets.edit', [
             'ticket' => $ticket,
             'clientes' => Cliente::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
             'empleados' => Empleado::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
+            'assignedEmployeeIds' => collect($ticket->assigned_employee_ids ?? [])
+                ->map(fn ($employeeId) => (int) $employeeId)
+                ->filter(fn (int $employeeId) => $employeeId > 0 && $employeeId !== (int) ($ticket->empleado_id ?? 0))
+                ->unique()
+                ->values()
+                ->all(),
             'menuBadges' => $this->menuBadges(),
         ]);
     }
@@ -932,7 +954,7 @@ class HomeController extends Controller
             abort(403);
         }
 
-        $ticket->load(['cliente', 'empleado', 'departamento']);
+        $ticket->load(['cliente', 'empleado', 'departamento', 'assignmentRequestBy']);
         $messages = $ticket->mensajes()
             ->with('user')
             ->latest()
@@ -980,8 +1002,51 @@ class HomeController extends Controller
             'remoteSession' => $remoteSession,
             'remoteSupportCode' => $remoteSupportCode,
             'remoteRustDeskCode' => $remoteRustDeskCode,
+            'assignedEmployeeNames' => $this->ticketAssignedEmployeeNames($ticket),
             'menuBadges' => $this->menuBadges(),
         ]);
+    }
+
+    public function requestTicketAssignmentChange(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
+    {
+        if (!$this->canAccessTicket($ticket) || !auth()->user()->hasRole('Empleado')) {
+            abort(403);
+        }
+
+        if (!$this->isAssignedEmployeeForTicket($ticket)) {
+            abort(403, 'Solo un empleado asignado puede solicitar cambios de asignacion.');
+        }
+
+        if (!in_array((string) $ticket->estado, ['pendiente', 'en_proceso'], true)) {
+            return $this->ticketAssignmentRequestResponse($request, 'Solo se puede solicitar cambios en tickets pendientes o en proceso.', false);
+        }
+
+        $validated = $request->validate([
+            'request_type' => ['required', Rule::in(['change_employee', 'add_employees'])],
+        ], [
+            'request_type.required' => 'Selecciona una opcion de solicitud.',
+        ]);
+
+        $requestType = (string) $validated['request_type'];
+        $requestTypeLabel = $requestType === 'change_employee'
+            ? 'Cambio de empleado'
+            : 'Asignacion de empleados';
+
+        $ticket->forceFill([
+            'assignment_request_type' => $requestType,
+            'assignment_request_by_id' => auth()->id(),
+            'assignment_request_at' => now(),
+        ])->save();
+
+        $ticket->mensajes()->create([
+            'user_id' => auth()->id(),
+            'mensaje' => auth()->user()->name . ' solicito: ' . $requestTypeLabel . '.',
+            'tipo' => 'atencion',
+        ]);
+
+        app(TicketNotificationService::class)->notifyTicketAssignmentRequest($ticket, $requestTypeLabel, auth()->user()->name);
+
+        return $this->ticketAssignmentRequestResponse($request, 'Solicitud enviada a los administradores.', true);
     }
 
     public function ticketLiveData(Request $request, Ticket $ticket): JsonResponse
@@ -1054,6 +1119,7 @@ class HomeController extends Controller
         }
 
         $ticket->loadMissing(['empleado']);
+        $assignedEmployeeNames = $this->ticketAssignedEmployeeNames($ticket);
 
         return response()->json([
             'ok' => true,
@@ -1063,7 +1129,9 @@ class HomeController extends Controller
                 'id' => (int) $ticket->id,
                 'estado' => (string) $ticket->estado,
                 'empleado_id' => (int) ($ticket->empleado_id ?? 0),
-                'empleado_nombre' => $ticket->empleado->nombre_completo ?? 'Sin asignar',
+                'empleado_nombre' => $assignedEmployeeNames->isNotEmpty()
+                    ? $assignedEmployeeNames->implode(', ')
+                    : 'Sin asignar',
             ],
             'remote' => [
                 'enabled' => $remoteEnabled,
@@ -1807,6 +1875,8 @@ class HomeController extends Controller
                 'codigo' => ['required', 'string', 'max:25', Rule::unique('tickets', 'codigo')->ignore($ticket->id)],
                 'cliente_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
                 'empleado_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'assigned_employee_ids' => ['nullable', 'array'],
+                'assigned_employee_ids.*' => [Rule::exists('users', 'id')->where(fn ($query) => $query->where('activo', true))],
                 'departamento_id' => ['required', Rule::exists('departamentos', 'id')->where(fn ($query) => $query->where('activo', true))],
                 'estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'finalizado', 'cerrado'])],
             ]);
@@ -1827,10 +1897,55 @@ class HomeController extends Controller
             }
         }
 
+        $previousAssigneeSignature = $this->ticketAssignedEmployeeSignature($ticket);
+        $assignmentRequestType = (string) ($ticket->assignment_request_type ?? '');
+        $assignmentRequestedById = (int) ($ticket->assignment_request_by_id ?? 0);
+
+        if ($isAdmin) {
+            $primaryEmployeeId = (int) ($validated['empleado_id'] ?? 0);
+            $additionalEmployeeIds = collect($validated['assigned_employee_ids'] ?? [])
+                ->map(fn ($employeeId) => (int) $employeeId)
+                ->filter(fn (int $employeeId) => $employeeId > 0 && $employeeId !== $primaryEmployeeId)
+                ->reject(fn (int $employeeId) => $assignmentRequestType === 'change_employee' && $employeeId === $assignmentRequestedById)
+                ->unique()
+                ->values()
+                ->all();
+
+            foreach ($additionalEmployeeIds as $employeeId) {
+                $empleado = Empleado::with('departamentos')->find($employeeId);
+
+                if (!$empleado || !$this->employeeBelongsToDepartment($empleado, (int) $validated['departamento_id'])) {
+                    return back()
+                        ->withErrors(['assigned_employee_ids' => 'Todos los empleados adicionales deben pertenecer al departamento del ticket.'])
+                        ->withInput();
+                }
+            }
+
+            $validated['assigned_employee_ids'] = $additionalEmployeeIds;
+            $validated['assignment_request_type'] = null;
+            $validated['assignment_request_by_id'] = null;
+            $validated['assignment_request_at'] = null;
+        }
+
         $ticket->update($validated);
 
         if ($isAdmin && in_array((string) ($validated['estado'] ?? ''), ['finalizado', 'cerrado'], true)) {
             $this->closeActiveRemoteSessionsForTicket($ticket, 'La sesion remota se cerro automaticamente porque el ticket fue cerrado.');
+        }
+
+        if ($isAdmin && $previousAssigneeSignature !== $this->ticketAssignedEmployeeSignature($ticket)) {
+            $assignedNames = $this->ticketAssignedEmployeeNames($ticket);
+            $attendedByName = $assignedNames->isNotEmpty()
+                ? $assignedNames->implode(', ')
+                : 'Sin asignar';
+
+            $ticket->mensajes()->create([
+                'user_id' => auth()->id(),
+                'mensaje' => 'Asignacion actualizada por ' . auth()->user()->name . '. Empleados asignados: ' . $attendedByName . '.',
+                'tipo' => 'atencion',
+            ]);
+
+            app(TicketNotificationService::class)->notifyTicketAttended($ticket->fresh(['cliente', 'departamento', 'empleado']), $attendedByName);
         }
 
         return back()->with('success', 'Ticket actualizado correctamente.');
@@ -1948,6 +2063,7 @@ class HomeController extends Controller
             if ($employee) {
                 $query->where(function ($q) use ($employee): void {
                     $q->where('empleado_id', $employee->id)
+                      ->orWhereJsonContains('assigned_employee_ids', (int) $employee->id)
                       ->orWhere(function ($q2): void {
                           $q2->whereNull('empleado_id')
                               ->where('estado', 'pendiente');
@@ -2014,6 +2130,17 @@ class HomeController extends Controller
         return back()->with('success', $message);
     }
 
+    private function ticketAssignmentRequestResponse(Request $request, string $message, bool $success): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ], $success ? 200 : 422);
+        }
+
+        return back()->with($success ? 'success' : 'error', $message);
+    }
+
     private function ticketRatingResponse(Request $request, string $message, bool $success): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
@@ -2075,7 +2202,7 @@ class HomeController extends Controller
                 return false;
             }
 
-            return (int) $ticket->empleado_id === (int) $employee->id;
+            return $this->ticketHasEmployeeAssigned($ticket, (int) $employee->id);
         }
 
         if (auth()->user()->hasRole('Usuario')) {
@@ -2114,7 +2241,7 @@ class HomeController extends Controller
             return false;
         }
 
-        return (int) $ticket->empleado_id === (int) $employee->id
+        return $this->ticketHasEmployeeAssigned($ticket, (int) $employee->id)
             && in_array($ticket->estado, ['pendiente', 'en_proceso'], true);
     }
 
@@ -2144,7 +2271,54 @@ class HomeController extends Controller
             return false;
         }
 
-        return (int) $ticket->empleado_id === (int) $employee->id;
+        return $this->ticketHasEmployeeAssigned($ticket, (int) $employee->id);
+    }
+
+    private function ticketHasEmployeeAssigned(Ticket $ticket, int $employeeId): bool
+    {
+        if ($employeeId <= 0) {
+            return false;
+        }
+
+        if ((int) ($ticket->empleado_id ?? 0) === $employeeId) {
+            return true;
+        }
+
+        return collect($ticket->assigned_employee_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->contains($employeeId);
+    }
+
+    private function ticketAssignedEmployeeIds(Ticket $ticket): array
+    {
+        return collect([$ticket->empleado_id])
+            ->merge($ticket->assigned_employee_ids ?? [])
+            ->filter(fn ($employeeId) => (int) $employeeId > 0)
+            ->map(fn ($employeeId) => (int) $employeeId)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function ticketAssignedEmployeeNames(Ticket $ticket): \Illuminate\Support\Collection
+    {
+        $ids = $this->ticketAssignedEmployeeIds($ticket);
+
+        if (empty($ids)) {
+            return collect();
+        }
+
+        return Empleado::query()
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn (Empleado $employee) => array_search((int) $employee->id, $ids, true))
+            ->pluck('nombre_completo')
+            ->values();
+    }
+
+    private function ticketAssignedEmployeeSignature(Ticket $ticket): string
+    {
+        return implode(',', $this->ticketAssignedEmployeeIds($ticket));
     }
 
     private function isTicketClientOwner(Ticket $ticket): bool

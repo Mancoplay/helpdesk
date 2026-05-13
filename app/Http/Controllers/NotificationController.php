@@ -144,6 +144,10 @@ class NotificationController extends Controller
         $user = $request->user();
 
         if ($user->hasRole('Administrador')) {
+            if (($data['kind'] ?? null) === 'ticket_assignment_request') {
+                return route('tickets.edit', $ticket);
+            }
+
             return route('tickets.show', $ticket);
         }
 
@@ -159,7 +163,10 @@ class NotificationController extends Controller
                     ->with('error', 'No se pudo identificar al empleado.');
             }
 
-            $isAssignedToCurrentEmployee = (int) ($ticket->empleado_id ?? 0) === (int) $employee->id;
+            $isAssignedToCurrentEmployee = (int) ($ticket->empleado_id ?? 0) === (int) $employee->id
+                || collect($ticket->assigned_employee_ids ?? [])
+                    ->map(fn ($employeeId) => (int) $employeeId)
+                    ->contains((int) $employee->id);
             $isPendingUnassigned = $ticket->estado === 'pendiente' && is_null($ticket->empleado_id);
 
             if (!$isAssignedToCurrentEmployee && !$isPendingUnassigned) {

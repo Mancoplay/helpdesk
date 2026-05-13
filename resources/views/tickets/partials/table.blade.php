@@ -25,7 +25,20 @@
                         $isDisabled = $ticket->trashed();
                         $badgeType = $isDisabled ? 'secondary' : ($stateMap[$ticket->estado]['badge'] ?? 'secondary');
                         $stateLabel = $isDisabled ? 'Deshabilitado' : str_replace('_', ' ', $ticket->estado);
-                        $isEmployeeOwner = auth()->user()->hasRole('Empleado') && (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0);
+                        $additionalAssignedIds = collect($ticket->assigned_employee_ids ?? [])->map(fn ($employeeId) => (int) $employeeId);
+                        $isEmployeeOwner = auth()->user()->hasRole('Empleado')
+                            && (
+                                (int) $ticket->empleado_id === (int) ($currentEmployeeId ?? 0)
+                                || $additionalAssignedIds->contains((int) ($currentEmployeeId ?? 0))
+                            );
+                        $assignedEmployeeNames = collect([$ticket->empleado->nombre_completo ?? null])
+                            ->merge(
+                                $additionalAssignedIds
+                                    ->map(fn ($employeeId) => ($assignedEmployeesById ?? collect())->get($employeeId)?->nombre_completo)
+                            )
+                            ->filter()
+                            ->unique()
+                            ->values();
                         $isClientOwner = auth()->user()->hasAnyRole(['Cliente', 'Usuario'])
                             && (
                                 (int) ($ticket->cliente->id ?? 0) === (int) auth()->id()
@@ -48,7 +61,7 @@
                         <td>{{ $ticket->codigo }}</td>
                         <td>{{ $ticket->asunto }}</td>
                         <td>{{ $ticket->cliente->nombre_completo ?? '-' }}</td>
-                        <td>{{ $ticket->empleado->nombre_completo ?? 'Sin asignar' }}</td>
+                        <td>{{ $assignedEmployeeNames->isNotEmpty() ? $assignedEmployeeNames->implode(', ') : 'Sin asignar' }}</td>
                         <td><span class="badge text-bg-{{ $badgeType }}">{{ $stateLabel }}</span></td>
                         <td class="text-nowrap">
                             <div class="d-flex flex-nowrap align-items-center gap-1">
