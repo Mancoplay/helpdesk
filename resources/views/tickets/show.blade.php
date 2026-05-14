@@ -36,16 +36,19 @@
 <div class="row g-3 ticket-detail-page">
     <div class="col-lg-5">
         <div class="card border-success ticket-panel ticket-panel-detail">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header ticket-summary-header d-flex align-items-center position-relative">
                 <h3 class="card-title mb-0">Ticket</h3>
-                <div class="d-flex align-items-center gap-2">
-                    @php
-                        $stateMap = config('adminlte.ticket_states');
-                        $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
-                    @endphp
+                @php
+                    $stateMap = config('adminlte.ticket_states');
+                    $badgeType = $stateMap[$ticket->estado]['badge'] ?? 'secondary';
+                @endphp
+                <div class="ticket-state-center position-absolute top-50 start-50 translate-middle">
                     <span id="ticketStateBadge" class="badge text-bg-{{ $badgeType }}">{{ str_replace('_', ' ', $ticket->estado) }}</span>
+                </div>
+                <div class="ticket-header-actions ms-auto">
                     @if($isAssignedEmployee && in_array($ticket->estado, ['pendiente', 'en_proceso'], true))
-                        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#assignmentRequestModal">
+                        <button type="button" class="btn btn-warning btn-sm ticket-assignment-request-btn" data-bs-toggle="modal" data-bs-target="#assignmentRequestModal">
+                            <i class="fas fa-paper-plane me-1"></i>
                             Solicitar
                         </button>
                     @endif

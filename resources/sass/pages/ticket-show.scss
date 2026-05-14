@@ -39,6 +39,10 @@
         color: var(--ink-dark);
     }
 
+    .ticket-summary-header {
+        min-height: 4.9rem;
+    }
+
     .card-body {
         background: var(--surface);
         padding: 1.15rem 1.2rem;
@@ -149,6 +153,33 @@
     .badge.text-bg-warning {
         background: #f2b705 !important;
         color: #2f2b11 !important;
+    }
+
+    .ticket-header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .ticket-state-center {
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    .ticket-assignment-request-btn {
+        --bs-btn-color: #2f2b11;
+        --bs-btn-bg: #f2b705;
+        --bs-btn-border-color: #d99d00;
+        --bs-btn-hover-color: #1f1c0b;
+        --bs-btn-hover-bg: #ffd24a;
+        --bs-btn-hover-border-color: #c48e00;
+        --bs-btn-active-bg: #d99d00;
+        --bs-btn-active-border-color: #b98200;
+        min-width: 7.25rem;
+        padding: 0.48rem 0.9rem;
+        border-width: 2px;
+        box-shadow: 0 8px 18px rgba(217, 157, 0, 0.28);
     }
 
     .ticket-chat-card-body {
