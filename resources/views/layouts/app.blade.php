@@ -703,6 +703,34 @@
                     }
                 });
             }
+
+            const keepSessionAlive = function () {
+                if (authUserId <= 0) {
+                    return;
+                }
+
+                if (document.hidden) {
+                    return;
+                }
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                fetch('{{ route('session.keep-alive') }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                }).catch(function () {
+                    // Ignore transient network errors silently.
+                });
+            };
+
+            keepSessionAlive();
+            window.setInterval(keepSessionAlive, 60000);
         });
     </script>
     @stack('scripts')

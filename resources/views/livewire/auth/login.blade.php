@@ -44,8 +44,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $sessionAccessService->clearExpiredSessionsForUser($userId, $currentSessionId);
 
-        if ($sessionAccessService->shouldEnforceSingleLogin()) {
-            $sessionAccessService->clearOtherSessions($userId, $currentSessionId);
+        if ($sessionAccessService->shouldEnforceSingleLogin() && $sessionAccessService->hasAnotherActiveSession($userId, $currentSessionId)) {
+            Auth::logout();
+            Session::invalidate();
+            Session::regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Ya existe una sesion activa con este usuario. Cierra la otra sesion antes de ingresar nuevamente.',
+            ]);
         }
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);

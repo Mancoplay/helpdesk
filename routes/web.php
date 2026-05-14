@@ -24,6 +24,10 @@ Route::middleware(['auth', 'permission:ver dashboard'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
 });
 
+Route::post('/session/keep-alive', function () {
+    return response()->noContent();
+})->middleware(['auth', 'throttle:10,1'])->name('session.keep-alive');
+
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
     Route::get('/usuarios', [HomeController::class, 'clientes'])->name('usuarios.index');
     Route::get('/reportes/usuarios', [HomeController::class, 'reportesUsuarios'])->name('reportes.usuarios');

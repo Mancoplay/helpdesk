@@ -34,7 +34,7 @@ return [
 
     'lifetime' => env('SESSION_LIFETIME', 120),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', true),
 
     /*
     |---------------------------------------------------------------------------
@@ -54,13 +54,12 @@ return [
     | Enforce Single Login
     |---------------------------------------------------------------------------
     |
-    | When enabled, a successful login removes the user's previous database
-    | sessions. Keep this disabled when users may keep the app open in more
-    | than one browser tab, device, or account-switching workflow.
+    | When enabled, a user cannot start a new login while another active
+    | database session already exists for that same account.
     |
     */
 
-    'enforce_single_login' => env('SESSION_ENFORCE_SINGLE_LOGIN', false),
+    'enforce_single_login' => env('SESSION_ENFORCE_SINGLE_LOGIN', true),
 
     /*
     |--------------------------------------------------------------------------

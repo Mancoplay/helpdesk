@@ -56,8 +56,19 @@ class LoginController extends Controller
             if ($loggedUser) {
                 $this->sessionAccessService->clearExpiredSessionsForUser((int) $loggedUser->id, $currentSessionId);
 
-                if ($this->sessionAccessService->shouldEnforceSingleLogin()) {
-                    $this->sessionAccessService->clearOtherSessions((int) $loggedUser->id, $currentSessionId);
+                if (
+                    $this->sessionAccessService->shouldEnforceSingleLogin()
+                    && $this->sessionAccessService->hasAnotherActiveSession((int) $loggedUser->id, $currentSessionId)
+                ) {
+                    auth()->logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return back()
+                        ->withErrors([
+                            $this->username() => 'Ya existe una sesion activa con este usuario. Cierra la otra sesion antes de ingresar nuevamente.',
+                        ])
+                        ->onlyInput($this->username());
                 }
             }
 
