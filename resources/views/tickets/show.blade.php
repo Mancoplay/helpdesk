@@ -586,8 +586,13 @@
         const endRemoteSessionForm = document.getElementById('endRemoteSessionForm');
         const closeAnyDeskBtn = document.getElementById('closeAnyDeskBtn');
         const closeAnyDeskForm = document.getElementById('closeAnyDeskForm');
+        const ticketId = {{ (int) $ticket->id }};
+        const currentRemoteSessionId = {{ (int) $remoteSession->id }};
+        const remoteLiveUrl = @json(route('tickets.live', $ticket));
+        const canEditRemoteCode = @json($canManageRemoteAsClient || $canManageRemoteAsEmployee);
         let saveTimer = null;
         let saveRequestController = null;
+        let remoteSyncInFlight = false;
         let lastSavedCode = codeElement ? String(codeElement.value || '').replace(/\D+/g, '').trim() : '';
         let lastSavedRustDeskCode = rustDeskCodeElement ? String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '').trim() : '';
         const hasManualSubmitButton = Boolean(sendSupportCodeBtn);
@@ -714,6 +719,80 @@
             }
 
             return '';
+        };
+
+        const syncRemoteCodeFields = function (remoteData) {
+            if (!remoteData || Number(remoteData.id || 0) !== Number(currentRemoteSessionId || 0)) {
+                return;
+            }
+
+            const supportCode = String(remoteData.support_code || '').trim();
+            const rustDeskCode = String(remoteData.rustdesk_code || '').trim();
+            const isEditingAnyDesk = codeElement && document.activeElement === codeElement;
+            const isEditingRustDesk = rustDeskCodeElement && document.activeElement === rustDeskCodeElement;
+
+            lastSavedCode = supportCode;
+            lastSavedRustDeskCode = rustDeskCode;
+
+            if (codeElement && !isEditingAnyDesk && String(codeElement.value || '').trim() !== supportCode) {
+                codeElement.value = supportCode;
+            }
+
+            if (rustDeskCodeElement && !isEditingRustDesk && String(rustDeskCodeElement.value || '').trim() !== rustDeskCode) {
+                rustDeskCodeElement.value = rustDeskCode;
+            }
+
+            if (openCopyAnyDeskBtn) {
+                openCopyAnyDeskBtn.disabled = supportCode === '' && !canEditRemoteCode;
+            }
+
+            if (openCopyRustDeskBtn) {
+                openCopyRustDeskBtn.disabled = rustDeskCode === '' && !canEditRemoteCode;
+            }
+        };
+
+        window.__ticketRemoteCodeSyncByTicket = window.__ticketRemoteCodeSyncByTicket || {};
+        window.__ticketRemoteCodeSyncByTicket[ticketId] = syncRemoteCodeFields;
+
+        window.addEventListener('helpdesk:remote-code-updated', function (event) {
+            if (Number(event.detail?.ticketId || 0) !== Number(ticketId || 0)) {
+                return;
+            }
+
+            syncRemoteCodeFields(event.detail?.remote || null);
+        });
+
+        const pollRemoteCodes = function () {
+            if (document.hidden || remoteSyncInFlight) {
+                return;
+            }
+
+            remoteSyncInFlight = true;
+
+            fetch(`${remoteLiveUrl}?since_message_id=0&t=${Date.now()}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('remote-live-failed');
+                    }
+
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (payload && payload.ok === true) {
+                        syncRemoteCodeFields(payload.remote || null);
+                    }
+                })
+                .catch(function () {
+                    // El polling global tambien reintentara; aqui evitamos molestar al usuario.
+                })
+                .finally(function () {
+                    remoteSyncInFlight = false;
+                });
         };
 
         const saveSupportCode = function () {
@@ -952,6 +1031,15 @@ closeAnyDeskBtn.disabled = true;
                 closeAnyDeskForm.submit();
             });
         }
+
+        pollRemoteCodes();
+        window.setInterval(pollRemoteCodes, 2500);
+        window.addEventListener('focus', pollRemoteCodes);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                pollRemoteCodes();
+            }
+        });
     });
 </script>
 @endpush
@@ -1352,6 +1440,13 @@ closeAnyDeskBtn.disabled = true;
             if (openCopyRustDeskBtn) {
                 openCopyRustDeskBtn.disabled = newRustDeskCode === '' && !canEditRemoteCode;
             }
+
+            window.dispatchEvent(new CustomEvent('helpdesk:remote-code-updated', {
+                detail: {
+                    ticketId,
+                    remote: remoteData,
+                },
+            }));
         };
 
         if (remoteCodeInput) {
