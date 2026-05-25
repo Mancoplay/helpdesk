@@ -41,13 +41,15 @@ return [
     | Concurrent Session Window
     |---------------------------------------------------------------------------
     |
-    | When single-session access is enforced, this value defines how many
-    | minutes a different session is considered actively in use. Older
-    | sessions are treated as stale and may be ignored during login.
+    | When single-session access is enforced, this value defines how long
+    | a different session is considered actively in use. Older sessions
+    | are treated as stale and may be ignored during login.
     |
     */
 
     'concurrent_window' => env('SESSION_CONCURRENT_WINDOW', 2),
+
+    'concurrent_window_seconds' => env('SESSION_CONCURRENT_WINDOW_SECONDS', 30),
 
     /*
     |---------------------------------------------------------------------------

@@ -55,6 +55,12 @@ class LoginController extends Controller
 
             if ($loggedUser) {
                 $this->sessionAccessService->clearExpiredSessionsForUser((int) $loggedUser->id, $currentSessionId);
+                $this->sessionAccessService->clearRecoverableSessionsForClient(
+                    (int) $loggedUser->id,
+                    $currentSessionId,
+                    $request->ip(),
+                    (string) $request->userAgent()
+                );
 
                 if (
                     $this->sessionAccessService->shouldEnforceSingleLogin()

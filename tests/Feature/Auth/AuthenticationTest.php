@@ -92,7 +92,7 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
-    public function test_login_clears_another_active_session_when_single_login_is_enabled(): void
+    public function test_login_clears_recoverable_session_from_same_client_when_single_login_is_enabled(): void
     {
         config([
             'session.driver' => 'database',
@@ -111,10 +111,12 @@ class AuthenticationTest extends TestCase
             'last_activity' => time(),
         ]);
 
-        $response = $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
+        $response = $this
+            ->withHeader('User-Agent', 'PHPUnit')
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'password',
+            ]);
 
         $response->assertRedirect(route('dashboard', absolute: false));
 
@@ -122,6 +124,41 @@ class AuthenticationTest extends TestCase
         $this->assertDatabaseMissing('sessions', [
             'id' => 'existing-active-session',
         ]);
+    }
+
+    public function test_login_is_blocked_when_another_client_has_an_active_session(): void
+    {
+        config([
+            'session.driver' => 'database',
+            'session.concurrent_window_seconds' => 30,
+            'session.enforce_single_login' => true,
+        ]);
+
+        $user = User::factory()->create();
+
+        DB::table('sessions')->insert([
+            'id' => 'existing-active-session',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Other Browser',
+            'payload' => 'test',
+            'last_activity' => time(),
+        ]);
+
+        $response = $this
+            ->withHeader('User-Agent', 'PHPUnit')
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'password',
+            ]);
+
+        $response->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertDatabaseHas('sessions', [
+            'id' => 'existing-active-session',
+        ]);
+        $response->assertSessionHasErrors('email');
     }
 
     public function test_login_is_allowed_when_previous_session_is_stale(): void

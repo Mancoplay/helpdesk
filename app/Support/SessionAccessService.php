@@ -28,6 +28,32 @@ class SessionAccessService
         $query->delete();
     }
 
+    public function clearRecoverableSessionsForClient(
+        int $userId,
+        string $currentSessionId = '',
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): void {
+        if ($userId <= 0 || config('session.driver') !== 'database') {
+            return;
+        }
+
+        if (blank($ipAddress) || blank($userAgent)) {
+            return;
+        }
+
+        $query = DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $userId)
+            ->where('ip_address', $ipAddress)
+            ->where('user_agent', $userAgent);
+
+        if ($currentSessionId !== '') {
+            $query->where('id', '!=', $currentSessionId);
+        }
+
+        $query->delete();
+    }
+
     public function hasAnotherActiveSession(int $userId, string $currentSessionId = ''): bool
     {
         if ($userId <= 0 || config('session.driver') !== 'database') {
@@ -74,14 +100,18 @@ class SessionAccessService
 
     private function activeCutoffTimestamp(): int
     {
-        $activeWindowMinutes = max(
-            1,
-            min(
-                (int) config('session.lifetime', 120),
-                (int) config('session.concurrent_window', 2)
-            )
-        );
+        $activeWindowSeconds = (int) config('session.concurrent_window_seconds', 0);
 
-        return time() - ($activeWindowMinutes * 60);
+        if ($activeWindowSeconds <= 0) {
+            $activeWindowSeconds = max(
+                60,
+                min(
+                    (int) config('session.lifetime', 120) * 60,
+                    (int) config('session.concurrent_window', 2) * 60
+                )
+            );
+        }
+
+        return time() - $activeWindowSeconds;
     }
 }
