@@ -271,6 +271,26 @@ document.addEventListener('DOMContentLoaded', () => {
             loadReportResults(paginationLink.href);
         });
 
+        document.addEventListener('dblclick', (event) => {
+            const userRow = event.target.closest('.js-report-results .js-report-user-row');
+            if (!userRow || !searchInput) {
+                return;
+            }
+
+            const userQuery = (userRow.getAttribute('data-report-user-query') || '').trim();
+            if (userQuery === '') {
+                return;
+            }
+
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+
+            searchInput.value = userQuery;
+            searchInput.focus();
+            loadReportResults();
+        });
+
         if (searchInput && searchInput.value.trim() === '') {
             const currentDetail = document.querySelector('.js-user-ticket-detail');
             if (currentDetail) {

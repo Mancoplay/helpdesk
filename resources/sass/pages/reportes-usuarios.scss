@@ -2,6 +2,10 @@
     display: none;
 }
 
+.js-report-user-row {
+    cursor: pointer;
+}
+
 @media print {
     @page {
         size: A4 portrait;

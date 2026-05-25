@@ -33,7 +33,11 @@
             </thead>
             <tbody>
                 @forelse($usuarios as $usuario)
-                    <tr>
+                    <tr
+                        class="js-report-user-row"
+                        data-report-user-query="{{ $usuario->nombre_completo }}"
+                        title="Doble click para ver solo este usuario"
+                    >
                         <td>{{ $usuario->nombre_completo }}</td>
                         <td>{{ $usuario->email }}</td>
                         <td>{{ $usuario->departamento->nombre ?? '-' }}</td>
