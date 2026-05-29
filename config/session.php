@@ -49,7 +49,7 @@ return [
 
     'concurrent_window' => env('SESSION_CONCURRENT_WINDOW', 2),
 
-    'concurrent_window_seconds' => env('SESSION_CONCURRENT_WINDOW_SECONDS', 30),
+    'concurrent_window_seconds' => env('SESSION_CONCURRENT_WINDOW_SECONDS', 180),
 
     /*
     |---------------------------------------------------------------------------
