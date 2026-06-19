@@ -414,7 +414,7 @@
 @media (max-width: 991.98px) {
     .ticket-detail-page {
         .ticket-chat-card-body {
-            height: clamp(420px, 72dvh, 680px);
+            height: clamp(500px, 78dvh, 760px);
             min-height: 0;
         }
 
@@ -462,7 +462,7 @@
         }
 
         .ticket-chat-card-body {
-            height: clamp(380px, 68dvh, 620px);
+            height: clamp(460px, 76dvh, 700px);
         }
 
         .ticket-chat-scroll {
@@ -503,7 +503,7 @@
 @media (max-width: 575.98px) {
     .ticket-detail-page {
         .ticket-chat-card-body {
-            height: clamp(340px, 66dvh, 560px);
+            height: clamp(430px, 74dvh, 640px);
         }
     }
 
