@@ -189,7 +189,10 @@
 
     .ticket-chat-scroll {
         flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
         background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 100%);
         border: 1px solid var(--line) !important;
         border-radius: 12px !important;
@@ -411,8 +414,8 @@
 @media (max-width: 991.98px) {
     .ticket-detail-page {
         .ticket-chat-card-body {
-            height: auto;
-            min-height: 420px;
+            height: clamp(420px, 72dvh, 680px);
+            min-height: 0;
         }
 
         .ticket-chat-bubble {
@@ -459,7 +462,7 @@
         }
 
         .ticket-chat-card-body {
-            min-height: 360px;
+            height: clamp(380px, 68dvh, 620px);
         }
 
         .ticket-chat-scroll {
@@ -498,6 +501,12 @@
 }
 
 @media (max-width: 575.98px) {
+    .ticket-detail-page {
+        .ticket-chat-card-body {
+            height: clamp(340px, 66dvh, 560px);
+        }
+    }
+
     .remote-support-modal {
         .remote-support-tools {
             grid-template-columns: 1fr;
