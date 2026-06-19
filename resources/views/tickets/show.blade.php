@@ -1266,6 +1266,9 @@ closeAnyDeskBtn.disabled = true;
                             Number(chatScroll.dataset.lastMessageId || 0),
                             latestMessageId - 1
                         ));
+
+                        window.__ticketForceScrollAfterOwnMessageByTicket = window.__ticketForceScrollAfterOwnMessageByTicket || {};
+                        window.__ticketForceScrollAfterOwnMessageByTicket[{{ (int) $ticket->id }}] = true;
                     }
 
                     const livePollFn = window.__ticketLivePollByTicket && window.__ticketLivePollByTicket[{{ (int) $ticket->id }}];
@@ -1560,6 +1563,7 @@ closeAnyDeskBtn.disabled = true;
             }
 
             const keepBottom = shouldStickToBottom();
+            const shouldForceOwnScroll = Boolean(window.__ticketForceScrollAfterOwnMessageByTicket?.[ticketId]);
             const emptyState = chatScroll.querySelector('p.text-muted.mb-0');
             if (emptyState) {
                 emptyState.remove();
@@ -1581,7 +1585,11 @@ closeAnyDeskBtn.disabled = true;
             });
 
             chatScroll.dataset.lastMessageId = String(lastMessageId);
-            if (keepBottom) {
+            if (keepBottom || shouldForceOwnScroll) {
+                if (window.__ticketForceScrollAfterOwnMessageByTicket) {
+                    window.__ticketForceScrollAfterOwnMessageByTicket[ticketId] = false;
+                }
+
                 scrollChatToBottom();
                 return;
             }

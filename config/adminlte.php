@@ -4,7 +4,7 @@ return [
     'app_name' => env('ADMINLTE_APP_NAME', 'Helpdesk'),
     'topbar_title' => env('ADMINLTE_TOPBAR_TITLE', 'Sistema de Soporte Tecnico / Help Desk'),
     'logo_text' => env('ADMINLTE_LOGO_TEXT', 'helpdesk'),
-    'footer_text' => env('ADMINLTE_FOOTER_TEXT', 'Todos los derechos reservados'),
+    'footer_text' => env('ADMINLTE_FOOTER_TEXT', 'Miguel Kevin Tito Flores'),
 
     'menu' => [
         [
