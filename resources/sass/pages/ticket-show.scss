@@ -187,6 +187,13 @@
         min-height: 540px;
     }
 
+    .ticket-chat-scroll-wrap {
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+        display: flex;
+    }
+
     .ticket-chat-scroll {
         flex: 1 1 auto;
         min-height: 0;
@@ -196,6 +203,37 @@
         background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 100%);
         border: 1px solid var(--line) !important;
         border-radius: 12px !important;
+    }
+
+    .ticket-chat-unread-badge {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        min-width: 1.8rem;
+        height: 1.35rem;
+        padding: 0 0.55rem;
+        border: 0;
+        border-radius: 999px;
+        background: #ffc107;
+        color: #1f2a37;
+        font-weight: 800;
+        font-size: 0.78rem;
+        line-height: 1;
+        box-shadow: 0 4px 10px rgba(15, 31, 58, 0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .ticket-chat-unread-badge[hidden] {
+        display: none;
+    }
+
+    .ticket-chat-unread-badge:hover,
+    .ticket-chat-unread-badge:focus {
+        background: #f2b705;
+        color: #1f2a37;
     }
 
     .ticket-chat-scroll::-webkit-scrollbar {

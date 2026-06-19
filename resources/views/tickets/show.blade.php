@@ -221,52 +221,57 @@
                 <h3 class="card-title mb-0">Comunicacion</h3>
             </div>
             <div class="card-body d-flex flex-column ticket-chat-card-body">
-                <div id="ticketChatScroll" class="ticket-chat-scroll border rounded p-3 mb-2" data-last-message-id="{{ (int) ($messages->max('id') ?? 0) }}">
-                    @php
-                        $chatTimezone = config('app.timezone', 'America/La_Paz');
-                    @endphp
-                    @forelse($messages as $mensaje)
+                <div class="ticket-chat-scroll-wrap mb-2">
+                    <div id="ticketChatScroll" class="ticket-chat-scroll border rounded p-3" data-last-message-id="{{ (int) ($messages->max('id') ?? 0) }}">
                         @php
-                            $isOwnMessage = (int) ($mensaje->user_id ?? 0) === (int) auth()->id();
+                            $chatTimezone = config('app.timezone', 'America/La_Paz');
                         @endphp
-                        <div class="ticket-chat-message {{ $isOwnMessage ? 'mine' : '' }}">
-                            <div class="ticket-chat-bubble">
-                                <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
-                                    <div>
-                                        <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
+                        @forelse($messages as $mensaje)
+                            @php
+                                $isOwnMessage = (int) ($mensaje->user_id ?? 0) === (int) auth()->id();
+                            @endphp
+                            <div class="ticket-chat-message {{ $isOwnMessage ? 'mine' : '' }}">
+                                <div class="ticket-chat-bubble">
+                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                        <div>
+                                            <strong>{{ $mensaje->user->name ?? 'Sistema' }}</strong>
+                                        </div>
+                                        <span class="ticket-chat-meta">
+                                            {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }}
+                                        </span>
                                     </div>
-                                    <span class="ticket-chat-meta">
-                                        {{ $mensaje->created_at?->copy()->setTimezone($chatTimezone)->format('d/m/Y H:i') }}
-                                    </span>
-                                </div>
-                                @if(!empty($mensaje->mensaje))
-                                    <p class="mb-1">{{ $mensaje->mensaje }}</p>
-                                @endif
-                                @if($mensaje->imagen_path)
-                                    @php
-                                        $attachmentUrl = route('tickets.attachments.show', [$ticket, $mensaje]);
-                                        $isImageAttachment = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
-                                    @endphp
-                                    @if($isImageAttachment)
-                                        <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener">
-                                            <img
-                                                src="{{ $attachmentUrl }}"
-                                                alt="Adjunto"
-                                                class="img-fluid rounded border ticket-chat-image"
-                                            >
-                                        </a>
-                                    @else
-                                        <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-paperclip me-1"></i>
-                                            {{ $mensaje->imagen_nombre ?? 'Descargar archivo' }}
-                                        </a>
+                                    @if(!empty($mensaje->mensaje))
+                                        <p class="mb-1">{{ $mensaje->mensaje }}</p>
                                     @endif
-                                @endif
+                                    @if($mensaje->imagen_path)
+                                        @php
+                                            $attachmentUrl = route('tickets.attachments.show', [$ticket, $mensaje]);
+                                            $isImageAttachment = str_starts_with((string) ($mensaje->imagen_mime ?? ''), 'image/');
+                                        @endphp
+                                        @if($isImageAttachment)
+                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener">
+                                                <img
+                                                    src="{{ $attachmentUrl }}"
+                                                    alt="Adjunto"
+                                                    class="img-fluid rounded border ticket-chat-image"
+                                                >
+                                            </a>
+                                        @else
+                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-paperclip me-1"></i>
+                                                {{ $mensaje->imagen_nombre ?? 'Descargar archivo' }}
+                                            </a>
+                                        @endif
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-                    @empty
-                        <p class="text-muted mb-0">Sin mensajes por el momento.</p>
-                    @endforelse
+                        @empty
+                            <p class="text-muted mb-0">Sin mensajes por el momento.</p>
+                        @endforelse
+                    </div>
+                    <button type="button" id="ticketChatUnreadBadge" class="ticket-chat-unread-badge" hidden aria-live="polite" aria-label="Ver mensajes nuevos">
+                        <span id="ticketChatUnreadCount">0</span>
+                    </button>
                 </div>
 
                 @php
@@ -1291,6 +1296,8 @@ closeAnyDeskBtn.disabled = true;
             return;
         }
 
+        const unreadBadge = document.getElementById('ticketChatUnreadBadge');
+        const unreadCountLabel = document.getElementById('ticketChatUnreadCount');
         const ticketId = {{ (int) $ticket->id }};
         const liveUrl = @json(route('tickets.live', $ticket));
         const badgeMap = @json(collect(config('adminlte.ticket_states', []))->mapWithKeys(fn ($state, $key) => [$key => $state['badge'] ?? 'secondary']));
@@ -1317,6 +1324,7 @@ closeAnyDeskBtn.disabled = true;
         let remoteCodeDirty = false;
         let rustDeskCodeDirty = false;
         let inFlight = false;
+        let unreadMessages = 0;
 
         if (rateTicketModal && window.bootstrap?.Modal) {
             window.bootstrap.Modal.getOrCreateInstance(rateTicketModal, {
@@ -1413,6 +1421,40 @@ closeAnyDeskBtn.disabled = true;
             const gap = chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight;
             return gap < 100;
         };
+
+        const updateUnreadBadge = function () {
+            if (!unreadBadge || !unreadCountLabel) {
+                return;
+            }
+
+            if (unreadMessages <= 0 || shouldStickToBottom()) {
+                unreadMessages = 0;
+                unreadBadge.hidden = true;
+                unreadCountLabel.textContent = '0';
+                return;
+            }
+
+            unreadCountLabel.textContent = unreadMessages > 99 ? '99+' : String(unreadMessages);
+            unreadBadge.hidden = false;
+        };
+
+        const scrollChatToBottom = function () {
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+            unreadMessages = 0;
+            updateUnreadBadge();
+        };
+
+        if (unreadBadge) {
+            unreadBadge.addEventListener('click', scrollChatToBottom);
+        }
+
+        chatScroll.addEventListener('scroll', function () {
+            if (shouldStickToBottom()) {
+                unreadMessages = 0;
+            }
+
+            updateUnreadBadge();
+        }, { passive: true });
 
         const syncRemoteSupportCode = function (remoteData) {
             if (!remoteData) {
@@ -1523,6 +1565,8 @@ closeAnyDeskBtn.disabled = true;
                 emptyState.remove();
             }
 
+            let appendedIncomingMessages = 0;
+
             incomingMessages.forEach(function (message) {
                 if (Number(message.id || 0) <= lastMessageId) {
                     return;
@@ -1530,12 +1574,20 @@ closeAnyDeskBtn.disabled = true;
 
                 chatScroll.insertAdjacentHTML('beforeend', buildMessageHtml(message));
                 lastMessageId = Number(message.id || lastMessageId);
+
+                if (!message.is_own) {
+                    appendedIncomingMessages++;
+                }
             });
 
             chatScroll.dataset.lastMessageId = String(lastMessageId);
             if (keepBottom) {
-                chatScroll.scrollTop = chatScroll.scrollHeight;
+                scrollChatToBottom();
+                return;
             }
+
+            unreadMessages += appendedIncomingMessages;
+            updateUnreadBadge();
         };
 
         const runLivePoll = function () {
