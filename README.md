@@ -295,3 +295,18 @@ npm run build
 ```
 
 `php artisan migrate:fresh --seed` borra todas las tablas de la base configurada y las crea nuevamente. Usalo solo en desarrollo.
+
+## Despliegue en servidor Linux
+
+Para produccion o para subirlo a un servidor Linux, usa la guia completa en `docs/LINUX_DEPLOY.md`.
+
+Resumen rapido en el servidor:
+
+```bash
+cp .env.production.example .env
+nano .env
+php artisan key:generate --force
+bash scripts/linux/deploy.sh
+```
+
+El servidor web debe apuntar a la carpeta `public`, no a la raiz del proyecto.
