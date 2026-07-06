@@ -108,7 +108,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/reportes-usuarios-print.css') }}?v=20260419-1">
+<link rel="stylesheet" href="{{ asset('css/reportes-usuarios-print.css') }}?v=20260706-2">
 @endpush
 
 @push('scripts')
@@ -304,3 +304,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 @endpush
+
