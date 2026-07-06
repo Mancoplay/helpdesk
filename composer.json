@@ -52,7 +52,7 @@
             "@php artisan boost:update --ansi"
         ],
         "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+            "@php -r \"file_exists('.env') || fwrite(STDERR, 'Create .env manually using README.md before running the app.'.PHP_EOL);\""
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi",
@@ -81,3 +81,6 @@
     "minimum-stability": "dev",
     "prefer-stable": true
 }
+
+
+

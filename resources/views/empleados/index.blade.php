@@ -126,49 +126,14 @@
     </div>
 </div>
 
-@push('styles')
-<style>
-    .js-password-input::-ms-reveal,
-    .js-password-input::-ms-clear {
-        display: none;
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
-    function setupPasswordToggles(root = document) {
-        root.querySelectorAll('.js-password-toggle').forEach((button) => {
-            if (button.dataset.bound === '1') {
-                return;
-            }
-
-            button.dataset.bound = '1';
-            button.addEventListener('click', () => {
-                const inputGroup = button.closest('.input-group');
-                const input = inputGroup ? inputGroup.querySelector('input') : null;
-                const icon = button.querySelector('i');
-
-                if (!input) {
-                    return;
-                }
-
-                const showPassword = input.type === 'password';
-                input.type = showPassword ? 'text' : 'password';
-                button.setAttribute('aria-label', showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena');
-
-                if (icon) {
-                    icon.classList.toggle('fa-eye', !showPassword);
-                    icon.classList.toggle('fa-eye-slash', showPassword);
-                }
-            });
-        });
-    }
-
     function renderDepartmentPicklist(wrapper) {
         const selectedContainer = wrapper.closest('.col-md-6').querySelector('.departments-selected-list');
         const button = wrapper.querySelector('[data-bs-toggle="dropdown"]');
-        const checkedBoxes = Array.from(wrapper.querySelectorAll('.department-checkbox:checked'));        if (!selectedContainer || !button) {
+        const checkedBoxes = Array.from(wrapper.querySelectorAll('.department-checkbox:checked'));
+
+        if (!selectedContainer || !button) {
             return;
         }
 
@@ -218,15 +183,15 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.department-picker').forEach(setupDepartmentPicker);
-        setupPasswordToggles();
     });
 
     document.addEventListener('shown.bs.modal', (event) => {
         event.target.querySelectorAll('.department-picker').forEach(setupDepartmentPicker);
-        setupPasswordToggles(event.target);
     });
 </script>
 @endpush
 
 @endsection
+
+
 

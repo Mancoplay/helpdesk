@@ -10,6 +10,9 @@
 // AdminLTE
 @import 'admin-lte/dist/css/adminlte.css';
 
+// Shared components
+@import './components/password-toggle';
+
 // Layout-level custom styles
 @import './layout/app-layout';
 @import './pages/reportes-usuarios';
@@ -63,3 +66,4 @@
     background-color: #ffcd11 !important;
     color: #1f1f1f !important;
 }
+

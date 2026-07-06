@@ -21,7 +21,7 @@ class DashboardTest extends TestCase
     {
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['activo' => true]);
         $user->assignRole('Usuario');
 
         $this->actingAs($user);
@@ -30,3 +30,4 @@ class DashboardTest extends TestCase
         $response->assertStatus(200);
     }
 }
+

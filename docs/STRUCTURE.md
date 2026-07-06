@@ -1,53 +1,55 @@
-# Project Structure Guide
+# Guia de estructura del proyecto
 
-This document explains the current structure and conventions of the Helpdesk project.
+Este documento resume como ubicarse rapido dentro del Helpdesk sin tener que leer todo el codigo desde cero.
 
-## 1) Main Layers
+## Capas principales
 
-- `routes/`
-  - `web.php`: business routes (dashboard, clientes, empleados, departamentos, tickets).
-  - `auth.php`: authentication and account routes.
-- `app/Http/Controllers/`
-  - `HomeController.php`: ticket/helpdesk use cases and admin CRUD actions.
-  - `Auth/*`: legacy auth controllers.
-- `app/Http/Requests/Admin/`
-  - `StoreClienteRequest.php`
-  - `UpdateClienteRequest.php`
-  - `StoreEmpleadoRequest.php`
-  - `UpdateEmpleadoRequest.php`
-  Centralized validation and input normalization for admin forms.
-- `app/Http/Middleware/`
-  - `EnsureActiveAccount.php`: disabled-account protection.
-  - `PreventBackHistory.php`: anti-cache protection for authenticated pages.
-- `app/Models/`
-  - Domain models (`Ticket`, `TicketMensaje`, `TicketRemoteSession`, `Cliente`, `Empleado`, `Departamento`, `User`).
-- `resources/views/`
-  - `layouts/`: base application layout.
-  - `tickets/`, `clientes/`, `empleados/`, `departamentos/`: feature views.
-  - `auth/` and `livewire/`: auth/settings UI.
-- `config/`
-  - `helpdesk.php`: feature configuration (attachments).
+- `routes/web.php`: rutas funcionales del sistema: dashboard, usuarios, empleados, departamentos, tickets, reportes y notificaciones.
+- `routes/auth.php`: rutas de autenticacion Livewire/Volt y cierre de sesion.
+- `app/Http/Controllers/HomeController.php`: flujo principal del helpdesk. Es grande; cuando se agreguen features nuevas, preferir mover logica a `app/Services` o `FormRequest` antes de seguir creciendo este controlador.
+- `app/Http/Controllers/Auth`: controladores heredados de autenticacion Laravel UI.
+- `app/Http/Requests/Admin`: validacion de formularios administrativos.
+- `app/Services`: reglas de negocio reutilizables, notificaciones y rangos de revision.
+- `app/Support`: utilidades de infraestructura o seguridad, como sesiones y broadcast seguro.
+- `app/Models`: entidades del dominio: tickets, mensajes, usuarios, empleados, clientes, departamentos, areas y configuraciones.
+- `resources/views`: vistas Blade agrupadas por modulo funcional.
+- `resources/views/layouts/app.blade.php`: layout principal del panel.
+- `resources/views/livewire`: pantallas Volt/Livewire, principalmente autenticacion y ajustes.
+- `resources/sass`: estilos fuente compilados por Vite.
+- `resources/js`: JavaScript fuente compilado por Vite.
+- `public/css`: CSS estatico que no pasa por Vite.
+- `config/helpdesk.php`: configuracion propia del dominio helpdesk.
 
-## 2) Validation Rules
+## Convenciones de vistas
 
-- Validation for create/update admin forms is handled in `FormRequest` classes.
-- Phone input is normalized before validation (non-digit characters are removed).
-- Bolivia phone format is enforced:
-  - mobile: 8 digits starting with `6` or `7`
-  - landline: 7 digits starting with `2`, `3`, or `4`
+- Las vistas reales de negocio viven en carpetas por modulo: `tickets`, `usuarios`, `empleados`, `departamentos`, `reportes` y `notifications`.
+- Los fragmentos reutilizables de cada modulo viven en `partials` dentro de su modulo.
+- Evitar crear nuevas vistas duplicadas en `resources/views/pages`; esa carpeta fue retirada porque contenia wrappers no usados por las rutas actuales.
+- Mantener PHP de presentacion minimo en Blade. Si una regla se repite o consulta modelos, moverla a controlador, service, view model o relacion del modelo.
 
-## 3) Security Design Notes
+## Convenciones de assets
 
-- Authenticated pages include no-cache headers through middleware.
-- Ticket attachments are served through authenticated routes and access checks.
-- Password recovery flow uses throttling and generic responses to reduce user enumeration.
+- CSS compartido: `resources/sass/app.scss` y parciales en `resources/sass/components` o `resources/sass/layout`.
+- CSS por pantalla compleja: `resources/sass/pages`, por ejemplo `ticket-show.scss`.
+- JavaScript compartido: `resources/js/app.js` y modulos en `resources/js/ui`.
+- JavaScript muy especifico de una pantalla puede quedar temporalmente en `@push('scripts')`, pero si crece o se repite debe pasar a `resources/js`.
+- La funcionalidad de mostrar/ocultar contrasena esta centralizada en `resources/js/ui/password-toggle.js`.
 
-## 4) Maintenance Rules
+## Archivos generados o locales
 
-- Keep business rules in controllers/services, not in Blade templates.
-- Keep input validation in `FormRequest` classes.
-- Before removing any file, verify references with:
-  - `rg "view\\(|route\\(|Volt::route|include\\(" -n app routes resources/views`
-- After refactors, validate routes:
-  - `php artisan route:list`
+- No versionar `vendor`, `node_modules`, `public/build`, `public/hot`, `.phpunit.result.cache` ni archivos temporales.
+- El archivo `.env` es local y contiene secretos. Si se entrega el proyecto a otra persona, entregar las variables necesarias por un canal seguro o documentarlas sin contrasenas reales.
+- Despues de cambiar `.env`, ejecutar `php artisan optimize:clear`.
 
+## Reglas de mantenimiento
+
+- Mantener validacion en `FormRequest` cuando sea posible.
+- Mantener reglas de negocio en services/controladores, no en CSS/JS ni en Blade.
+- Antes de borrar una vista o mover una ruta, buscar referencias en `app`, `routes` y `resources/views`.
+- Despues de refactors, ejecutar:
+
+```bash
+php artisan route:list
+php artisan test
+npm run build
+```

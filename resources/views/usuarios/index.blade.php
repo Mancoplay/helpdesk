@@ -139,47 +139,9 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-    .js-password-input::-ms-reveal,
-    .js-password-input::-ms-clear {
-        display: none;
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
-    function setupPasswordToggles(root = document) {
-        root.querySelectorAll('.js-password-toggle').forEach((button) => {
-            if (button.dataset.bound === '1') {
-                return;
-            }
-
-            button.dataset.bound = '1';
-            button.addEventListener('click', () => {
-                const inputGroup = button.closest('.input-group');
-                const input = inputGroup ? inputGroup.querySelector('input') : null;
-                const icon = button.querySelector('i');
-
-                if (!input) {
-                    return;
-                }
-
-                const showPassword = input.type === 'password';
-                input.type = showPassword ? 'text' : 'password';
-                button.setAttribute('aria-label', showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
-
-                if (icon) {
-                    icon.classList.toggle('fa-eye', !showPassword);
-                    icon.classList.toggle('fa-eye-slash', showPassword);
-                }
-            });
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-        setupPasswordToggles();
 
         const createUsuarioModal = document.getElementById('createUsuarioModal');
         const createUsuarioForm = document.getElementById('createUsuarioForm');
@@ -204,9 +166,6 @@
             });
         }
     });
-
-    document.addEventListener('shown.bs.modal', (event) => {
-        setupPasswordToggles(event.target);
-    });
 </script>
 @endpush
+

@@ -1,20 +1,30 @@
+# Helpdesk
+
+Sistema Helpdesk en Laravel 12 para administrar usuarios, empleados, departamentos, tickets, chat de atencion, soporte remoto, reportes y notificaciones.
+
 ## Tecnologias
 
 - PHP 8.2 o superior
 - Laravel 12
 - Livewire / Volt / Flux
 - PostgreSQL
+- Reverb para eventos en tiempo real
 - Node.js 20 o superior
 - Composer
-- npm
+- npm / Vite
 
-laravel new helpdesk
-composer create-project laravel/laravel helpdesk
-```
+## Estructura rapida
 
-Esos comandos crean un proyecto Laravel nuevo y pueden generar carpetas, vistas, rutas o configuraciones que no pertenecen a este Helpdesk.
-
-Tampoco copies `vendor`, `node_modules` ni `.env` desde otra PC. Es mejor generarlos nuevamente con `composer install`, `npm install` y una copia limpia de `.env.example`.
+- `routes/web.php`: rutas principales del sistema.
+- `routes/auth.php`: autenticacion, recuperacion de contrasena y logout.
+- `app/Http/Controllers/HomeController.php`: flujo principal del helpdesk.
+- `app/Http/Requests/Admin`: validaciones de formularios administrativos.
+- `app/Services`: reglas reutilizables y servicios de notificacion.
+- `resources/views`: pantallas Blade agrupadas por modulo.
+- `resources/sass`: estilos fuente.
+- `resources/js`: JavaScript fuente.
+- `docs/STRUCTURE.md`: guia completa para ubicarse en el proyecto.
+- `docs/LINUX_DEPLOY.md`: guia de despliegue en Linux.
 
 ## Requisitos
 
@@ -38,9 +48,7 @@ Extensiones PHP necesarias o recomendadas:
 - `bcmath`
 - `fileinfo`
 
-Si usas XAMPP, revisa que el PHP que usa Composer sea el mismo PHP donde habilitaste `pdo_pgsql`.
-
-Puedes verificarlo con:
+Verifica tu entorno con:
 
 ```bash
 php -v
@@ -59,44 +67,29 @@ git clone <URL_DEL_REPOSITORIO>
 cd helpdesk
 ```
 
-### 2. Instalar dependencias de PHP
+### 2. Instalar dependencias
 
 ```bash
 composer install
-```
-
-### 3. Instalar dependencias de Node
-
-```bash
 npm install
 ```
 
-### 4. Crear el archivo `.env`
+### 3. Crear y configurar `.env`
 
-En PowerShell:
+Este proyecto no mantiene `.env.example` porque el archivo de entorno se maneja localmente. Crea un archivo `.env` en la raiz y configura las variables necesarias.
 
-```powershell
-Copy-Item .env.example .env
-```
-
-En Git Bash, Linux o macOS:
-
-```bash
-cp .env.example .env
-```
-
-### 5. Configurar `.env`
-
-Edita el archivo `.env` y deja estas variables principales asi:
+Base minima para desarrollo:
 
 ```env
 APP_NAME=Helpdesk
 APP_ENV=local
+APP_KEY=
 APP_DEBUG=true
 APP_URL=http://127.0.0.1:8000
 
 APP_LOCALE=es
 APP_FALLBACK_LOCALE=es
+APP_FAKER_LOCALE=es_BO
 
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
@@ -106,6 +99,15 @@ DB_USERNAME=postgres
 DB_PASSWORD=tu_password_de_postgres
 
 SESSION_DRIVER=database
+SESSION_LIFETIME=5256000
+SESSION_EXPIRE_ON_CLOSE=true
+SESSION_ENFORCE_SINGLE_LOGIN=true
+SESSION_CONCURRENT_WINDOW_SECONDS=30
+SESSION_ENCRYPT=false
+SESSION_COOKIE=helpdesk_session
+SESSION_PATH=/
+SESSION_DOMAIN=null
+
 CACHE_STORE=database
 QUEUE_CONNECTION=database
 
@@ -123,6 +125,7 @@ VITE_REVERB_HOST="${REVERB_HOST}"
 VITE_REVERB_PORT="${REVERB_PORT}"
 VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 
+FILESYSTEM_DISK=local
 HELPDESK_CHAT_ATTACHMENTS_DISK=public
 HELPDESK_CHAT_ATTACHMENTS_DIR=ticket-mensajes
 HELPDESK_PENDING_TICKET_REMINDER_MINUTES=5
@@ -132,37 +135,30 @@ HELPDESK_NOTIFICATIONS_RETENTION_DAYS=7
 MAIL_MAILER=log
 ```
 
-Usa siempre el mismo nombre de base de datos en PostgreSQL y en `.env`. En esta guia se usa `helpdesk`.
+Despues genera la clave:
 
-### 6. Crear la base de datos en PostgreSQL
+```bash
+php artisan key:generate
+php artisan optimize:clear
+```
 
-En PostgreSQL crea la base de datos:
+### 4. Crear base de datos
+
+En PostgreSQL crea la base:
 
 ```sql
 CREATE DATABASE helpdesk;
 ```
 
-Si la base ya existe y quieres reinstalar desde cero, primero elimina sus tablas o crea una base nueva. No ejecutes migraciones sobre una base que pertenece a otro proyecto.
+El nombre debe coincidir con `DB_DATABASE`.
 
-### 7. Generar la clave de la aplicacion
-
-```bash
-php artisan key:generate
-```
-
-### 8. Ejecutar migraciones
+### 5. Migrar y cargar datos iniciales
 
 ```bash
 php artisan migrate
-```
-
-### 9. Cargar usuarios y roles iniciales
-
-```bash
 php artisan db:seed
+php artisan storage:link
 ```
-
-Esto crea roles, permisos y usuarios de prueba.
 
 Usuarios iniciales:
 
@@ -172,106 +168,86 @@ Empleado:      empleado@helpdesk.com / password
 Usuario:       usuario@helpdesk.com / password
 ```
 
-### 10. Crear enlace de storage
-
-```bash
-php artisan storage:link
-```
-
-### 11. Limpiar cache de configuracion
-
-Despues de editar `.env`, ejecuta:
-
-```bash
-php artisan optimize:clear
-```
-
 ## Levantar el proyecto
 
-La forma mas completa para desarrollo es:
+Forma completa para desarrollo:
 
 ```bash
 composer run dev
 ```
 
-Ese comando levanta:
+Ese comando levanta servidor Laravel, cola, Vite y Reverb.
 
-- servidor Laravel
-- cola de trabajos
-- Vite
-- Reverb para notificaciones en tiempo real
+Forma manual:
 
-Luego abre:
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+npm run dev
+php artisan queue:work
+php artisan reverb:start --host=0.0.0.0 --port=8080
+```
+
+En la PC abre:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-## Levantarlo manualmente
+Desde un celular en la misma WiFi usa la IP local de la PC, por ejemplo:
 
-Si prefieres usar terminales separadas:
-
-Terminal 1:
-
-```bash
-php artisan serve
+```text
+http://192.168.100.197:8000
 ```
 
-Terminal 2:
+Si el celular no entra y Laravel esta escuchando en `0.0.0.0:8000`, revisa el firewall de Windows.
+
+## Comandos utiles
 
 ```bash
-npm run dev
+php artisan optimize:clear
+php artisan route:list
+php artisan test
+npm run build
 ```
 
-Terminal 3, para colas:
+Para reinstalar una base de desarrollo desde cero:
 
 ```bash
-php artisan queue:work
+php artisan migrate:fresh --seed
 ```
 
-Terminal 4, para Reverb/notificaciones en tiempo real:
-
-```bash
-php artisan reverb:start --host=0.0.0.0 --port=8080
-```
+Ese comando borra las tablas de la base configurada. Usalo solo en desarrollo.
 
 ## Problemas comunes
 
 ### Error de conexion a PostgreSQL
 
-Revisa que:
-
-- PostgreSQL este iniciado.
-- La base `helpdesk` exista.
-- `DB_USERNAME` y `DB_PASSWORD` sean correctos.
-- La extension `pdo_pgsql` este habilitada en PHP.
-- Despues de cambiar `.env`, hayas ejecutado `php artisan optimize:clear`.
+Revisa que PostgreSQL este iniciado, que la base exista y que `DB_USERNAME` / `DB_PASSWORD` sean correctos. Si usas XAMPP, verifica que el PHP de Composer tenga habilitado `pdo_pgsql`.
 
 ### No cargan estilos o JavaScript
-
-Ejecuta:
 
 ```bash
 npm install
 npm run dev
 ```
 
+Para generar assets de produccion:
+
+```bash
+npm run build
+```
+
 ### No puedo iniciar sesion
 
-Ejecuta los seeders:
+Ejecuta:
 
 ```bash
 php artisan db:seed
 ```
 
-Luego prueba con:
+Luego prueba con los usuarios iniciales.
 
-```text
-admin@helpdesk.com
-password
-```
-
-### Las notificaciones en tiempo real no funcionan
+### Notificaciones en tiempo real no funcionan
 
 Levanta Reverb:
 
@@ -279,34 +255,6 @@ Levanta Reverb:
 php artisan reverb:start --host=0.0.0.0 --port=8080
 ```
 
-O usa directamente:
-
-```bash
-composer run dev
-```
-
-## Comandos utiles
-
-```bash
-php artisan migrate:fresh --seed
-php artisan optimize:clear
-php artisan route:list
-npm run build
-```
-
-`php artisan migrate:fresh --seed` borra todas las tablas de la base configurada y las crea nuevamente. Usalo solo en desarrollo.
-
 ## Despliegue en servidor Linux
 
-Para produccion o para subirlo a un servidor Linux, usa la guia completa en `docs/LINUX_DEPLOY.md`.
-
-Resumen rapido en el servidor:
-
-```bash
-cp .env.production.example .env
-nano .env
-php artisan key:generate --force
-bash scripts/linux/deploy.sh
-```
-
-El servidor web debe apuntar a la carpeta `public`, no a la raiz del proyecto.
+Usa la guia completa en `docs/LINUX_DEPLOY.md`. En produccion, el servidor web debe apuntar a `public`, no a la raiz del proyecto.
