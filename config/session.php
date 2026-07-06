@@ -32,7 +32,7 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    'lifetime' => env('SESSION_LIFETIME', 5256000),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', true),
 
@@ -49,7 +49,7 @@ return [
 
     'concurrent_window' => env('SESSION_CONCURRENT_WINDOW', 2),
 
-    'concurrent_window_seconds' => env('SESSION_CONCURRENT_WINDOW_SECONDS', 180),
+    'concurrent_window_seconds' => env('SESSION_CONCURRENT_WINDOW_SECONDS', 30),
 
     /*
     |---------------------------------------------------------------------------
