@@ -48,6 +48,7 @@
                 <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="row g-4">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="return_url" value="{{ $returnUrl ?? route('tickets.show', $ticket) }}">
 
                     <div class="col-12">
                         <div class="row g-3">
@@ -181,7 +182,7 @@
 
                     <div class="col-12">
                         <div class="d-flex flex-wrap justify-content-end gap-2 pt-2">
-                            <a href="{{ route('tickets.index') }}" class="btn btn-secondary px-4">Cancelar</a>
+                            <a href="{{ $returnUrl ?? route('tickets.show', $ticket) }}" class="btn btn-secondary px-4">Cancelar</a>
                             <button type="submit" class="btn btn-primary px-4">Guardar cambios</button>
                         </div>
                     </div>

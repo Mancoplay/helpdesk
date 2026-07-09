@@ -935,9 +935,11 @@ class HomeController extends Controller
         }
 
         $ticket->loadMissing('assignmentRequestBy');
+        $returnUrl = $this->safeTicketReturnUrl(url()->previous(), $ticket);
 
         return view('tickets.edit', [
             'ticket' => $ticket,
+            'returnUrl' => $returnUrl,
             'clientes' => Cliente::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
             'empleados' => Empleado::where('activo', true)->orderBy('nombres')->orderBy('apellidos')->get(),
             'departamentos' => Departamento::where('activo', true)->orderBy('nombre')->get(),
@@ -1951,7 +1953,9 @@ class HomeController extends Controller
             app(TicketNotificationService::class)->notifyTicketAttended($ticket->fresh(['cliente', 'departamento', 'empleado']), $attendedByName);
         }
 
-        return back()->with('success', 'Ticket actualizado correctamente.');
+        $returnUrl = $this->safeTicketReturnUrl($request->input('return_url'), $ticket);
+
+        return redirect()->to($returnUrl)->with('success', 'Ticket actualizado correctamente.');
     }
 
     public function destroyTicket(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
@@ -2176,6 +2180,21 @@ class HomeController extends Controller
                 'puntuacion_promedio' => $ratingAverage,
                 'puntuaciones_count' => $ratingCount,
             ]);
+    }
+
+    private function safeTicketReturnUrl(?string $url, Ticket $ticket): string
+    {
+        $fallback = route('tickets.show', $ticket);
+        $url = trim((string) $url);
+
+        if ($url === '' || !Str::startsWith($url, rtrim(url('/'), '/') . '/')) {
+            return $fallback;
+        }
+
+        $returnPath = (string) parse_url($url, PHP_URL_PATH);
+        $editPath = (string) parse_url(route('tickets.edit', $ticket), PHP_URL_PATH);
+
+        return $returnPath === $editPath ? $fallback : $url;
     }
 
     private function canAccessTicket(Ticket $ticket): bool
