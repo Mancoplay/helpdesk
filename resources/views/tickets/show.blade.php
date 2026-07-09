@@ -594,7 +594,10 @@
         const ticketId = {{ (int) $ticket->id }};
         const currentRemoteSessionId = {{ (int) $remoteSession->id }};
         const remoteLiveUrl = @json(route('tickets.live', $ticket));
+        const canManageRemoteAsClient = @json($canManageRemoteAsClient);
+        const canManageRemoteAsEmployee = @json($canManageRemoteAsEmployee);
         const canEditRemoteCode = @json($canManageRemoteAsClient || $canManageRemoteAsEmployee);
+        const shouldOpenRemoteAppOnly = canManageRemoteAsClient && !canManageRemoteAsEmployee;
         let saveTimer = null;
         let saveRequestController = null;
         let remoteSyncInFlight = false;
@@ -659,6 +662,11 @@
 
                 const code = codeElement.value.trim();
 
+                if (shouldOpenRemoteAppOnly) {
+                    openAnyDesk('');
+                    return;
+                }
+
                 if (!code) {
                     openAnyDesk('');
                     return;
@@ -683,6 +691,11 @@
                 event.stopPropagation();
 
                 const code = rustDeskCodeElement.value.trim();
+
+                if (shouldOpenRemoteAppOnly) {
+                    openRustDesk('');
+                    return;
+                }
 
                 if (!code) {
                     openRustDesk('');
