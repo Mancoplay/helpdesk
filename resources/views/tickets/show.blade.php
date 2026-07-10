@@ -879,7 +879,7 @@
 
         const saveRustDeskCode = function () {
             if (!rustDeskShareCodeForm || !rustDeskCodeElement) {
-                return;
+                return Promise.resolve();
             }
 
             const code = String(rustDeskCodeElement.value || '').replace(/[^A-Za-z0-9_-]+/g, '').trim();
@@ -887,12 +887,12 @@
 
             if (!code) {
                 setSupportCodeStatus('Escribe un código de RustDesk para compartirlo.', 'text-muted');
-                return;
+                return Promise.resolve();
             }
 
             if (code === lastSavedRustDeskCode) {
                 setSupportCodeStatus('Código de RustDesk sincronizado.', 'text-success');
-                return;
+                return Promise.resolve();
             }
 
             setSupportCodeStatus('Guardando código de RustDesk...', 'text-muted');
@@ -900,7 +900,7 @@
             const payload = new FormData(rustDeskShareCodeForm);
             payload.set('rustdesk_code', code);
 
-            fetch(rustDeskShareCodeForm.action, {
+            return fetch(rustDeskShareCodeForm.action, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
