@@ -1174,9 +1174,21 @@ closeAnyDeskBtn.disabled = true;
             attachmentInput.click();
         });
 
-        attachmentInput.addEventListener('change', function () {
-            addFiles(attachmentInput.files, false);
-            attachmentInput.value = '';
+        attachmentInput.addEventListener('change', function (event) {
+            const files = (event && event.target && event.target.files) ? event.target.files : (attachmentInput.files || []);
+
+            if (!files || files.length === 0) {
+                // En algunos móviles el selector puede devolver una lista vacía; no romper la UI.
+                return;
+            }
+
+            addFiles(files, false);
+            // Limpiar el input para permitir volver a seleccionar los mismos archivos más tarde
+            try {
+                attachmentInput.value = null;
+            } catch (e) {
+                attachmentInput.value = '';
+            }
         });
 
         if (messageInput) {
@@ -1247,13 +1259,24 @@ closeAnyDeskBtn.disabled = true;
                 submitButton.textContent = 'Enviando...';
             }
 
+            // Construimos FormData manualmente y adjuntamos los archivos seleccionados
+            const payload = new FormData(form);
+            try {
+                // Asegurar que todos los archivos del array `selectedFiles` se adjunten
+                selectedFiles.forEach(function (file) {
+                    payload.append('adjuntos[]', file);
+                });
+            } catch (e) {
+                // En caso de error, dejamos que el servidor realice la validación normal
+            }
+
             fetch(form.action, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: new FormData(form)
+                body: payload
             })
                 .then(function (response) {
                     return response.json().then(function (payload) {
