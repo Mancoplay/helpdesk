@@ -12,15 +12,15 @@
 @php
     $ticketSubjectOptions = [
         'Problema con el sistema de correspondencia',
-        'Falla en equipo de computacion',
+        'Falla en equipo de computación',
         'Problema con impresora o escaner',
         'Problema de conexion a internet o red',
         'Acceso bloqueado o recuperacion de cuenta',
         'Error al registrar o actualizar envios',
         'Problema con reportes o consultas internas',
         'Solicitud de soporte para ventanilla',
-        'Solicitud de soporte para clasificacion o distribucion',
-        'Solicitud de mantenimiento o revision tecnica',
+        'Solicitud de soporte para clasificación o distribución',
+        'Solicitud de mantenimiento o revisión técnica',
     ];
 
     $oldSubject = old('asunto');
@@ -77,7 +77,7 @@
                     <div class="js-create-ticket-feedback"></div>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">Codigo</label>
+                            <label class="form-label">Código</label>
                             <input type="text" name="codigo" id="codigoTicket" class="form-control" value="{{ old('codigo', $nextTicketCode) }}" readonly>
                         </div>
                         <div class="col-md-8">
@@ -111,7 +111,7 @@
                             >
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Descripcion</label>
+                            <label class="form-label">Descripción</label>
                             <textarea
                                 name="descripcion"
                                 class="form-control"

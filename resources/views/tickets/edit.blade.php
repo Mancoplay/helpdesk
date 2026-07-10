@@ -53,7 +53,7 @@
                     <div class="col-12">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Codigo</label>
+                                <label class="form-label">Código</label>
                                 <input type="text" name="codigo" class="form-control" value="{{ old('codigo', $ticket->codigo) }}" readonly>
                             </div>
                             <div class="col-md-4">
@@ -166,7 +166,7 @@
                                 >
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Descripcion</label>
+                                <label class="form-label">Descripción</label>
                                 <textarea
                                     name="descripcion"
                                     class="form-control"

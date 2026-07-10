@@ -16,23 +16,33 @@
 
 @section('content')
 @php
+    $user = auth()->user();
+    
     $currentEmployee = \App\Models\Empleado::query()
-        ->whereKey(auth()->id())
-        ->orWhere('email', auth()->user()->email)
+        ->where('id', $user->id)
+        ->orWhere('email', $user->email)
         ->first();
+    
     $currentEmployeeId = (int) ($currentEmployee->id ?? 0);
+    
     $additionalAssignedIds = collect($ticket->assigned_employee_ids ?? [])
-        ->map(fn ($employeeId) => (int) $employeeId);
-    $isAdmin = auth()->user()->hasRole('Administrador');
-    $isAssignedEmployee = auth()->user()->hasRole('Empleado')
-        && (
-            (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId
-            || $additionalAssignedIds->contains($currentEmployeeId)
-        );
-    $assignedEmployeeDisplay = ($assignedEmployeeNames ?? collect())->isNotEmpty()
-        ? $assignedEmployeeNames->implode(', ')
+        ->map(fn ($id) => (int) $id)
+        ->filter()
+        ->values();
+    
+    // Verificar roles
+    $isAdmin = $user->hasRole('Administrador');
+    $isAssignedEmployee = $user->hasRole('Empleado') && (
+        (int) ($ticket->empleado_id ?? 0) === $currentEmployeeId
+        || $additionalAssignedIds->contains($currentEmployeeId)
+    );
+    
+    $assignedNames = $assignedEmployeeNames ?? collect();
+    $assignedEmployeeDisplay = $assignedNames->isNotEmpty()
+        ? $assignedNames->implode(', ')
         : ($ticket->empleado->nombre_completo ?? 'Sin asignar');
 @endphp
+
 <div class="row g-3 ticket-detail-page">
     <div class="col-lg-5">
         <div class="card border-success ticket-panel ticket-panel-detail">
@@ -75,7 +85,7 @@
                 </div>
                 <hr>
                 <div>
-                    <strong>Descripcion</strong>
+                    <strong>Descripción</strong>
                     <p class="mb-0">{{ $ticket->descripcion }}</p>
                 </div>
             </div>
@@ -218,7 +228,7 @@
     <div class="col-lg-7">
         <div class="card border-primary ticket-panel ticket-panel-chat">
             <div class="card-header">
-                <h3 class="card-title mb-0">Comunicacion</h3>
+                <h3 class="card-title mb-0">Comunicación</h3>
             </div>
             <div class="card-body d-flex flex-column ticket-chat-card-body">
                 <div class="ticket-chat-scroll-wrap mb-2">
@@ -328,7 +338,7 @@
                 @csrf
                 @method('PATCH')
                 <div class="modal-header">
-                    <h5 class="modal-title">Solicitud para administracion</h5>
+                    <h5 class="modal-title">Solicitud para administración</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -340,7 +350,7 @@
 
                         <input type="radio" class="btn-check" name="request_type" id="requestAddEmployees" value="add_employees" required>
                         <label class="btn btn-outline-primary text-start" for="requestAddEmployees">
-                            Asignar mas empleados
+                            Asignar más empleados
                         </label>
                     </div>
                 </div>
@@ -361,7 +371,7 @@
             <form method="POST" action="{{ route('tickets.rate', $ticket) }}" id="rateTicketForm">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title">Calificar atencion</h5>
+                    <h5 class="modal-title">Calificar atención</h5>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted mb-3">
